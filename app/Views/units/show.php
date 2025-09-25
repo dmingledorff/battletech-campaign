@@ -21,7 +21,9 @@
     <p><strong>Type:</strong> <?= esc($unit['unit_type']) ?></p>
     <p><strong>Commander:</strong>
       <?php if (!empty($unit['commander_id'])): ?>
-        <a class="link-info" href="/personnel/<?= esc($unit['commander_id']) ?>">View Commander</a>
+        <a class="link-info" href="/personnel/<?= esc($unit['commander_id']) ?>">
+          <?= esc($unit['grade']) ?> <?= esc($unit['first_name'].' '.$unit['last_name']) ?>
+        </a>
       <?php else: ?>
         <span class="text-muted">Unassigned</span>
       <?php endif; ?>

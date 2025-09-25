@@ -41,17 +41,32 @@ class UnitModel extends Model
     return $children;
 }
 
-    public function getUnit($id) {
-        return $this->find($id);
+    // app/Models/UnitModel.php
+
+    public function getUnit($unit_id)
+    {
+        return $this->db->table('units u')
+            ->select('u.*, p.first_name, p.last_name, p.grade')
+            ->join('personnel p', 'u.commander_id = p.personnel_id', 'left')
+            ->where('u.unit_id', $unit_id)
+            ->get()
+            ->getRowArray();
     }
 
-    public function getPersonnel($unitId) {
-        return $this->db->table('personnel_assignments')
-            ->select('personnel.*')
-            ->join('personnel','personnel.personnel_id=personnel_assignments.personnel_id')
-            ->where('personnel_assignments.unit_id',$unitId)
-            ->get()->getResultArray();
+    public function getPersonnel($unitId)
+    {
+        return $this->db->table('personnel p')
+            ->select('p.personnel_id, p.first_name, p.last_name, p.grade, p.status, ANY_VALUE(pa.unit_id) as unit_id, MAX(pa.date_assigned) as date_assigned')
+            ->join('personnel_assignments pa', 'pa.personnel_id = p.personnel_id')
+            ->where('pa.unit_id', $unitId)
+            ->where('pa.date_released IS NULL')
+            ->groupBy('p.personnel_id')
+            ->orderBy('p.grade', 'ASC')
+            ->get()
+            ->getResultArray();
     }
+
+
 
     public function getEquipment($unitId) {
         return $this->db->table('equipment')

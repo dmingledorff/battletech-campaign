@@ -338,7 +338,7 @@ INSERT INTO personnel VALUES
 
 -- 2nd Platoon: 4th Squad (7)
 INSERT INTO personnel VALUES
-(155,'Seamus','O\'Brien','Sergeant','Active','Male',NULL,'Infantry','Regular',4),
+(155,'Seamus','Brien','Sergeant','Active','Male',NULL,'Infantry','Regular',4),
 (156,'Hyejin','Park','Corporal','Active','Female',NULL,'Infantry','Regular',3),
 (157,'Colin','Barker','Corporal','Active','Male',NULL,'Infantry','Regular',3),
 (158,'Arjun','Kapoor','Private','Active','Male',NULL,'Infantry','Green',1),
@@ -383,7 +383,7 @@ INSERT INTO personnel VALUES
 -- 3rd Platoon: 4th Squad (7)
 INSERT INTO personnel VALUES
 (184,'Gregor','Ivanov','Sergeant','Active','Male',NULL,'Infantry','Regular',4),
-(185,'Maeve','O\'Connell','Corporal','Active','Female',NULL,'Infantry','Regular',3),
+(185,'Maeve','Connell','Corporal','Active','Female',NULL,'Infantry','Regular',3),
 (186,'Karl','Hofmann','Corporal','Active','Male',NULL,'Infantry','Regular',3),
 (187,'Ana','Pereira','Private','Active','Female',NULL,'Infantry','Green',1),
 (188,'Youssef','Ali','Private','Active','Male',NULL,'Infantry','Green',1),
