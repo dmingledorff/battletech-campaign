@@ -14,14 +14,14 @@ DROP TABLE IF EXISTS unit_command_history;
 DROP TABLE IF EXISTS personnel_equipment;
 DROP TABLE IF EXISTS personnel_assignments;
 DROP TABLE IF EXISTS equipment;
-DROP TABLE IF EXISTS chassis;
+-- DROP TABLE IF EXISTS chassis;
 DROP TABLE IF EXISTS units;
 DROP TABLE IF EXISTS personnel;
 DROP TABLE IF EXISTS locations;
 DROP TABLE IF EXISTS campaigns;
 DROP TABLE IF EXISTS planets;
-DROP TABLE IF EXISTS name_pool;
-DROP TABLE IF EXISTS callsign_pool;
+-- DROP TABLE IF EXISTS name_pool;
+-- DROP TABLE IF EXISTS callsign_pool;
 
 -- Core tables
 
@@ -78,18 +78,28 @@ CREATE TABLE units (
 
 CREATE TABLE chassis (
     chassis_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,          -- e.g., "Centurion"
-    variant VARCHAR(50) NOT NULL,        -- e.g., "CN9-A"
+    name VARCHAR(100) NOT NULL,
+    variant VARCHAR(50),
     type ENUM('BattleMech','Vehicle','APC') NOT NULL,
     weight_class ENUM('Light','Medium','Heavy','Assault','Infantry') NOT NULL,
-    tonnage INT NOT NULL,                -- weight in tons
-    speed DECIMAL(5,2),                  -- kph
+    battlefield_role ENUM(
+        'Ambusher',
+        'Brawler',
+        'Missile Boat',
+        'Juggernaut',
+        'Scout','Sniper'
+        ,'Skirmisher'
+        ,'Striker'
+    ) DEFAULT 'Brawler',
     hard_attack INT,
     soft_attack INT,
     armor_value INT,
     ammo_reliance DECIMAL(4,2),
-    supply_consumption DECIMAL(6,2)
+    supply_consumption DECIMAL(6,2),
+    tonnage INT,
+    speed DECIMAL(5,2)
 );
+
 
 
 CREATE TABLE equipment (
@@ -99,11 +109,11 @@ CREATE TABLE equipment (
     assigned_unit_id INT,
     damage_percentage DECIMAL(5,2) DEFAULT 0.0,
     equipment_status ENUM(
-    'Active',
-    'Destroyed',
-    'Salvaged',
-    'Repair',
-    'Mothballed'
+        'Active',
+        'Destroyed',
+        'Salvaged',
+        'Repair',
+        'Mothballed'
     ) NOT NULL DEFAULT 'Active',
     FOREIGN KEY (chassis_id) REFERENCES chassis(chassis_id) ON DELETE CASCADE,
     FOREIGN KEY (assigned_unit_id) REFERENCES units(unit_id) ON DELETE SET NULL
@@ -151,6 +161,23 @@ CREATE TABLE callsign_pool (
     id INT AUTO_INCREMENT PRIMARY KEY,
     value VARCHAR(50) NOT NULL,
     used BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE lance_templates (
+    template_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,         -- e.g. "Command Lance", "Recon Lance"
+    role VARCHAR(50) NOT NULL,          -- e.g. Command, Recon, Line, Fire Support
+    commander_rank VARCHAR(50) NOT NULL,
+    commander_experience ENUM('Green','Regular','Veteran','Elite') NOT NULL
+);
+
+CREATE TABLE lance_template_slots (
+    slot_id INT AUTO_INCREMENT PRIMARY KEY,
+    template_id INT NOT NULL,
+    slot_number INT NOT NULL,             -- 1 to 4
+    weight_class ENUM('Light','Medium','Heavy','Assault') NOT NULL,
+    is_commander_slot BOOLEAN DEFAULT 0,  -- true if this slot is for the CO
+    FOREIGN KEY (template_id) REFERENCES lance_templates(template_id)
 );
 
 

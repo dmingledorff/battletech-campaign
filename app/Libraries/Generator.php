@@ -19,6 +19,9 @@ class Generator
      * @param string $grade       Rank (e.g., "Sergeant", "Lieutenant")
      * @param string $experience  Experience level (e.g., "Green", "Regular", "Veteran", "Elite")
      * @param string $status      Current status (e.g., "Active", "KIA", "Retired")
+     * @param string $gender      Male/Female, weighted randomly to Male if not provided
+     * @param string $first       Generated if not provided
+     * @param string $last        Generated if not provided
      * @return int                Inserted personnel_id
      */
     public function generatePersonnel(
@@ -27,19 +30,21 @@ class Generator
         string $grade = 'Private',
         string $experience = 'Green',
         string $status = 'Active',
-        string $gender = null
+        string $gender = null,
+        string $first = null,
+        string $last = null
     ) {
         // Decide gender if not provided (weighted male)
         if ($gender === null) {
             $gender = (mt_rand(0,100) <= 65) ? 'Male' : 'Female';
         }
-
+        
         // Map to name_pool type
         $firstType = ($gender === 'Female') ? 'first_female' : 'first_male';
 
         // Pick first + last names with faction fallback
-        $first = $this->pickRandomNameRow($faction, $firstType);
-        $last  = $this->pickRandomNameRow($faction, 'last');
+        if ($first == null) $first = $this->pickRandomNameRow($faction, $firstType)->value;
+        if ($last == null) $last  = $this->pickRandomNameRow($faction, 'last')->value;
 
         if (!$first || !$last) {
             throw new \RuntimeException("No names available for faction: {$faction}");
@@ -56,8 +61,8 @@ class Generator
         }
 
         $personnel = [
-            'first_name' => $first->value,
-            'last_name'  => $last->value,
+            'first_name' => $first,
+            'last_name'  => $last,
             'grade'      => $grade,
             'gender'     => $gender,
             'callsign'   => $callsign->value ?? null,

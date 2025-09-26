@@ -1,0 +1,7 @@
+SET FOREIGN_KEY_CHECKS=0;
+TRUNCATE TABLE units;
+TRUNCATE TABLE personnel_equipment;
+TRUNCATE TABLE personnel_assignments;
+TRUNCATE TABLE equipment;
+TRUNCATE TABLE personnel;
+SET FOREIGN_KEY_CHECKS=1;
