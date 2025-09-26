@@ -20,6 +20,8 @@ DROP TABLE IF EXISTS personnel;
 DROP TABLE IF EXISTS locations;
 DROP TABLE IF EXISTS campaigns;
 DROP TABLE IF EXISTS planets;
+DROP TABLE IF EXISTS name_pool;
+DROP TABLE IF EXISTS callsign_pool;
 
 -- Core tables
 

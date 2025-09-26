@@ -26,16 +26,22 @@ class Generator
         string $role = 'MechWarrior',
         string $grade = 'Private',
         string $experience = 'Green',
-        string $status = 'Active'
+        string $status = 'Active',
+        string $gender = null
     ) {
-        // Random name
-        $name = $this->db->table('name_pool')
-            ->where('faction', $faction)
-            ->orderBy('RAND()')
-            ->get(1)
-            ->getRow();
+        // Decide gender if not provided (weighted male)
+        if ($gender === null) {
+            $gender = (mt_rand(0,100) <= 65) ? 'Male' : 'Female';
+        }
 
-        if (!$name) {
+        // Map to name_pool type
+        $firstType = ($gender === 'Female') ? 'first_female' : 'first_male';
+
+        // Pick first + last names with faction fallback
+        $first = $this->pickRandomNameRow($faction, $firstType);
+        $last  = $this->pickRandomNameRow($faction, 'last');
+
+        if (!$first || !$last) {
             throw new \RuntimeException("No names available for faction: {$faction}");
         }
 
@@ -50,10 +56,10 @@ class Generator
         }
 
         $personnel = [
-            'first_name' => $name->first_name,
-            'last_name'  => $name->last_name,
+            'first_name' => $first->value,
+            'last_name'  => $last->value,
             'grade'      => $grade,
-            'gender'     => $name->gender,
+            'gender'     => $gender,
             'callsign'   => $callsign->value ?? null,
             'mos'        => $role,
             'experience' => $experience,
@@ -72,6 +78,17 @@ class Generator
 
         return $id;
     }
+
+    private function pickRandomNameRow(string $faction, string $nameType): ?object
+    {
+        // Try specific faction + Generic as fallback in one query
+        return $this->db->table('name_pool')
+            ->whereIn('faction', [$faction, 'Generic'])
+            ->where('name_type', $nameType)
+            ->orderBy('RAND()', '', false)  // MySQL RAND()
+            ->get(1)
+            ->getRow();
+    }  
 
     public function generateAPC(
         string $variant = 'Wheeled',
