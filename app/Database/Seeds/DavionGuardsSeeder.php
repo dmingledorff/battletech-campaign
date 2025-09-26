@@ -11,7 +11,7 @@ class DavionGuardsSeeder extends Seeder
         $db = \Config\Database::connect();
 
         // Adjust path if you move the SQL file
-        $file = APPPATH . '../SQL/1st_davion_guards_inserts.sql';
+        $file = APPPATH . '../SQL/clean_regen_inserts_full.sql';
 
         if (!file_exists($file)) {
             throw new \RuntimeException("SQL file not found: " . $file);

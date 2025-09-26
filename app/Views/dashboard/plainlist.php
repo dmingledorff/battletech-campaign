@@ -1,1 +1,0 @@
-<h2><?= esc($title) ?></h2><p>Stub list view.</p>

@@ -1,9 +1,14 @@
 <div class="card shadow mb-3">
   <div class="card-header">Personnel Details</div>
   <div class="card-body">
-    <p><strong>Name:</strong> <?= esc($person['first_name'].' '.$person['last_name']) ?></p>
-    <p><strong>Grade:</strong> <?= esc($person['grade']) ?></p>
-    <p><strong>Status:</strong> <?= esc($person['status']) ?></p>
+      <p><strong>Name:</strong> <?= esc($person['first_name'].' '.$person['last_name']) ?></p>
+      <p><strong>Gender:</strong> <?= esc($person['gender']) ?></p>
+      <p><strong>Callsign:</strong> <?= esc($person['callsign']) ?></p>
+      <p><strong>Status:</strong> <?= esc($person['status']) ?></p>
+      <p><strong>Grade:</strong> <?= esc($person['grade']) ?></p>
+      <p><strong>MOS:</strong> <?= esc($person['mos']) ?></p>
+      <p><strong>Experience:</strong> <?= esc($person['experience']) ?></p>
+      <p><strong>Missions:</strong> <?= esc($person['missions']) ?></p>
   </div>
 </div>
 

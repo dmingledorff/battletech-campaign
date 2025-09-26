@@ -18,7 +18,12 @@
   <div class="card-body">
     <p><strong>Name:</strong> <?= esc($unit['name']) ?></p>
     <p><strong>Nickname:</strong> <?= esc($unit['nickname'] ?? '-') ?></p>
-    <p><strong>Type:</strong> <?= esc($unit['unit_type']) ?></p>
+    <p>
+      <strong>Type:</strong> <?= esc($unit['unit_type']) ?>
+      <?php if (!empty($unit['role'])): ?>
+          <span class="text-info fst-italic">– <?= esc($unit['role']) ?></span>
+      <?php endif; ?>
+    </p>
     <p><strong>Commander:</strong>
       <?php if (!empty($unit['commander_id'])): ?>
         <a class="link-info" href="/personnel/<?= esc($unit['commander_id']) ?>">

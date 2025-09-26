@@ -15,7 +15,7 @@ class EquipmentModel extends Model
     public function getEquipment($id) {
         return $this->db->table('equipment')
             ->select('equipment.*, chassis.name as chassis_name, chassis.type as chassis_type, chassis.weight_class,
-                    units.name as unit_name, units.unit_type, units.nickname')
+                    units.name as unit_name, units.unit_type, units.nickname, chassis.tonnage as tonnage, chassis.speed as speed')
             ->join('chassis','chassis.chassis_id=equipment.chassis_id')
             ->join('units','units.unit_id=equipment.assigned_unit_id','left')
             ->where('equipment.equipment_id',$id)

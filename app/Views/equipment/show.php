@@ -6,6 +6,8 @@
         <p><strong>Chassis:</strong> <?= esc($equipment['chassis_name']) ?></p>
         <p><strong>Type:</strong> <?= esc($equipment['chassis_type'] ?? 'Unknown') ?></p>
         <p><strong>Weight Class:</strong> <?= esc($equipment['weight_class'] ?? 'Unknown') ?></p>
+        <p><strong>Tonnage:</strong> <?= esc($equipment['tonnage'] . ' tons' ?? 'Unknown') ?></p>
+        <p><strong>Speed:</strong> <?= esc($equipment['speed'] . ' km/h' ?? 'Unknown') ?></p>
         <p><strong>Serial Number:</strong> <?= esc($equipment['serial_number']) ?></p>
         <p><strong>Damage:</strong> <?= esc($equipment['damage_percentage']).'%' ?></p>
         <p><strong>Status:</strong> <?= esc($equipment['equipment_status']) ?></p>
