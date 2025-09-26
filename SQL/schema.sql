@@ -47,7 +47,7 @@ CREATE TABLE personnel (
     callsign VARCHAR(50),
     mos VARCHAR(50),  -- Military Occupational Specialty
     experience ENUM('Green','Regular','Veteran','Elite') DEFAULT 'Green',
-    missions_completed INT DEFAULT 0
+    missions INT DEFAULT 0
 );
 
 CREATE TABLE locations (
@@ -64,6 +64,7 @@ CREATE TABLE units (
     nickname VARCHAR(100),
     current_supply DECIMAL(10,2) DEFAULT 0,
     unit_type ENUM('Regiment','Battalion','Company','Lance','InfantryPlatoon','Squad') NOT NULL,
+    role VARCHAR(50) DEFAULT NULL,
     allegiance VARCHAR(100),
     parent_unit_id INT,
     commander_id INT,
@@ -75,11 +76,12 @@ CREATE TABLE units (
 
 CREATE TABLE chassis (
     chassis_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    type ENUM('BattleMech','Vehicle','InfantryWeapon') NOT NULL,
+    name VARCHAR(100) NOT NULL,          -- e.g., "Centurion"
+    variant VARCHAR(50) NOT NULL,        -- e.g., "CN9-A"
+    type ENUM('BattleMech','Vehicle','APC') NOT NULL,
     weight_class ENUM('Light','Medium','Heavy','Assault','Infantry') NOT NULL,
-    tonnage INT,                       -- Always multiples of 5
-    speed DECIMAL(6,2),                -- in kph
+    tonnage INT NOT NULL,                -- weight in tons
+    speed DECIMAL(5,2),                  -- kph
     hard_attack INT,
     soft_attack INT,
     armor_value INT,
@@ -87,15 +89,22 @@ CREATE TABLE chassis (
     supply_consumption DECIMAL(6,2)
 );
 
+
 CREATE TABLE equipment (
     equipment_id INT AUTO_INCREMENT PRIMARY KEY,
     chassis_id INT NOT NULL,
     serial_number VARCHAR(50) UNIQUE NOT NULL,
     assigned_unit_id INT,
     damage_percentage DECIMAL(5,2) DEFAULT 0.0,
-    equipment_status VARCHAR(50) NOT NULL DEFAULT 'Active',
-    FOREIGN KEY (chassis_id) REFERENCES chassis(chassis_id),
-    FOREIGN KEY (assigned_unit_id) REFERENCES units(unit_id)
+    equipment_status ENUM(
+    'Active',
+    'Destroyed',
+    'Salvaged',
+    'Repair',
+    'Mothballed'
+    ) NOT NULL DEFAULT 'Active',
+    FOREIGN KEY (chassis_id) REFERENCES chassis(chassis_id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_unit_id) REFERENCES units(unit_id) ON DELETE SET NULL
 );
 
 CREATE TABLE personnel_assignments (
@@ -104,8 +113,8 @@ CREATE TABLE personnel_assignments (
     unit_id INT NOT NULL,
     date_assigned DATE,
     date_released DATE,
-    FOREIGN KEY (personnel_id) REFERENCES personnel(personnel_id),
-    FOREIGN KEY (unit_id) REFERENCES units(unit_id)
+    FOREIGN KEY (personnel_id) REFERENCES personnel(personnel_id) ON DELETE CASCADE,
+    FOREIGN KEY (unit_id) REFERENCES units(unit_id) ON DELETE CASCADE
 );
 
 CREATE TABLE personnel_equipment (
@@ -115,8 +124,8 @@ CREATE TABLE personnel_equipment (
     role VARCHAR(50),
     date_assigned DATE,
     date_released DATE,
-    FOREIGN KEY (personnel_id) REFERENCES personnel(personnel_id),
-    FOREIGN KEY (equipment_id) REFERENCES equipment(equipment_id)
+    FOREIGN KEY (personnel_id) REFERENCES personnel(personnel_id) ON DELETE CASCADE,
+    FOREIGN KEY (equipment_id) REFERENCES equipment(equipment_id) ON DELETE CASCADE
 );
 
 CREATE TABLE unit_command_history (
@@ -128,6 +137,20 @@ CREATE TABLE unit_command_history (
     FOREIGN KEY (unit_id) REFERENCES units(unit_id),
     FOREIGN KEY (commander_id) REFERENCES personnel(personnel_id)
 );
+
+CREATE TABLE name_pool (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    faction VARCHAR(50) NOT NULL, -- e.g. 'Davion', 'Kurita', 'Liao', 'Generic'
+    name_type ENUM('first_male','first_female','last') NOT NULL,
+    value VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE callsign_pool (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    value VARCHAR(50) NOT NULL,
+    used BOOLEAN DEFAULT FALSE
+);
+
 
 -- Views
 
