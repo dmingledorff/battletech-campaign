@@ -120,8 +120,7 @@ class Generator
             'serial_number'    => $serial,
             'assigned_unit_id' => $unitId,
             'damage_percentage'=> 0.0,
-            'equipment_status' => $status,   // <-- use param
-            'mobility'         => $variant
+            'equipment_status' => $status   // <-- use param
         ];
 
         $this->db->table('equipment')->insert($data);
