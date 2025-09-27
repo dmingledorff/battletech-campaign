@@ -25,15 +25,24 @@ class EquipmentModel extends Model
 
     // Get crew/pilot assigned to this equipment
     public function getCrew($equipmentId) {
-        return $this->db->table('personnel_equipment')
-            ->select('personnel.personnel_id, personnel_equipment.role, 
-                    personnel.first_name, personnel.last_name, 
-                    personnel.grade, personnel.status')
-            ->join('personnel','personnel.personnel_id=personnel_equipment.personnel_id')
-            ->where('personnel_equipment.equipment_id',$equipmentId)
-            ->get()->getResultArray();
+        return $this->db->table('personnel_equipment pe')
+            ->select('
+                p.personnel_id,
+                pe.role,
+                p.first_name,
+                p.last_name,
+                r.full_name AS rank_full,
+                r.abbreviation AS rank_abbr,
+                r.grade,
+                p.status
+            ')
+            ->join('personnel p', 'p.personnel_id = pe.personnel_id')
+            ->join('ranks r', 'p.rank_id = r.id', 'left')
+            ->where('pe.equipment_id', $equipmentId)
+            ->orderBy('r.grade', 'DESC')
+            ->get()
+            ->getResultArray();
     }
-
 
     // List all equipment for a unit
     public function getByUnit($unitId) {

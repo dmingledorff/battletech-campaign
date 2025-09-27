@@ -36,37 +36,43 @@ class UnitModel extends Model
             usort($group, function($a, $b) {
                 return strnatcmp($a['name'], $b['name']);
             });
+        }
+
+        return $children;
     }
 
-    return $children;
-}
-
-    // app/Models/UnitModel.php
-
-    public function getUnit($unit_id)
-    {
+    public function getUnit($unit_id) {
         return $this->db->table('units u')
-            ->select('u.*, p.first_name, p.last_name, p.grade')
+            ->select('u.*, p.first_name, p.last_name, r.full_name AS rank_full, r.abbreviation AS rank_abbr')
             ->join('personnel p', 'u.commander_id = p.personnel_id', 'left')
+            ->join('ranks r', 'p.rank_id = r.id', 'left')
             ->where('u.unit_id', $unit_id)
             ->get()
             ->getRowArray();
     }
 
-    public function getPersonnel($unitId)
-    {
-        return $this->db->table('personnel p')
-            ->select('p.personnel_id, p.first_name, p.last_name, p.grade, p.status, ANY_VALUE(pa.unit_id) as unit_id, MAX(pa.date_assigned) as date_assigned')
-            ->join('personnel_assignments pa', 'pa.personnel_id = p.personnel_id')
-            ->where('pa.unit_id', $unitId)
-            ->where('pa.date_released IS NULL')
-            ->groupBy('p.personnel_id')
-            ->orderBy('p.grade', 'ASC')
-            ->get()
-            ->getResultArray();
+    public function getPersonnel($unitId) {
+    return $this->db->table('personnel p')
+        ->select('
+            p.personnel_id,
+            p.first_name,
+            p.last_name,
+            r.full_name AS rank_full,
+            r.abbreviation AS rank_abbr,
+            r.grade AS rank_grade,
+            p.status,
+            ANY_VALUE(pa.unit_id) as unit_id,
+            MAX(pa.date_assigned) as date_assigned
+        ')
+        ->join('personnel_assignments pa', 'pa.personnel_id = p.personnel_id')
+        ->join('ranks r', 'p.rank_id = r.id', 'left')
+        ->where('pa.unit_id', $unitId)
+        ->where('pa.date_released IS NULL')
+        ->groupBy('p.personnel_id, r.full_name, r.abbreviation, r.grade, p.first_name, p.last_name, p.status')
+        ->orderBy('r.grade', 'DESC') // optional if you add grade column in ranks
+        ->get()
+        ->getResultArray();
     }
-
-
 
     public function getEquipment($unitId) {
         return $this->db->table('equipment')
@@ -80,13 +86,24 @@ class UnitModel extends Model
     // Recursive personnel
     public function getAllPersonnelRecursive($unitId, $children) {
         $personnel = $this->getPersonnel($unitId);
+
         if (isset($children[$unitId])) {
             foreach ($children[$unitId] as $child) {
-                $personnel = array_merge($personnel, $this->getAllPersonnelRecursive($child['unit_id'], $children));
+                $personnel = array_merge(
+                    $personnel,
+                    $this->getAllPersonnelRecursive($child['unit_id'], $children)
+                );
             }
         }
+
+        // Global sort: highest grade first
+        usort($personnel, function ($a, $b) {
+            return $b['rank_grade'] <=> $a['rank_grade'];
+        });
+
         return $personnel;
     }
+
 
     // Recursive equipment
     public function getAllEquipmentRecursive($unitId, $children) {

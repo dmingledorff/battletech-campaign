@@ -16,7 +16,7 @@ class Generator
      *
      * @param string $faction     Faction name (e.g., "Davion")
      * @param string $role        MOS/role (e.g., "MechWarrior", "Infantry", "Tanker")
-     * @param string $grade       Rank (e.g., "Sergeant", "Lieutenant")
+     * @param string $rankName    Rank (full name in ranks table, e.g., "Sergeant", "Lieutenant")
      * @param string $experience  Experience level (e.g., "Green", "Regular", "Veteran", "Elite")
      * @param string $status      Current status (e.g., "Active", "KIA", "Retired")
      * @param string $gender      Male/Female, weighted randomly to Male if not provided
@@ -27,7 +27,7 @@ class Generator
     public function generatePersonnel(
         string $faction = 'Davion',
         string $role = 'MechWarrior',
-        string $grade = 'Private',
+        string $rankName = 'Private',
         string $experience = 'Green',
         string $status = 'Active',
         string $gender = null,
@@ -44,10 +44,21 @@ class Generator
 
         // Pick first + last names with faction fallback
         if ($first == null) $first = $this->pickRandomNameRow($faction, $firstType)->value;
-        if ($last == null) $last  = $this->pickRandomNameRow($faction, 'last')->value;
+        if ($last == null)  $last  = $this->pickRandomNameRow($faction, 'last')->value;
 
         if (!$first || !$last) {
             throw new \RuntimeException("No names available for faction: {$faction}");
+        }
+
+        // Look up rank_id from ranks table
+        $rank = $this->db->table('ranks')
+            ->where('faction', $faction)
+            ->where('full_name', $rankName)
+            ->get(1)
+            ->getRow();
+
+        if (!$rank) {
+            throw new \RuntimeException("No rank found for {$rankName} in faction {$faction}");
         }
 
         // Random callsign only for MechWarriors
@@ -63,7 +74,7 @@ class Generator
         $personnel = [
             'first_name' => $first,
             'last_name'  => $last,
-            'grade'      => $grade,
+            'rank_id'    => $rank->id,     // <-- rank_id FK instead of grade text
             'gender'     => $gender,
             'callsign'   => $callsign->value ?? null,
             'mos'        => $role,
@@ -83,6 +94,7 @@ class Generator
 
         return $id;
     }
+
 
     private function pickRandomNameRow(string $faction, string $nameType): ?object
     {

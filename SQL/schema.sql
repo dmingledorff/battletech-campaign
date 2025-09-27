@@ -14,14 +14,17 @@ DROP TABLE IF EXISTS unit_command_history;
 DROP TABLE IF EXISTS personnel_equipment;
 DROP TABLE IF EXISTS personnel_assignments;
 DROP TABLE IF EXISTS equipment;
--- DROP TABLE IF EXISTS chassis;
+DROP TABLE IF EXISTS chassis;
 DROP TABLE IF EXISTS units;
+DROP TABLE IF EXISTS ranks;
 DROP TABLE IF EXISTS personnel;
 DROP TABLE IF EXISTS locations;
 DROP TABLE IF EXISTS campaigns;
 DROP TABLE IF EXISTS planets;
--- DROP TABLE IF EXISTS name_pool;
--- DROP TABLE IF EXISTS callsign_pool;
+DROP TABLE IF EXISTS name_pool;
+DROP TABLE IF EXISTS callsign_pool;
+DROP TABLE IF EXISTS lance_template_slots;
+DROP TABLE IF EXISTS lance_templates;
 
 -- Core tables
 
@@ -43,13 +46,14 @@ CREATE TABLE personnel (
     personnel_id INT AUTO_INCREMENT PRIMARY KEY,
     first_name VARCHAR(50),
     last_name VARCHAR(50),
-    grade VARCHAR(30),
+    rank_id INT,
     status ENUM('Active','KIA','Retired') DEFAULT 'Active',
     gender ENUM('Male','Female','Other'),
     callsign VARCHAR(50),
     mos VARCHAR(50),  -- Military Occupational Specialty
     experience ENUM('Green','Regular','Veteran','Elite') DEFAULT 'Green',
-    missions INT DEFAULT 0
+    missions INT DEFAULT 0,
+    FOREIGN KEY (rank_id) REFERENCES ranks(id);
 );
 
 CREATE TABLE locations (
@@ -99,8 +103,6 @@ CREATE TABLE chassis (
     tonnage INT,
     speed DECIMAL(5,2)
 );
-
-
 
 CREATE TABLE equipment (
     equipment_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -178,6 +180,14 @@ CREATE TABLE lance_template_slots (
     weight_class ENUM('Light','Medium','Heavy','Assault') NOT NULL,
     is_commander_slot BOOLEAN DEFAULT 0,  -- true if this slot is for the CO
     FOREIGN KEY (template_id) REFERENCES lance_templates(template_id)
+);
+
+CREATE TABLE ranks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    faction VARCHAR(50) NOT NULL,          -- e.g. 'Davion', 'Kurita', 'Generic'
+    full_name VARCHAR(50) NOT NULL,        -- e.g. 'Sergeant'
+    abbreviation VARCHAR(10) NOT NULL,     -- e.g. 'Sgt'
+    grade INT NOT NULL                     -- order of precedence, lower = junior
 );
 
 

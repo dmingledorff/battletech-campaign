@@ -27,7 +27,7 @@
     <p><strong>Commander:</strong>
       <?php if (!empty($unit['commander_id'])): ?>
         <a class="link-info" href="/personnel/<?= esc($unit['commander_id']) ?>">
-          <?= esc($unit['grade']) ?> <?= esc($unit['first_name'].' '.$unit['last_name']) ?>
+          <?= esc($unit['rank_abbr']) ?>. <?= esc($unit['first_name'].' '.$unit['last_name']) ?>
         </a>
       <?php else: ?>
         <span class="text-muted">Unassigned</span>
@@ -70,7 +70,7 @@
       <div class="card-header">Personnel (incl. sub-units)</div>
       <div class="card-body p-0">
         <table class="table table-dark table-sm mb-0">
-          <thead><tr><th>Name</th><th>Grade</th><th>Status</th></tr></thead>
+          <thead><tr><th>Name</th><th>Rank</th><th>Status</th></tr></thead>
           <tbody>
             <?php foreach($personnel as $p): ?>
               <tr>
@@ -79,7 +79,7 @@
                     <?= esc($p['first_name'].' '.$p['last_name']) ?>
                   </a>
                 </td>
-                <td><?= esc($p['grade']) ?></td>
+                <td><?= esc($p['rank_full']) ?></td>
                 <td><?= esc($p['status']) ?></td>
               </tr>
             <?php endforeach; ?>

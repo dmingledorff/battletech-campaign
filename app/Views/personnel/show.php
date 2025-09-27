@@ -5,7 +5,7 @@
       <p><strong>Gender:</strong> <?= esc($person['gender']) ?></p>
       <p><strong>Callsign:</strong> <?= esc($person['callsign']) ?></p>
       <p><strong>Status:</strong> <?= esc($person['status']) ?></p>
-      <p><strong>Grade:</strong> <?= esc($person['grade']) ?></p>
+      <p><strong>Rank:</strong> <?= esc($person['rank_full']) ?></p>
       <p><strong>MOS:</strong> <?= esc($person['mos']) ?></p>
       <p><strong>Experience:</strong> <?= esc($person['experience']) ?></p>
       <p><strong>Missions:</strong> <?= esc($person['missions']) ?></p>
