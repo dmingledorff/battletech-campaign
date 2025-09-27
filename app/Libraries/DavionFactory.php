@@ -97,7 +97,7 @@ class DavionFactory
                 }
 
                 $g->assignPersonnelToUnit($pilot, $lanceId, '3025-01-01');
-                $mechId = $g->generateBattleMech(null, null, $weights[$y], $lanceId);
+                $mechId = $g->generateEquipment('BattleMech', null, null, $weights[$y], $lanceId);
                 $g->assignEquipmentToPersonnel($pilot, $mechId, 'Pilot', '3025-01-01');
             }
         }
@@ -135,7 +135,7 @@ class DavionFactory
                 // Generate APC only if mechanized
                 $apcId = null;
                 if ($mechanized) {
-                    $apcId = $g->generateAPC('Wheeled', $sqdId);
+                    $apcId = $g->generateEquipment('APC', null, 'Wheeled', null, $sqdId);
                 }
 
                 // 6 more Squad members (2 corporals, 4 privates)

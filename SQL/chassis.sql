@@ -40,12 +40,12 @@ INSERT INTO chassis
 ('Warhammer','WHM-6R','BattleMech','Heavy','Brawler',84,28,160,0.70,13.8,70,64.8),
 
 -- Vehicles / APCs
-('Manticore','STD','Vehicle','Heavy','Brawler',60,20,150,0.65,10.0,60,54.0),
-('Bulldog Medium Tank','STD','Vehicle','Heavy','Brawler',50,15,120,0.60,8.0,60,65.0),
+('Manticore','MHT-STD','Vehicle','Heavy','Brawler',60,20,150,0.65,10.0,60,54.0),
+('Bulldog Medium Tank','BMT-STD','Vehicle','Heavy','Brawler',50,15,120,0.60,8.0,60,65.0),
 ('Von Luckner Heavy Tank','VNL-K100','Vehicle','Heavy','Juggernaut',70,25,160,0.70,11.0,75,43.2),
-('Scorpion Light Tank','STD','Vehicle','Light','Scout',35,12,80,0.50,6.8,25,64.8),
-('Vedette Medium Tank','STD','Vehicle','Medium','Brawler',48,15,115,0.55,7.8,50,86.0),
-('Pegasus Scout Hover','STD','Vehicle','Light','Striker',40,14,75,0.50,6.5,35,129.6),
+('Scorpion Light Tank','SLT-STD','Vehicle','Light','Scout',35,12,80,0.50,6.8,25,64.8),
+('Vedette Medium Tank','VMT-STD','Vehicle','Medium','Brawler',48,15,115,0.55,7.8,50,86.0),
+('Pegasus Scout Hover','PSH-STD','Vehicle','Light','Striker',40,14,75,0.50,6.5,35,129.6),
 ('APC','Wheeled','APC','Light','Scout',10,8,60,0.40,4.0,10,97.2),
 ('APC','Tracked','APC','Light','Scout',10,8,65,0.40,4.2,10,97.2),
 ('APC','Hover','APC','Light','Scout',10,8,55,0.40,3.8,10,162.0);

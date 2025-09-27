@@ -95,54 +95,22 @@ class Generator
             ->getRow();
     }  
 
-    public function generateAPC(
-        string $variant = 'Wheeled',
-        int $unitId = null,
-        string $status = 'Active'   // <-- parameterized
+    public function generateEquipment(
+        string $type,                 // 'BattleMech', 'Vehicle', 'APC'
+        string $name = null,          // Optional chassis name
+        string $variant = null,       // Optional variant
+        string $weightClass = null,   // Optional weight class
+        int $unitId = null,           // Optional assigned unit
+        string $status = 'Active'     // Default status
     ) {
-        // Find APC chassis for this variant
-        $apc = $this->db->table('chassis')
-            ->where('type', 'APC')
-            ->where('variant', $variant)
-            ->get(1)
-            ->getRow();
+        // 1. Base query
+        $builder = $this->db->table('chassis')->where('type', $type);
 
-        if (!$apc) {
-            throw new \RuntimeException("No APC chassis found for variant: {$variant}");
-        }
-
-        // Create unique serial
-        $serial = strtoupper($apc->variant) . '_' . str_pad(rand(1, 9999999999), 10, '0', STR_PAD_LEFT);
-
-        // Insert equipment record
-        $data = [
-            'chassis_id'       => $apc->chassis_id,
-            'serial_number'    => $serial,
-            'assigned_unit_id' => $unitId,
-            'damage_percentage'=> 0.0,
-            'equipment_status' => $status   // <-- use param
-        ];
-
-        $this->db->table('equipment')->insert($data);
-
-        return $this->db->insertID();
-    }
-
-    public function generateBattleMech(
-        string $name = null,
-        string $variant = null,
-        string $weightClass = null,
-        int $unitId = null,
-        string $status = 'Active'
-    ) {
-        $builder = $this->db->table('chassis')->where('type', 'BattleMech');
-
-        // Case 4: Variant only
+        // 2. Apply filters
         if ($variant && !$name && !$weightClass) {
             $builder->where('variant', $variant);
         }
 
-        // Case 1 + 2: Name (with or without variant)
         if ($name) {
             $builder->where('name', $name);
             if ($variant) {
@@ -150,32 +118,33 @@ class Generator
             }
         }
 
-        // Case 3: Weight Class only
         if ($weightClass && !$name && !$variant) {
             $builder->where('weight_class', $weightClass);
         }
 
+        // 3. Fetch possible chassis
         $rows = $builder->get()->getResult();
-
         if (!$rows) {
-            throw new \RuntimeException("No chassis found with provided filters (name: {$name}, variant: {$variant}, weight: {$weightClass}).");
+            throw new \RuntimeException(
+                "No chassis found with filters (type: {$type}, name: {$name}, variant: {$variant}, weight: {$weightClass})."
+            );
         }
 
-        // Random pick if multiple results
-        $mech = $rows[array_rand($rows)];
+        // 4. Random selection if multiple matches
+        $chassis = $rows[array_rand($rows)];
 
-        // Serial number
-        $serial = strtoupper($mech->variant) . '_' . str_pad(rand(1, 9999999999), 10, '0', STR_PAD_LEFT);
+        // 5. Serial number
+        $prefix = strtoupper($chassis->variant ?? $chassis->name);
+        $serial = $prefix . '_' . str_pad(rand(1, 9999999999), 10, '0', STR_PAD_LEFT);
 
-        // Insert into equipment
+        // 6. Insert into equipment table
         $data = [
-            'chassis_id'       => $mech->chassis_id,
-            'serial_number'    => $serial,
-            'assigned_unit_id' => $unitId,
-            'damage_percentage'=> 0.0,
-            'equipment_status' => $status
+            'chassis_id'        => $chassis->chassis_id,
+            'serial_number'     => $serial,
+            'assigned_unit_id'  => $unitId,
+            'damage_percentage' => 0.0,
+            'equipment_status'  => $status
         ];
-
         $this->db->table('equipment')->insert($data);
 
         return $this->db->insertID();
