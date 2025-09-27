@@ -16,8 +16,8 @@ DROP TABLE IF EXISTS personnel_assignments;
 DROP TABLE IF EXISTS equipment;
 DROP TABLE IF EXISTS chassis;
 DROP TABLE IF EXISTS units;
-DROP TABLE IF EXISTS ranks;
 DROP TABLE IF EXISTS personnel;
+DROP TABLE IF EXISTS ranks;
 DROP TABLE IF EXISTS locations;
 DROP TABLE IF EXISTS campaigns;
 DROP TABLE IF EXISTS planets;
@@ -42,6 +42,14 @@ CREATE TABLE campaigns (
     theater VARCHAR(100)
 );
 
+CREATE TABLE ranks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    faction VARCHAR(50) NOT NULL,          -- e.g. 'Davion', 'Kurita', 'Generic'
+    full_name VARCHAR(50) NOT NULL,        -- e.g. 'Sergeant'
+    abbreviation VARCHAR(10) NOT NULL,     -- e.g. 'Sgt'
+    grade INT NOT NULL                     -- order of precedence, lower = junior
+);
+
 CREATE TABLE personnel (
     personnel_id INT AUTO_INCREMENT PRIMARY KEY,
     first_name VARCHAR(50),
@@ -53,7 +61,7 @@ CREATE TABLE personnel (
     mos VARCHAR(50),  -- Military Occupational Specialty
     experience ENUM('Green','Regular','Veteran','Elite') DEFAULT 'Green',
     missions INT DEFAULT 0,
-    FOREIGN KEY (rank_id) REFERENCES ranks(id);
+    FOREIGN KEY (rank_id) REFERENCES ranks(id)
 );
 
 CREATE TABLE locations (
@@ -181,39 +189,3 @@ CREATE TABLE lance_template_slots (
     is_commander_slot BOOLEAN DEFAULT 0,  -- true if this slot is for the CO
     FOREIGN KEY (template_id) REFERENCES lance_templates(template_id)
 );
-
-CREATE TABLE ranks (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    faction VARCHAR(50) NOT NULL,          -- e.g. 'Davion', 'Kurita', 'Generic'
-    full_name VARCHAR(50) NOT NULL,        -- e.g. 'Sergeant'
-    abbreviation VARCHAR(10) NOT NULL,     -- e.g. 'Sgt'
-    grade INT NOT NULL                     -- order of precedence, lower = junior
-);
-
-
--- Views
-
-CREATE VIEW unit_summary AS
-SELECT u.unit_id, u.name, u.nickname, u.unit_type,
-       COUNT(DISTINCT pa.personnel_id) AS personnel_count,
-       COUNT(DISTINCT e.equipment_id) AS equipment_count
-FROM units u
-LEFT JOIN personnel_assignments pa ON u.unit_id = pa.unit_id
-LEFT JOIN equipment e ON u.unit_id = e.assigned_unit_id
-GROUP BY u.unit_id;
-
-CREATE VIEW unit_personnel_equipment AS
-SELECT u.unit_id, u.name AS unit_name,
-       p.personnel_id, CONCAT(p.first_name,' ',p.last_name) AS personnel_name, p.grade,
-       e.equipment_id, c.name AS chassis_name, pe.role
-FROM units u
-JOIN personnel_assignments pa ON u.unit_id = pa.unit_id
-JOIN personnel p ON pa.personnel_id = p.personnel_id
-LEFT JOIN personnel_equipment pe ON p.personnel_id = pe.personnel_id
-LEFT JOIN equipment e ON pe.equipment_id = e.equipment_id
-LEFT JOIN chassis c ON e.chassis_id = c.chassis_id;
-
-CREATE VIEW unit_hierarchy_chain AS
-SELECT u.unit_id, u.name, u.unit_type, u.parent_unit_id, pu.name AS parent_name
-FROM units u
-LEFT JOIN units pu ON u.parent_unit_id = pu.unit_id;

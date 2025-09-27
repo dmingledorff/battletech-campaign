@@ -16,3 +16,7 @@ a {
 a:hover {
   color: #aad4ff; /* or another highlight color */
 }
+
+.navbar-brand img {
+    margin-right: 8px;
+}

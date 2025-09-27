@@ -10,7 +10,9 @@
 <body class="bg-dark text-light">
 <nav class="navbar navbar-expand-lg navbar-dark bg-black border-bottom border-secondary mb-3">
   <div class="container-fluid">
-    <a class="navbar-brand fw-bold" href="/">1st Davion Guards</a>
+    <a class="navbar-brand d-flex align-items-center" href="<?= base_url('/') ?>">
+      <img src="<?= base_url('images/logo.png') ?>" alt="Unit Logo" style="height:40px; width:auto;">
+    </a>
   </div>
 </nav>
 <div class="container">

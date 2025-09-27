@@ -39,13 +39,32 @@ INSERT INTO chassis
 ('Thunderbolt','TDR-5S','BattleMech','Heavy','Brawler',78,22,150,0.60,12.9,65,64.8),
 ('Warhammer','WHM-6R','BattleMech','Heavy','Brawler',84,28,160,0.70,13.8,70,64.8),
 
--- Vehicles / APCs
-('Manticore','MHT-STD','Vehicle','Heavy','Brawler',60,20,150,0.65,10.0,60,54.0),
-('Bulldog Medium Tank','BMT-STD','Vehicle','Heavy','Brawler',50,15,120,0.60,8.0,60,65.0),
+-- Light Vehicles
 ('Von Luckner Heavy Tank','VNL-K100','Vehicle','Heavy','Juggernaut',70,25,160,0.70,11.0,75,43.2),
 ('Scorpion Light Tank','SLT-STD','Vehicle','Light','Scout',35,12,80,0.50,6.8,25,64.8),
-('Vedette Medium Tank','VMT-STD','Vehicle','Medium','Brawler',48,15,115,0.55,7.8,50,86.0),
 ('Pegasus Scout Hover','PSH-STD','Vehicle','Light','Striker',40,14,75,0.50,6.5,35,129.6),
+('Striker','Standard','Vehicle','Light','Striker',25,5,70,0.35,5.0,35,86.4),
+('Hunter LST','HNT-STD','Vehicle','Light','Missile Boat',28,8,80,0.40,5.5,35,86.4),
+
+-- Medium Vehicles
+('Goblin','GBL-STD','Vehicle','Medium','Brawler',35,10,90,0.45,6.5,45,64.8),
+('Vedette Medium Tank','VMT-STD','Vehicle','Medium','Brawler',48,15,115,0.55,7.8,50,86.0),
+
+-- Heavy Vehicles
+('Patton','PTN-STD','Vehicle','Heavy','Brawler',40,12,140,0.55,9.0,65,64.8),
+('Rommel','RML-STD','Vehicle','Heavy','Juggernaut',45,15,150,0.60,10.0,65,64.80),
+('Brutus','BTS-STD','Vehicle','Heavy','Juggernaut',50,15,160,0.60,10.5,75,54.0),
+('Manticore','MHT-STD','Vehicle','Heavy','Brawler',60,20,150,0.65,10.0,60,54.0),
+('Bulldog Medium Tank','BMT-STD','Vehicle','Heavy','Brawler',50,15,120,0.60,8.0,60,65.0),
+
+-- Assault Vehicles
+('Schrek','SHK-STD','Vehicle','Assault','Sniper',55,20,170,0.65,11.5,80,54.0),
+('Partisan','PRT-STD','Vehicle','Assault','Sniper',33,9,110,0.45,7.0,45,54.0),
+('Ontos','ONT-STD','Vehicle','Assault','Juggernaut',30,7,75,0.40,5.5,95,97.2),
+('Demolisher','DML-STD','Vehicle','Assault','Juggernaut',45,10,155,0.55,10.0,80,54.0),
+('Behemoth','BHM-STD','Vehicle','Assault','Juggernaut',80,20,200,0.60,12.0,100,32.0),
+
+-- APCs
 ('APC','Wheeled','APC','Light','Scout',10,8,60,0.40,4.0,10,97.2),
 ('APC','Tracked','APC','Light','Scout',10,8,65,0.40,4.2,10,97.2),
 ('APC','Hover','APC','Light','Scout',10,8,55,0.40,3.8,10,162.0);
