@@ -37,7 +37,7 @@ class DavionFactory
 
         $captainId = $generator->generatePersonnel('Davion', 'Vehicle', 'Captain', 'Veteran');
         $dogCompanyId = $unitGenerator->createUnit('Company', 'Dog Company', 'Steel Hounds', 'Federated Suns', $battalionId, $captainId);
-        $this->createLances($generator, $unitGenerator, 3, $dogCompanyId, 'Davion', $captainId, true);
+        $this->createLances($generator, $unitGenerator, 4, $dogCompanyId, 'Davion', $captainId, true);
         
         $captainId = $generator->generatePersonnel('Davion', 'Infantry', 'Captain', 'Veteran');
         $easyCompanyId   = $unitGenerator->createUnit('Company', 'Easy Company', 'Mud Dogs', 'Federated Suns', $battalionId, $captainId);
