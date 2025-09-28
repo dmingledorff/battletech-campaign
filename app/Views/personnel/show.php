@@ -8,6 +8,7 @@
       <p><strong>Rank:</strong> <?= esc($person['rank_full']) ?></p>
       <p><strong>MOS:</strong> <?= esc($person['mos']) ?></p>
       <p><strong>Experience:</strong> <?= esc($person['experience']) ?></p>
+      <p><strong>Morale:</strong> <?= esc($person['morale']) ?>%</p>
       <p><strong>Missions:</strong> <?= esc($person['missions']) ?></p>
   </div>
 </div>

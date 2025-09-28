@@ -15,7 +15,8 @@ class PersonnelModel extends Model
         'callsign',
         'mos',
         'experience',
-        'missions'
+        'missions',
+        'morale'
     ];
 
     protected $returnType = 'array';

@@ -35,6 +35,11 @@
     </p>
     <p><strong>Current Supply:</strong> <?= esc(number_format($unit['current_supply'],2)) ?></p>
     <p><strong>Required Supply:</strong> <?= esc(number_format($unit['required_supply'],2)) ?></p>
+    <?php
+      $morale = $unit['avg_morale'];
+      $color = $morale >= 80 ? 'green' : ($morale >= 50 ? 'orange' : 'red');
+    ?>
+    <p><strong>Average Morale:</strong> <span style="color: <?= $color ?>"><?= number_format($morale, 2) ?>%</span></p>
   </div>
 </div>
 

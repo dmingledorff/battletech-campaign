@@ -60,6 +60,7 @@ CREATE TABLE personnel (
     callsign VARCHAR(50),
     mos VARCHAR(50),  -- Military Occupational Specialty
     experience ENUM('Green','Regular','Veteran','Elite') DEFAULT 'Green',
+    morale DECIMAL(5,2) NOT NULL DEFAULT 100.00,
     missions INT DEFAULT 0,
     FOREIGN KEY (rank_id) REFERENCES ranks(id)
 );

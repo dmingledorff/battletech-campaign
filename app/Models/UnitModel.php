@@ -82,6 +82,26 @@ class UnitModel extends Model
             ->get()->getResultArray();
     }
 
+    public function getUnitMorale($unitId, $children) {
+        // Gather all personnel recursively (this includes children units!)
+        $personnel = $this->getAllPersonnelRecursive($unitId, $children);
+
+        if (empty($personnel)) {
+            return null; // or 0 if you prefer a default
+        }
+
+        $totalMorale = 0;
+        $count       = 0;
+
+        foreach ($personnel as $p) {
+            if (isset($p['morale']) && $p['morale'] !== null) {
+                $totalMorale += (float)$p['morale'];
+                $count++;
+            }
+        }
+
+        return $count > 0 ? ($totalMorale / $count) : null;
+    }
 
     // Recursive personnel
     public function getAllPersonnelRecursive($unitId, $children) {

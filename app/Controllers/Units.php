@@ -22,6 +22,9 @@ class Units extends BaseController
         // Personnel + Equipment (recursive)
         $personnel = $unitModel->getAllPersonnelRecursive($id, $children);
 
+        // Morale roll-up
+        $unit['avg_morale'] = $unitModel->getUnitMorale($id, $children);
+
         // Breadcrumb
         $breadcrumb = $unitModel->getBreadcrumb($id);
 
