@@ -20,7 +20,7 @@ class DavionFactory
         $battCommId = $generator->generatePersonnel('Davion', 'Officer', 'Major', 'Elite');
         $battalionId = $unitGenerator->createUnit('Battalion', '1st Battalion', 'Iron Fists', 'Federated Suns', $regimentId, $battCommId);
         $generator->assignPersonnelToUnit($battCommId, $battalionId, '3025-01-01');
-        $this->createLances($generator, $unitGenerator, 1, $battalionId, 'Davion', $battCommId, 'Command Lance');
+        $this->createLances($generator, $unitGenerator, 1, $battalionId, 'Davion', $battCommId, null, 'Command Lance');
 
         // 3. Create Able Company 1st Battalion
         $captainId = $generator->generatePersonnel('Davion', 'MechWarrior', 'Captain', 'Veteran');
@@ -35,8 +35,9 @@ class DavionFactory
         $charlieCompanyId= $unitGenerator->createUnit('Company', 'Charlie Company', 'Ghosts', 'Federated Suns', $battalionId, $captainId);
         $this->createLances($generator, $unitGenerator, 3, $charlieCompanyId, 'Davion', $captainId);
 
-        //$captainId = $generator->generatePersonnel('Davion', 'Infantry', 'Captain', 'Veteran');
-        //$dogCompanyId = $unitGenerator->createUnit('Company', 'Dog Company', 'Steel Hounds', 'Federated Suns', $battalionId, $captainId);
+        $captainId = $generator->generatePersonnel('Davion', 'Vehicle', 'Captain', 'Veteran');
+        $dogCompanyId = $unitGenerator->createUnit('Company', 'Dog Company', 'Steel Hounds', 'Federated Suns', $battalionId, $captainId);
+        $this->createLances($generator, $unitGenerator, 3, $dogCompanyId, 'Davion', $captainId, true);
         
         $captainId = $generator->generatePersonnel('Davion', 'Infantry', 'Captain', 'Veteran');
         $easyCompanyId   = $unitGenerator->createUnit('Company', 'Easy Company', 'Mud Dogs', 'Federated Suns', $battalionId, $captainId);
@@ -46,59 +47,93 @@ class DavionFactory
         return $regimentId;
     }
 
-    function createLances($g, $ug, $size, $parentId, $allegiance, $compCmdId, $name = null) {
+    function createLances($g, $ug, $size, $parentId, $allegiance, $compCmdId, $vehicle = false, $name = null) {
         for ($x = 1; $x <= $size; $x++) {
             // Ordinal suffix
             $abbreviation = $this->ordinal($x);
 
             // Default lance role
             $lanceRole = 'Line';
+            $mos = $vehicle ? 'Tanker' : 'MechWarrior';
 
             // Weight templates
-            if ($x == 1) {
-                $weights   = ['Heavy', 'Heavy', 'Medium', 'Light'];
-                $rank      = 'Captain';
-                $exp       = 'Veteran';
-                $lanceRole = 'Command';
-            } elseif ($x == 2) {
-                $weights = ['Medium', 'Medium', 'Medium', 'Light'];
-                $rank    = 'Lieutenant';
-                $exp     = 'Regular';
-            } elseif ($x == 3) {
-                $weights = ['Light', 'Light', 'Light', 'Light'];
-                $rank    = 'Lieutenant';
-                $exp     = 'Regular';
+            if (!$vehicle) {
+                if ($x == 1) {
+                    $weights   = ['Heavy', 'Heavy', 'Medium', 'Light'];
+                    $rank      = 'Captain';
+                    $exp       = 'Veteran';
+                    $lanceRole = 'Command';
+                } elseif ($x == 2) {
+                    $weights = ['Medium', 'Medium', 'Medium', 'Light'];
+                    $rank    = 'Lieutenant';
+                    $exp     = 'Regular';
+                } elseif ($x == 3) {
+                    $weights = ['Light', 'Light', 'Light', 'Light'];
+                    $rank    = 'Lieutenant';
+                    $exp     = 'Regular';
+                    $lanceRole = 'Recon';
+                } else {
+                    $weights = ['Medium', 'Medium', 'Medium', 'Medium']; // fallback
+                    $rank    = 'Lieutenant';
+                    $exp     = 'Regular';
+                }
             } else {
-                $weights = ['Medium', 'Medium', 'Medium', 'Medium']; // fallback
-                $rank    = 'Lieutenant';
-                $exp     = 'Regular';
+                if ($x == 1) {
+                    $weights   = ['Heavy', 'Heavy', 'Assault', 'Medium'];
+                    $rank      = 'Captain';
+                    $exp       = 'Veteran';
+                    $lanceRole = 'Command';
+                } elseif ($x == 2) {
+                    $weights = ['Heavy', 'Heavy', 'Medium', 'Medium'];
+                    $rank    = 'Lieutenant';
+                    $exp     = 'Regular';
+                } elseif ($x == 3) {
+                    $weights = ['Heavy', 'Medium', 'Medium', 'Light'];
+                    $rank    = 'Lieutenant';
+                    $exp     = 'Regular';
+                } elseif ($x == 4) {
+                    $weights = ['Light', 'Light', 'Light', 'Light'];
+                    $rank    = 'Lieutenant';
+                    $exp     = 'Regular';
+                    $lanceRole = 'Recon';
+                } else {
+                    $weights = ['Medium', 'Medium', 'Medium', 'Medium']; // fallback
+                    $rank    = 'Lieutenant';
+                    $exp     = 'Regular';
+                }
             }
 
             // Unique lance name per iteration
-            if ($name === null) {
-                $lanceName = $abbreviation . ' Lance';
-            } else {
-                $lanceName = ($x === 1) ? $name : $abbreviation . ' Lance';
-            }
+            $lanceName = ($name && $x === 1) ? $name : $abbreviation . ' Lance';
 
             // Commander
-            if ($x == 1) $coId = $compCmdId;
-            else $coId = $g->generatePersonnel('Davion', 'MechWarrior', $rank, $exp);
+            $coId = ($x === 1) ? $compCmdId : $g->generatePersonnel('Davion', $mos, $rank, $exp);
 
             $lanceId = $ug->createUnit('Lance', $lanceName, null, $allegiance, $parentId, $coId, $lanceRole);
 
             // Slots
-            for ($y = 0; $y < 4; $y++) {
-                if ($y == 0) {
-                    $pilot = $coId; // commander also pilots
+            foreach ($weights as $i => $weight) {
+                if ($i === 0) {
+                    $commander = $coId;
                 } else {
-                    $exp   = (mt_rand(0, 1) === 0) ? 'Regular' : 'Green';
-                    $pilot = $g->generatePersonnel('Davion', 'MechWarrior', 'Sergeant', $exp);
+                    $exp   = (mt_rand(0,1) === 0) ? 'Regular' : 'Green';
+                    $commander = $g->generatePersonnel('Davion', $mos, 'Sergeant', $exp);
                 }
+                $g->assignPersonnelToUnit($commander, $lanceId, '3025-01-01');
 
-                $g->assignPersonnelToUnit($pilot, $lanceId, '3025-01-01');
-                $mechId = $g->generateEquipment('BattleMech', null, null, $weights[$y], $lanceId);
-                $g->assignEquipmentToPersonnel($pilot, $mechId, 'Pilot', '3025-01-01');
+                $equipType = $vehicle ? 'Vehicle' : 'BattleMech';
+                $eqId = $g->generateEquipment($equipType, null, null, $weight, $lanceId);
+                $g->assignEquipmentToPersonnel($commander, $eqId, $vehicle ? 'Commander' : 'Pilot', '3025-01-01');
+
+                if ($vehicle) {
+                    // add driver + gunner per tank
+                    $driver = $g->generatePersonnel('Davion', 'Tanker', 'Corporal', 'Regular');
+                    $gunner = $g->generatePersonnel('Davion', 'Tanker', 'Private', (mt_rand(0,1) ? 'Regular' : 'Green'));
+                    foreach ([['Driver',$driver],['Gunner',$gunner]] as [$role,$crew]) {
+                        $g->assignPersonnelToUnit($crew, $lanceId, '3025-01-01');
+                        $g->assignEquipmentToPersonnel($crew, $eqId, $role, '3025-01-01');
+                    }
+                }
             }
         }
     }
