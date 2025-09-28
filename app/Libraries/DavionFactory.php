@@ -15,11 +15,11 @@ class DavionFactory
         // 1. Create Regiment
         $regimentCommanderId = $generator->generatePersonnel('Davion', 'Officer', 'Marshal', 'Elite', 'Active', 'Male', 'Stephen', 'Davion');
         $regimentId = $unitGenerator->createUnit('Regiment', '1st Davion Guards', 'The Strength of Alexander', 'Federated Suns', null, $regimentCommanderId);
+        $generator->assignPersonnelToUnit($regimentCommanderId, $regimentId, '3025-01-01');
 
         // 2. Create 1st Battalion
         $battCommId = $generator->generatePersonnel('Davion', 'Officer', 'Major', 'Elite');
         $battalionId = $unitGenerator->createUnit('Battalion', '1st Battalion', 'Iron Fists', 'Federated Suns', $regimentId, $battCommId);
-        $generator->assignPersonnelToUnit($battCommId, $battalionId, '3025-01-01');
         $this->createLances($generator, $unitGenerator, 1, $battalionId, 'Davion', $battCommId, null, 'Command Lance');
 
         // 3. Create Able Company 1st Battalion
