@@ -96,8 +96,7 @@ class Generator
     }
 
 
-    private function pickRandomNameRow(string $faction, string $nameType): ?object
-    {
+    private function pickRandomNameRow(string $faction, string $nameType): ?object {
         // Try specific faction + Generic as fallback in one query
         return $this->db->table('name_pool')
             ->whereIn('faction', [$faction, 'Generic'])
@@ -108,55 +107,70 @@ class Generator
     }  
 
     public function generateEquipment(
-        string $type,                 // 'BattleMech', 'Vehicle', 'APC'
-        string $name = null,          // Optional chassis name
-        string $variant = null,       // Optional variant
-        string $weightClass = null,   // Optional weight class
-        int $unitId = null,           // Optional assigned unit
-        string $status = 'Active'     // Default status
+        string $type = null,             // e.g. 'BattleMech','Vehicle'
+        string $name = null,             // optional: chassis name
+        string $variant = null,          // NEW: variant priority filter
+        $battlefieldRole = null,         // can be string or array of roles
+        string $weightClass = null,      // optional: Light/Medium/etc
+        int $unitId = null,
+        string $status = 'Active'
     ) {
-        // 1. Base query
-        $builder = $this->db->table('chassis')->where('type', $type);
+        $builder = $this->db->table('chassis');
 
-        // 2. Apply filters
-        if ($variant && !$name && !$weightClass) {
+        // Always filter on type
+        if ($type) {
+            $builder->where('type', $type);
+        }
+
+        // Case 1: Variant (takes precedence)
+        if ($variant) {
             $builder->where('variant', $variant);
         }
-
-        if ($name) {
+        // Case 2: Name (with or without variant)
+        elseif ($name) {
             $builder->where('name', $name);
-            if ($variant) {
-                $builder->where('variant', $variant);
-            }
         }
 
-        if ($weightClass && !$name && !$variant) {
+        // Case 3: Weight Class
+        if ($weightClass) {
             $builder->where('weight_class', $weightClass);
         }
 
-        // 3. Fetch possible chassis
+        // Case 4: Battlefield Role(s)
+        if ($battlefieldRole) {
+            if (is_array($battlefieldRole)) {
+                $builder->whereIn('battlefield_role', $battlefieldRole);
+            } else {
+                $builder->where('battlefield_role', $battlefieldRole);
+            }
+        }
+
+        // Fetch candidates
         $rows = $builder->get()->getResult();
+
         if (!$rows) {
             throw new \RuntimeException(
-                "No chassis found with filters (type: {$type}, name: {$name}, variant: {$variant}, weight: {$weightClass})."
+                "No chassis found (type={$type}, name={$name}, variant={$variant}, role=" 
+                . (is_array($battlefieldRole) ? implode(',', $battlefieldRole) : $battlefieldRole) 
+                . ", weight={$weightClass})."
             );
         }
 
-        // 4. Random selection if multiple matches
+        // Random pick if multiple results
         $chassis = $rows[array_rand($rows)];
 
-        // 5. Serial number
-        $prefix = strtoupper($chassis->variant ?? $chassis->name);
-        $serial = $prefix . '_' . str_pad(rand(1, 9999999999), 10, '0', STR_PAD_LEFT);
+        // Serial number
+        $serial = strtoupper($chassis->variant ?? $chassis->name) . '_' . str_pad(rand(1, 9999999999), 10, '0', STR_PAD_LEFT);
 
-        // 6. Insert into equipment table
+        // Insert into equipment
         $data = [
-            'chassis_id'        => $chassis->chassis_id,
-            'serial_number'     => $serial,
-            'assigned_unit_id'  => $unitId,
-            'damage_percentage' => 0.0,
-            'equipment_status'  => $status
+            'chassis_id'       => $chassis->chassis_id,
+            'serial_number'    => $serial,
+            'assigned_unit_id' => $unitId,
+            'damage_percentage'=> 0.0,
+            'equipment_status' => $status
         ];
+
         $this->db->table('equipment')->insert($data);
 
         return $this->db->insertID();

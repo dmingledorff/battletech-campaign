@@ -26,6 +26,9 @@ INSERT INTO chassis
 ('Assassin','ASN-21','BattleMech','Medium','Scout',58,18,90,0.35,9.5,40,118.8),
 ('Blackjack','BJ-1','BattleMech','Medium','Sniper',60,20,100,0.55,10.0,45,64.8),
 ('Trebuchet','TBT-5N','BattleMech','Medium','Missile Boat',62,22,105,0.70,11.5,50,86.4),
+('Clint','CLNT-2-3T','BattleMech','Medium','Striker',62,22,90,0.70,9,40,97.0),
+('Clint','CLNT-2-4T','BattleMech','Medium','Sniper',62,22,90,0.70,10,40,97.0),
+('Vulcan','VL-5T','BattleMech','Medium','Striker',60,22,100,0.70,10,40,97.0),
 
 -- Heavy / Assault Mechs
 ('Rifleman','RFL-3N','BattleMech','Heavy','Sniper',72,24,120,0.70,12.5,60,64.8),

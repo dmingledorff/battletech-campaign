@@ -25,6 +25,11 @@ DROP TABLE IF EXISTS name_pool;
 DROP TABLE IF EXISTS callsign_pool;
 DROP TABLE IF EXISTS lance_template_slots;
 DROP TABLE IF EXISTS lance_templates;
+DROP TABLE IF EXISTS toe_slot_roles;
+DROP TABLE IF EXISTS toe_slot_crews;
+DROP TABLE IF EXISTS toe_slots;
+DROP TABLE IF EXISTS toe_subunits;
+DROP TABLE IF EXISTS toe_templates;
 
 -- Core tables
 
@@ -174,19 +179,64 @@ CREATE TABLE callsign_pool (
     used BOOLEAN DEFAULT FALSE
 );
 
-CREATE TABLE lance_templates (
+CREATE TABLE toe_templates (
     template_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,         -- e.g. "Command Lance", "Recon Lance"
-    role VARCHAR(50) NOT NULL,          -- e.g. Command, Recon, Line, Fire Support
-    commander_rank VARCHAR(50) NOT NULL,
-    commander_experience ENUM('Green','Regular','Veteran','Elite') NOT NULL
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    unit_type ENUM('Regiment','Battalion','Company','Lance','Platoon','Squad') NOT NULL,
+    faction VARCHAR(50), -- optional filter
+    era VARCHAR(50) -- optional filter
 );
 
-CREATE TABLE lance_template_slots (
+CREATE TABLE toe_slots (
     slot_id INT AUTO_INCREMENT PRIMARY KEY,
     template_id INT NOT NULL,
-    slot_number INT NOT NULL,             -- 1 to 4
-    weight_class ENUM('Light','Medium','Heavy','Assault') NOT NULL,
-    is_commander_slot BOOLEAN DEFAULT 0,  -- true if this slot is for the CO
-    FOREIGN KEY (template_id) REFERENCES lance_templates(template_id)
+    slot_type ENUM('Personnel','Equipment','SubUnit') NOT NULL,
+    -- Personnel slots
+    mos VARCHAR(50), -- e.g. MechWarrior, Tanker, Infantry
+    min_rank_id INT,
+    max_rank_id INT,
+    -- Equipment slots
+    equipment_type ENUM('BattleMech','Vehicle','APC','Aerospace','Infantry') NULL,
+    weight_class SET('Light','Medium','Heavy','Assault') NULL,
+    battlefield_roles SET(
+        'Ambusher','Brawler','Missile Boat','Juggernaut',
+        'Scout','Sniper','Skirmisher','Striker'
+    ) NULL,
+    crew_size INT DEFAULT 1, -- 1 = Mechs, >1 = Vehicles
+    -- Subunits
+    subunit_template_id INT NULL,
+    is_core BOOLEAN DEFAULT TRUE, -- differentiate core vs detachment
+    FOREIGN KEY (template_id) REFERENCES toe_templates(template_id) ON DELETE CASCADE
 );
+
+CREATE TABLE toe_subunits (
+    subunit_id INT AUTO_INCREMENT PRIMARY KEY,
+    parent_template_id INT NOT NULL,
+    child_template_id INT NOT NULL,
+    quantity INT DEFAULT 1,
+    is_core BOOLEAN DEFAULT TRUE,  -- Core vs Detachment
+    FOREIGN KEY (parent_template_id) REFERENCES toe_templates(template_id) ON DELETE CASCADE,
+    FOREIGN KEY (child_template_id) REFERENCES toe_templates(template_id) ON DELETE CASCADE
+);
+
+CREATE TABLE toe_slot_roles (
+    slot_role_id INT AUTO_INCREMENT PRIMARY KEY,
+    slot_id INT NOT NULL,
+    battlefield_role ENUM(
+        'Ambusher','Brawler','Missile Boat','Juggernaut',
+        'Scout','Sniper','Skirmisher','Striker'
+    ) NOT NULL,
+    FOREIGN KEY (slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
+);
+
+CREATE TABLE toe_slot_crews (
+    crew_id INT AUTO_INCREMENT PRIMARY KEY,
+    equipment_slot_id INT NOT NULL,
+    personnel_slot_id INT NOT NULL,
+    crew_role ENUM('Commander','Driver','Gunner','Loader','Tech') NOT NULL,
+    FOREIGN KEY (equipment_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE,
+    FOREIGN KEY (personnel_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
+);
+
+
