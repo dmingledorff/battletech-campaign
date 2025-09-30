@@ -184,6 +184,10 @@ CREATE TABLE toe_templates (
     name VARCHAR(100) NOT NULL,
     description TEXT,
     unit_type ENUM('Regiment','Battalion','Company','Lance','Platoon','Squad') NOT NULL,
+    battlefield_roles ENUM(
+        'Command','Battle','Striker','Pursuit',
+        'Fire','Security','Support','Assault', 'Recon', 'Urban Combat'
+    ) NULL,
     faction VARCHAR(50), -- optional filter
     era VARCHAR(50) -- optional filter
 );
@@ -199,10 +203,6 @@ CREATE TABLE toe_slots (
     -- Equipment slots
     equipment_type ENUM('BattleMech','Vehicle','APC','Aerospace','Infantry') NULL,
     weight_class SET('Light','Medium','Heavy','Assault') NULL,
-    battlefield_roles SET(
-        'Ambusher','Brawler','Missile Boat','Juggernaut',
-        'Scout','Sniper','Skirmisher','Striker'
-    ) NULL,
     crew_size INT DEFAULT 1, -- 1 = Mechs, >1 = Vehicles
     -- Subunits
     subunit_template_id INT NULL,
