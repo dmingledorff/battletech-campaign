@@ -207,7 +207,9 @@ CREATE TABLE toe_slots (
     -- Subunits
     subunit_template_id INT NULL,
     is_core BOOLEAN DEFAULT TRUE, -- differentiate core vs detachment
-    FOREIGN KEY (template_id) REFERENCES toe_templates(template_id) ON DELETE CASCADE
+    FOREIGN KEY (template_id) REFERENCES toe_templates(template_id) ON DELETE CASCADE,
+    FOREIGN KEY (min_rank_id) REFERENCES ranks(id) ON DELETE SET NULL,
+    FOREIGN KEY (max_rank_id) REFERENCES ranks(id) ON DELETE SET NULL
 );
 
 CREATE TABLE toe_subunits (
@@ -216,6 +218,7 @@ CREATE TABLE toe_subunits (
     child_template_id INT NOT NULL,
     quantity INT DEFAULT 1,
     is_core BOOLEAN DEFAULT TRUE,  -- Core vs Detachment
+    is_command BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (parent_template_id) REFERENCES toe_templates(template_id) ON DELETE CASCADE,
     FOREIGN KEY (child_template_id) REFERENCES toe_templates(template_id) ON DELETE CASCADE
 );
@@ -234,7 +237,7 @@ CREATE TABLE toe_slot_crews (
     crew_id INT AUTO_INCREMENT PRIMARY KEY,
     equipment_slot_id INT NOT NULL,
     personnel_slot_id INT NOT NULL,
-    crew_role ENUM('Commander','Driver','Gunner','Loader','Tech') NOT NULL,
+    crew_role ENUM('Commander','Driver','Gunner','Loader','Tech', 'Pilot', 'Dismount') NOT NULL,
     FOREIGN KEY (equipment_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE,
     FOREIGN KEY (personnel_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
 );

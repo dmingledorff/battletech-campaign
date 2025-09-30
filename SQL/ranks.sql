@@ -1,16 +1,16 @@
 INSERT INTO ranks (faction, full_name, abbreviation, grade) VALUES
-('Davion', 'Private',           'Pvt.', 1),
-('Davion', 'Corporal',          'Cpl.', 2),
-('Davion', 'Sergeant',          'Sgt.', 3),
-('Davion', 'Leftenant',         'Lt.',  4),
-('Davion', 'Captain',           'Cpt.', 5),
-('Davion', 'Major',             'Maj.', 6),
-('Davion', 'Leftenant Colonel', 'Lt. Col', 7),
-('Davion', 'Colonel',           'Col.', 8),
-('Davion', 'Leftenant General', 'Lt. Gen.', 9),
-('Davion', 'Major General',     'Maj. Gen.', 10),
-('Davion', 'General',           'Gen.', 11),
-('Davion', 'Marshal',           'Msh.', 12),
+('Davion', 'Private',           'Pvt', 1),
+('Davion', 'Corporal',          'Cpl', 2),
+('Davion', 'Sergeant',          'Sgt', 3),
+('Davion', 'Leftenant',         'Lt',  4),
+('Davion', 'Captain',           'Cpt', 5),
+('Davion', 'Major',             'Maj', 6),
+('Davion', 'Leftenant Colonel', 'Lt.Col', 7),
+('Davion', 'Colonel',           'Col', 8),
+('Davion', 'Leftenant General', 'Lt Gen', 9),
+('Davion', 'Major General',     'Maj Gen', 10),
+('Davion', 'General',           'Gen', 11),
+('Davion', 'Marshal',           'Msh', 12),
 ('Davion', 'Field Marshal',     'FN', 13);
 
 INSERT INTO ranks (faction, full_name, abbreviation, grade) VALUES

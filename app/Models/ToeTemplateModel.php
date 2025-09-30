@@ -28,7 +28,7 @@ class ToeTemplateModel extends Model
             throw new \RuntimeException("Template ID {$templateId} not found");
         }
 
-        $template['slots'] = $this->getSlots($templateId);
+        $template['slots']    = $this->getSlots($templateId);
         $template['subunits'] = $this->getSubunits($templateId);
 
         return $template;
@@ -42,7 +42,7 @@ class ToeTemplateModel extends Model
             ->getResultArray();
 
         foreach ($slots as &$slot) {
-            // Roles
+            // Battlefield roles
             $roles = $this->db->table('toe_slot_roles')
                 ->select('battlefield_role')
                 ->where('slot_id', $slot['slot_id'])
@@ -50,14 +50,8 @@ class ToeTemplateModel extends Model
                 ->getResultArray();
             $slot['roles'] = array_map(fn($r) => $r['battlefield_role'], $roles);
 
-            // Crew
-            $crew = $this->db->table('toe_slot_crews c')
-                ->select('c.crew_role, ps.mos')
-                ->join('toe_slots ps', 'ps.slot_id = c.personnel_slot_id')
-                ->where('c.equipment_slot_id', $slot['slot_id'])
-                ->get()
-                ->getResultArray();
-            $slot['crew'] = $crew;
+            // Do NOT preload crew here → handled per equipment slot in TemplateGenerator
+            $slot['crew'] = [];
         }
 
         return $slots;
@@ -76,19 +70,13 @@ class ToeTemplateModel extends Model
         return $subs;
     }
 
-    public function getRolesForSlot($slotId) {
-        return $this->db->table('toe_slot_roles')
-            ->select('battlefield_role')
-            ->where('slot_id', $slotId)
+    public function getCrewForSlot($slotId): array {
+        return $this->db->table('toe_slot_crews c')
+            ->select('c.equipment_slot_id, c.personnel_slot_id, c.crew_role, ps.mos, ps.min_rank_id, ps.max_rank_id')
+            ->join('toe_slots ps', 'ps.slot_id = c.personnel_slot_id', 'left')
+            ->where('c.equipment_slot_id', $slotId)
             ->get()
             ->getResultArray();
     }
 
-    public function getCrewForSlot($slotId) {
-        return $this->db->table('toe_slot_crews c')
-            ->select('c.*, s.mos')
-            ->join('toe_slots s', 's.slot_id = c.personnel_slot_id')
-            ->where('c.equipment_slot_id', $slotId)
-            ->get()->getResultArray();
-    }
 }

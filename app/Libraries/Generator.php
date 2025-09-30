@@ -16,7 +16,7 @@ class Generator
      *
      * @param string $faction     Faction name (e.g., "Davion")
      * @param string $role        MOS/role (e.g., "MechWarrior", "Infantry", "Tanker")
-     * @param string $rankName    Rank (full name in ranks table, e.g., "Sergeant", "Lieutenant")
+     * @param string $rank        ID of rank in ranks table
      * @param string $experience  Experience level (e.g., "Green", "Regular", "Veteran", "Elite")
      * @param string $status      Current status (e.g., "Active", "KIA", "Retired")
      * @param string $gender      Male/Female, weighted randomly to Male if not provided
@@ -27,7 +27,7 @@ class Generator
     public function generatePersonnel(
         string $faction = 'Davion',
         string $role = 'MechWarrior',
-        string $rankName = 'Private',
+        int $rank = 1,
         string $experience = 'Green',
         string $status = 'Active',
         string $gender = null,
@@ -50,17 +50,6 @@ class Generator
             throw new \RuntimeException("No names available for faction: {$faction}");
         }
 
-        // Look up rank_id from ranks table
-        $rank = $this->db->table('ranks')
-            ->where('faction', $faction)
-            ->where('full_name', $rankName)
-            ->get(1)
-            ->getRow();
-
-        if (!$rank) {
-            throw new \RuntimeException("No rank found for {$rankName} in faction {$faction}");
-        }
-
         // Random callsign only for MechWarriors
         $callsign = null;
         if ($role === 'MechWarrior') {
@@ -74,7 +63,7 @@ class Generator
         $personnel = [
             'first_name' => $first,
             'last_name'  => $last,
-            'rank_id'    => $rank->id,     // <-- rank_id FK instead of grade text
+            'rank_id'    => $rank,
             'gender'     => $gender,
             'callsign'   => $callsign->value ?? null,
             'mos'        => $role,
