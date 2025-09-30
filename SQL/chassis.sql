@@ -40,10 +40,10 @@ INSERT INTO chassis
 ('Marauder','MAD-3R','BattleMech','Heavy','Sniper',82,26,155,0.60,13.6,75,64.8),
 ('Orion','ON1-K','BattleMech','Heavy','Brawler',80,25,160,0.55,13.2,75,64.8),
 ('Thunderbolt','TDR-5S','BattleMech','Heavy','Brawler',78,22,150,0.60,12.9,65,64.8),
-('Warhammer','WHM-6R','BattleMech','Heavy','Brawler',84,28,160,0.70,13.8,70,64.8),
+('Warhammer','WHM-6R','BattleMech','Heavy','Brawler',84,28,145,0.70,13.8,70,64.8),
+('Black Knight','BL-6-KNT','BattleMech','Heavy','Brawler',84,28,150,0.10,8.0,75,64.8),
 
 -- Light Vehicles
-('Von Luckner Heavy Tank','VNL-K100','Vehicle','Heavy','Juggernaut',70,25,160,0.70,11.0,75,43.2),
 ('Scorpion Light Tank','SLT-STD','Vehicle','Light','Scout',35,12,80,0.50,6.8,25,64.8),
 ('Pegasus Scout Hover','PSH-STD','Vehicle','Light','Striker',40,14,75,0.50,6.5,35,129.6),
 ('Striker','Standard','Vehicle','Light','Striker',25,5,70,0.35,5.0,35,86.4),
@@ -54,6 +54,7 @@ INSERT INTO chassis
 ('Vedette Medium Tank','VMT-STD','Vehicle','Medium','Brawler',48,15,115,0.55,7.8,50,86.0),
 
 -- Heavy Vehicles
+('Von Luckner Heavy Tank','VNL-K100','Vehicle','Heavy','Juggernaut',70,25,160,0.70,11.0,75,54.0),
 ('Patton','PTN-STD','Vehicle','Heavy','Brawler',40,12,140,0.55,9.0,65,64.8),
 ('Rommel','RML-STD','Vehicle','Heavy','Juggernaut',45,15,150,0.60,10.0,65,64.80),
 ('Brutus','BTS-STD','Vehicle','Heavy','Juggernaut',50,15,160,0.60,10.5,75,54.0),

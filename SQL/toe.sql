@@ -1,6 +1,7 @@
 -- ================================
 -- Rank Variables
 -- ================================
+SET @major     = (SELECT id FROM ranks WHERE full_name = 'Major'   LIMIT 1);
 SET @captain   = (SELECT id FROM ranks WHERE full_name = 'Captain'   LIMIT 1);
 SET @lieutenant= (SELECT id FROM ranks WHERE full_name = 'Leftenant' LIMIT 1);
 SET @sergeant  = (SELECT id FROM ranks WHERE full_name = 'Sergeant'  LIMIT 1);
@@ -8,11 +9,64 @@ SET @corporal  = (SELECT id FROM ranks WHERE full_name = 'Corporal'  LIMIT 1);
 SET @private   = (SELECT id FROM ranks WHERE full_name = 'Private'   LIMIT 1);
 
 -- ================================
+-- 1st Davion Guards Regiment
+-- ================================
+INSERT INTO toe_templates (name, description, unit_type)
+VALUES ('1st Davion Guards', 'A medium BattleMech regiment with support.', 'Regiment');
+SET @regiment_id = LAST_INSERT_ID();
+
+-- ================================
 -- Combined Arms Battalion
 -- ================================
 INSERT INTO toe_templates (name, description, unit_type)
 VALUES ('Combined Arms Battalion', 'A balanced battalion with mech, vehicle, and infantry companies', 'Battalion');
 SET @battalion_id = LAST_INSERT_ID();
+
+INSERT INTO toe_subunits (parent_template_id, child_template_id, quantity, is_core)
+VALUES (@regiment_id, @battalion_id, 1, TRUE);
+
+-- Command Lance
+INSERT INTO toe_templates (name, description, unit_type)
+VALUES ('Command Lance', 'Heavy lance to support the battalion commander', 'Lance');
+SET @command_lance_id = LAST_INSERT_ID();
+
+-- Equipment
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@command_lance_id, 'Equipment', 'BattleMech', 'Heavy'); SET @c_eq1 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@command_lance_id, 'Equipment', 'BattleMech', 'Heavy'); SET @c_eq2 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@command_lance_id, 'Equipment', 'BattleMech', 'Heavy');  SET @c_eq3 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@command_lance_id, 'Equipment', 'BattleMech', 'Medium');  SET @c_eq4 = LAST_INSERT_ID();
+
+-- Equipment roles
+INSERT INTO toe_slot_roles (slot_id, battlefield_role) VALUES
+(@c_eq1, 'Brawler'), (@c_eq1, 'Juggernaut'),
+(@c_eq2, 'Brawler'), (@c_eq2, 'Juggernaut'),
+(@c_eq3, 'Brawler'), (@c_eq3, 'Juggernaut'),
+(@c_eq4, 'Brawler'), (@c_eq4, 'Juggernaut');
+
+-- Personnel (Major + 3 Sergeants)
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@command_lance_id, 'Personnel', 'MechWarrior', @lieutenant, @major);      SET @c1 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@command_lance_id, 'Personnel', 'MechWarrior', @sergeant, @sergeant);     SET @c2 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@command_lance_id, 'Personnel', 'MechWarrior', @sergeant, @sergeant);     SET @c3 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@command_lance_id, 'Personnel', 'MechWarrior', @sergeant, @sergeant);     SET @c4 = LAST_INSERT_ID();
+
+-- Crew
+INSERT INTO toe_slot_crews (equipment_slot_id, personnel_slot_id, crew_role) VALUES
+(@c_eq1, @c1, 'Pilot'),
+(@c_eq2, @c2, 'Pilot'),
+(@c_eq3, @c3, 'Pilot'),
+(@c_eq4, @c4, 'Pilot');
+
+-- Attach lances to battalion
+INSERT INTO toe_subunits (parent_template_id, child_template_id, quantity, is_core)
+VALUES (@battalion_id, @command_lance_id, 1, TRUE);
 
 -- ================================
 -- Striker Company
@@ -38,6 +92,13 @@ INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
 VALUES (@striker_lance_id, 'Equipment', 'BattleMech', 'Medium'); SET @eq3 = LAST_INSERT_ID();
 INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
 VALUES (@striker_lance_id, 'Equipment', 'BattleMech', 'Light');  SET @eq4 = LAST_INSERT_ID();
+
+-- Equipment roles
+INSERT INTO toe_slot_roles (slot_id, battlefield_role) VALUES
+(@eq1, 'Skirmisher'), (@eq1, 'Striker'),
+(@eq2, 'Skirmisher'), (@eq2, 'Striker'),
+(@eq3, 'Skirmisher'), (@eq3, 'Striker'),
+(@eq4, 'Skirmisher'), (@eq4, 'Striker');
 
 -- Personnel (Lieutenant + 3 Sergeants)
 INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
@@ -70,6 +131,13 @@ INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
 VALUES (@fire_lance_id, 'Equipment', 'BattleMech', 'Heavy');  SET @eq7 = LAST_INSERT_ID();
 INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
 VALUES (@fire_lance_id, 'Equipment', 'BattleMech', 'Heavy');  SET @eq8 = LAST_INSERT_ID();
+
+-- Equipment roles
+INSERT INTO toe_slot_roles (slot_id, battlefield_role) VALUES
+(@eq5, 'Sniper'), (@eq5, 'Missile Boat'),
+(@eq6, 'Sniper'), (@eq6, 'Missile Boat'),
+(@eq7, 'Sniper'), (@eq7, 'Missile Boat'),
+(@eq8, 'Sniper'), (@eq8, 'Missile Boat');
 
 -- Personnel (Lieutenant + 3 Sergeants)
 INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
@@ -131,7 +199,7 @@ INSERT INTO toe_slot_crews (equipment_slot_id, personnel_slot_id, crew_role) VAL
 -- Vehicle 2
 -- ================================
 INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
-VALUES (@vehicle_lance_id, 'Equipment', 'Vehicle', 'Heavy'); 
+VALUES (@vehicle_lance_id, 'Equipment', 'Vehicle', 'Medium'); 
 SET @v2_eq = LAST_INSERT_ID();
 
 INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
@@ -169,7 +237,7 @@ INSERT INTO toe_slot_crews (equipment_slot_id, personnel_slot_id, crew_role) VAL
 -- Vehicle 4
 -- ================================
 INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
-VALUES (@vehicle_lance_id, 'Equipment', 'Vehicle', 'Medium'); 
+VALUES (@vehicle_lance_id, 'Equipment', 'Vehicle', 'Light'); 
 SET @v4_eq = LAST_INSERT_ID();
 
 INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
