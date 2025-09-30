@@ -84,7 +84,10 @@ CREATE TABLE units (
     nickname VARCHAR(100),
     current_supply DECIMAL(10,2) DEFAULT 0,
     unit_type ENUM('Regiment','Battalion','Company','Lance','InfantryPlatoon','Squad') NOT NULL,
-    role VARCHAR(50) DEFAULT NULL,
+    role ENUM(
+        'Command','Battle','Striker','Pursuit',
+        'Fire','Security','Support','Assault', 'Recon', 'Urban Combat'
+    ) NULL,
     allegiance VARCHAR(100),
     parent_unit_id INT,
     commander_id INT,
@@ -184,7 +187,7 @@ CREATE TABLE toe_templates (
     name VARCHAR(100) NOT NULL,
     description TEXT,
     unit_type ENUM('Regiment','Battalion','Company','Lance','Platoon','Squad') NOT NULL,
-    battlefield_roles ENUM(
+    role ENUM(
         'Command','Battle','Striker','Pursuit',
         'Fire','Security','Support','Assault', 'Recon', 'Urban Combat'
     ) NULL,
