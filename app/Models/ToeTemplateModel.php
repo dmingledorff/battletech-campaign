@@ -79,4 +79,17 @@ class ToeTemplateModel extends Model
             ->getResultArray();
     }
 
+    public function getAlphabet(): array {
+        return [
+            'Able', 'Baker', 'Charlie', 'Dog',
+            'Easy', 'Fox', 'George', 'How',
+            'Item', 'Jig', 'King', 'Love',
+            'Mike', 'Nan', 'Oboe', 'Peter',
+            'Queen', 'Roger', 'Sugar', 'Tare',
+            'Uncle', 'Victor', 'William', 'Xray',
+            'Yoke', 'Zebra'
+        ];
+}
+
+
 }

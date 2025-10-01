@@ -17,7 +17,6 @@ DROP TABLE IF EXISTS equipment;
 DROP TABLE IF EXISTS chassis;
 DROP TABLE IF EXISTS units;
 DROP TABLE IF EXISTS personnel;
-DROP TABLE IF EXISTS ranks;
 DROP TABLE IF EXISTS locations;
 DROP TABLE IF EXISTS campaigns;
 DROP TABLE IF EXISTS planets;
@@ -30,6 +29,7 @@ DROP TABLE IF EXISTS toe_slot_crews;
 DROP TABLE IF EXISTS toe_slots;
 DROP TABLE IF EXISTS toe_subunits;
 DROP TABLE IF EXISTS toe_templates;
+DROP TABLE IF EXISTS ranks;
 
 -- Core tables
 
