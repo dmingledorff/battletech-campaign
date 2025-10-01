@@ -22,7 +22,7 @@ class TestGen extends BaseController
         }
         $template = $toeModel->getTemplate($templateId);
         $templateGen = new TemplateGenerator();
-        $unitId = $templateGen->generateFromTemplate($template, null, 'Davion');
+        $unitId = $templateGen->generateFromTemplate($template);
         return "{$name} created with ID: {$unitId}";
         //return "1st Davion Guards Regiment created with ID: " . $regimentId;
     }

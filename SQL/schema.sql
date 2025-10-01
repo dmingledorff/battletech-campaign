@@ -83,7 +83,7 @@ CREATE TABLE units (
     name VARCHAR(100) NOT NULL,
     nickname VARCHAR(100),
     current_supply DECIMAL(10,2) DEFAULT 0,
-    unit_type ENUM('Regiment','Battalion','Company','Lance','InfantryPlatoon','Squad') NOT NULL,
+    unit_type ENUM('Regiment','Battalion','Company','Lance','Platoon','Squad') NOT NULL,
     role ENUM(
         'Command','Battle','Striker','Pursuit',
         'Fire','Security','Support','Assault', 'Recon', 'Urban Combat'
@@ -189,7 +189,7 @@ CREATE TABLE toe_templates (
     unit_type ENUM('Regiment','Battalion','Company','Lance','Platoon','Squad') NOT NULL,
     role ENUM(
         'Command','Battle','Striker','Pursuit',
-        'Fire','Security','Support','Assault', 'Recon', 'Urban Combat'
+        'Fire','Security','Support','Assault', 'Recon', 'Urban Combat', 'Infantry'
     ) NULL,
     faction VARCHAR(50), -- optional filter
     era VARCHAR(50) -- optional filter

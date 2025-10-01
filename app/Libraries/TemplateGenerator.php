@@ -1,6 +1,7 @@
 <?php namespace App\Libraries;
 
 use App\Models\ToeTemplateModel;
+use App\Models\RankModel;
 
 class TemplateGenerator
 {
@@ -8,6 +9,7 @@ class TemplateGenerator
     protected $unitGenerator;
     protected $toeModel;
     protected $alphabet;
+    protected $rankCache = [];
 
     // counters scoped per parentId
     protected $counters = [];
@@ -18,19 +20,35 @@ class TemplateGenerator
         $this->unitGenerator = new UnitGenerator(db_connect());
         $this->toeModel      = new ToeTemplateModel();
         $this->alphabet      = $this->toeModel->getAlphabet();
+
+        // Preload ranks for all factions
+        $rankModel = new RankModel();
+        $allRanks = $rankModel->findAll();
+
+        foreach ($allRanks as $rank) {
+            $faction = $rank['faction'];
+            $this->rankCache[$faction]['byName'][$rank['full_name']] = $rank['id'];
+            $this->rankCache[$faction]['byId'][$rank['id']]          = $rank;
+        }
     }
 
-    public function generateFromTemplate(array $template, $parentUnitId = null, $allegiance = 'Davion')
-    {
+    public function getRankIdByName(string $name, string $faction = 'Davion'): ?int {
+        return $this->rankCache[$faction]['byName'][$name] ?? null;
+    }
+
+    public function getRankById(int $id, string $faction = 'Davion'): ?array {
+        return $this->rankCache[$faction]['byId'][$id] ?? null;
+    }
+
+    public function generateFromTemplate(array $template, $parentUnitId = null, $allegiance = 'Davion') {
         $commanderId = null;
         $unitType    = $template['unit_type'];
-
+        // Resolve a scoped counter for this parent
+        $num = $this->getNextCounter($parentUnitId ?? 0, $unitType);
         if ($unitType == 'Regiment') {
             $unitName = '1st Davion Guards';
         }
         else {
-            // Resolve a scoped counter for this parent
-            $num = $this->getNextCounter($parentUnitId ?? 0, $unitType);
             // Generate name
             $unitName = $this->generateUnitName($unitType, $template, $num, $parentUnitId);
         }
@@ -42,7 +60,8 @@ class TemplateGenerator
             $template['nickname'] ?? null,
             $allegiance,
             $parentUnitId,
-            $commanderId
+            null,
+            $template['role'] ?? null
         );
 
         // Pass A: personnel slots
@@ -59,6 +78,14 @@ class TemplateGenerator
                 $personBySlotId[(int)$slot['slot_id']] = $pid;
             }
         }
+
+        $this->assignCommanders(
+            $unitId,
+            $template,
+            $personBySlotId,
+            $parentUnitId,
+            $num
+        );
 
         // Pass B: equipment slots + crew
         foreach ($template['slots'] as $slot) {
@@ -110,12 +137,118 @@ class TemplateGenerator
     }
 
     /**
+     * Assign commanders to units based on type, role, and sequence number.
+     *
+     * @param int   $unitId          The generated unit ID
+     * @param array $template        The template array for this unit
+     * @param array $personBySlotId  Map of slot_id → personnel_id
+     * @param int   $parentUnitId    Parent unit ID
+     * @param int   $sequenceNum     Sequence number (1 = first unit of type under parent)
+     */
+    private function assignCommanders($unitId, $template, $personBySlotId, $parentUnitId, $sequenceNum) {
+        $type = $template['unit_type'];
+        $role = $template['role'] ?? null;
+
+        // Rank IDs (from cache)
+        $ltRankId  = $this->getRankIdByName('Leftenant');
+        $sgtRankId = $this->getRankIdByName('Sergeant');
+        $cptRankId = $this->getRankIdByName('Captain');
+        $majRankId = $this->getRankIdByName('Major');
+        $mshRankId = $this->getRankIdByName('Marshal');
+
+        // Get parent type
+        if ($parentUnitId) {
+            $parentUnit = $this->unitGenerator->getUnitById($parentUnitId);
+            $parentType = $parentUnit['unit_type'] ?? null;
+        }
+
+        // --- Command Lance (child of Battalion) ---
+        if ($type === 'Lance' && $parentType === 'Battalion' && $role === 'Command') {
+            $ltSlot = $this->toeModel->findSlotByRank($template['template_id'], $ltRankId);
+            $commanderId = $personBySlotId[$ltSlot] ?? null;
+
+            if ($commanderId) {
+                $this->generator->promotePersonnel($commanderId, $majRankId);
+                $this->unitGenerator->assignCommander($unitId, $commanderId);
+                $this->unitGenerator->assignCommander($parentUnitId, $commanderId);
+            }
+        }
+
+        // --- Regular Lance (child of Company) ---
+        if ($type === 'Lance' && $parentType === 'Company') {
+            $ltSlot = $this->toeModel->findSlotByRank($template['template_id'], $ltRankId);
+            $commanderId = $personBySlotId[$ltSlot] ?? null;
+
+            if ($commanderId) {
+                if ($sequenceNum === 1) {
+                    // First lance → promote to Captain and also company commander
+                    $this->generator->promotePersonnel($commanderId, $cptRankId);
+                    $this->unitGenerator->assignCommander($parentUnitId, $commanderId);
+                }
+                $this->unitGenerator->assignCommander($unitId, $commanderId);
+            }
+        }
+
+        // --- Platoon commander ---
+        if ($type === 'Platoon') {
+            $ltSlot = $this->toeModel->findSlotByRank($template['template_id'], $ltRankId);
+            if ($ltSlot && isset($personBySlotId[$ltSlot])) {
+                $this->unitGenerator->assignCommander($unitId, $personBySlotId[$ltSlot]);
+            }
+        }
+
+        // --- Squad leader ---
+        if ($type === 'Squad') {
+            $sgtSlot = $this->toeModel->findSlotByRank($template['template_id'], $sgtRankId);
+            if ($sgtSlot && isset($personBySlotId[$sgtSlot])) {
+                $this->unitGenerator->assignCommander($unitId, $personBySlotId[$sgtSlot]);
+            }
+        }
+
+        // --- Infantry Company commander ---
+        if ($type === 'Company' && $role === 'Infantry') {
+            $cptSlot = $this->toeModel->findSlotByRank($template['template_id'], $cptRankId);
+            if ($cptSlot && isset($personBySlotId[$cptSlot])) {
+                $this->unitGenerator->assignCommander($unitId, $personBySlotId[$cptSlot]);
+            }
+        }
+
+        // --- Regiment commander ---
+        if ($type === 'Regiment') {
+            $mshSlot = $this->toeModel->findSlotByRank($template['template_id'], $mshRankId);
+            if ($mshSlot && isset($personBySlotId[$mshSlot])) {
+                $this->unitGenerator->assignCommander($unitId, $personBySlotId[$mshSlot]);
+            }
+        }
+    }
+
+    /**
+     * Utility: check if parent unit is a Company
+     */
+    private function isChildOfCompany(?int $parentUnitId): bool
+    {
+        if (!$parentUnitId) return false;
+        $parent = $this->unitGenerator->getUnitById($parentUnitId);
+        return $parent && $parent['unit_type'] === 'Company';
+    }
+
+    /**
+     * Utility: check if this is the Command Lance under a Battalion
+     */
+    private function isCommandLance(array $template, ?int $parentUnitId): bool
+    {
+        if (!$parentUnitId) return false;
+        $parent = $this->unitGenerator->getUnitById($parentUnitId);
+        return $parent && $parent['unit_type'] === 'Battalion' && ($template['role'] ?? null) === 'Command';
+    }
+
+    /**
      * Returns next counter for unitType under a specific parent.
      */
-    private function getNextCounter($parentId, $unitType)
-    {
+    private function getNextCounter($parentId, $unitType) {
         if (!isset($this->counters[$parentId])) {
             $this->counters[$parentId] = [
+                'Regiment'  => 1,
                 'Battalion' => 1,
                 'Company'   => 1,
                 'Lance'     => 1,
@@ -133,8 +266,7 @@ class TemplateGenerator
     /**
      * Generate names based on unitType + scoped counter.
      */
-    private function generateUnitName($unitType, $template, $num, $parentUnitId)
-    {
+    private function generateUnitName($unitType, $template, $num, $parentUnitId) {
         switch ($unitType) {
             case 'Battalion':
                 return $this->ordinal($num) . " Battalion";

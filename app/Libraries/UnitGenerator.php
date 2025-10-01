@@ -82,4 +82,18 @@ class UnitGenerator
         $this->db->table('units')->delete(['unit_id' => $unitId]);
     }
 
+    public function assignCommander(int $unitId, int $personnelId): void {
+        $this->db->table('units')
+            ->where('unit_id', $unitId)
+            ->update(['commander_id' => $personnelId]);
+    }
+
+    public function getUnitById(int $unitId): ?array {
+        return $this->db->table('units')
+            ->where('unit_id', $unitId)
+            ->get()
+            ->getRowArray();
+    }
+
+
 }

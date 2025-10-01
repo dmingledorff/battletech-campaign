@@ -89,7 +89,32 @@ class ToeTemplateModel extends Model
             'Uncle', 'Victor', 'William', 'Xray',
             'Yoke', 'Zebra'
         ];
-}
+    }
+
+    public function findSlotByRank(int $templateId, int $rankId): ?int {
+        $row = $this->db->table('toe_slots')
+            ->where('template_id', $templateId)
+            ->where('min_rank_id', $rankId)
+            ->get()
+            ->getRowArray();
+
+        return $row['slot_id'] ?? null;
+    }
+
+    /**
+     * Generic helper: get rank_id by full_name
+     */
+    public function getRankId(string $rankName, string $faction = 'Davion'): ?int {
+        $row = $this->db->table('ranks')
+            ->select('id')
+            ->where('faction', $faction)
+            ->where('full_name', $rankName)
+            ->get(1)
+            ->getRowArray();
+
+        return $row['id'] ?? null;
+    }
+
 
 
 }

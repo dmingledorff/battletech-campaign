@@ -1,6 +1,7 @@
 -- ================================
 -- Rank Variables
 -- ================================
+SET @marshal   = (SELECT id FROM ranks WHERE full_name = 'Marshal'   LIMIT 1);
 SET @major     = (SELECT id FROM ranks WHERE full_name = 'Major'   LIMIT 1);
 SET @captain   = (SELECT id FROM ranks WHERE full_name = 'Captain'   LIMIT 1);
 SET @lieutenant= (SELECT id FROM ranks WHERE full_name = 'Leftenant' LIMIT 1);
@@ -15,6 +16,10 @@ INSERT INTO toe_templates (name, description, unit_type)
 VALUES ('1st Davion Guards', 'A medium BattleMech regiment with support.', 'Regiment');
 SET @regiment_id = LAST_INSERT_ID();
 
+-- Regiment commander (Marshal)
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@regiment_id, 'Personnel', 'Officer', @marshal, @marshal);
+
 -- ================================
 -- Combined Arms Battalion
 -- ================================
@@ -26,8 +31,8 @@ INSERT INTO toe_subunits (parent_template_id, child_template_id, quantity, is_co
 VALUES (@regiment_id, @battalion_id, 1, TRUE);
 
 -- Command Lance
-INSERT INTO toe_templates (name, description, unit_type)
-VALUES ('Command Lance', 'Heavy lance to support the battalion commander', 'Lance');
+INSERT INTO toe_templates (name, description, unit_type, role)
+VALUES ('Command Lance', 'Heavy lance to support the battalion commander', 'Lance', 'Command');
 SET @command_lance_id = LAST_INSERT_ID();
 
 -- Equipment
@@ -65,22 +70,115 @@ INSERT INTO toe_slot_crews (equipment_slot_id, personnel_slot_id, crew_role) VAL
 (@c_eq4, @c4, 'Pilot');
 
 -- Attach lances to battalion
+INSERT INTO toe_subunits (parent_template_id, child_template_id, quantity, is_core, is_command)
+VALUES (@battalion_id, @command_lance_id, 1, TRUE, TRUE);
+
+-- ================================
+-- Battle Company
+-- ================================
+INSERT INTO toe_templates (name, description, unit_type, role)
+VALUES ('Battle Company', 'Balanced BattleMech company with battle and fire lances', 'Company', 'Battle');
+SET @battle_company_id = LAST_INSERT_ID();
+
 INSERT INTO toe_subunits (parent_template_id, child_template_id, quantity, is_core)
-VALUES (@battalion_id, @command_lance_id, 1, TRUE);
+VALUES (@battalion_id, @battle_company_id, 2, TRUE);
+
+-- Battle Lance
+INSERT INTO toe_templates (name, description, unit_type, role)
+VALUES ('Battle Lance', 'Balanced lance with medium and heavy BattleMechs', 'Lance', 'Battle');
+SET @battle_lance_id = LAST_INSERT_ID();
+
+-- Equipment
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@battle_lance_id, 'Equipment', 'BattleMech', 'Heavy'); SET @eq1 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@battle_lance_id, 'Equipment', 'BattleMech', 'Medium'); SET @eq2 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@battle_lance_id, 'Equipment', 'BattleMech', 'Heavy');  SET @eq3 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@battle_lance_id, 'Equipment', 'BattleMech', 'Medium');  SET @eq4 = LAST_INSERT_ID();
+
+-- Equipment roles
+INSERT INTO toe_slot_roles (slot_id, battlefield_role) VALUES
+(@eq1, 'Brawler'), (@eq1, 'Skirmisher'),
+(@eq2, 'Brawler'), (@eq2, 'Skirmisher'),
+(@eq3, 'Juggernaut'), (@eq3, 'Brawler'),
+(@eq4, 'Juggernaut'), (@eq4, 'Brawler');
+
+-- Personnel (Lieutenant + 3 Sergeants)
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@battle_lance_id, 'Personnel', 'MechWarrior', @lieutenant, @lieutenant); SET @p1 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@battle_lance_id, 'Personnel', 'MechWarrior', @sergeant, @sergeant);   SET @p2 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@battle_lance_id, 'Personnel', 'MechWarrior', @sergeant, @sergeant);   SET @p3 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@battle_lance_id, 'Personnel', 'MechWarrior', @sergeant, @sergeant);   SET @p4 = LAST_INSERT_ID();
+
+-- Crew
+INSERT INTO toe_slot_crews (equipment_slot_id, personnel_slot_id, crew_role) VALUES
+(@eq1, @p1, 'Pilot'),
+(@eq2, @p2, 'Pilot'),
+(@eq3, @p3, 'Pilot'),
+(@eq4, @p4, 'Pilot');
+
+-- Fire Lance (reuse from Striker example, but with battle role)
+INSERT INTO toe_templates (name, description, unit_type, role)
+VALUES ('Fire Lance', 'Missile boat/sniper lance for long-range firepower', 'Lance', 'Fire');
+SET @fire_lance_id = LAST_INSERT_ID();
+
+-- Equipment
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@fire_lance_id, 'Equipment', 'BattleMech', 'Medium'); SET @eq5 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@fire_lance_id, 'Equipment', 'BattleMech', 'Heavy'); SET @eq6 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@fire_lance_id, 'Equipment', 'BattleMech', 'Heavy');  SET @eq7 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, equipment_type, weight_class)
+VALUES (@fire_lance_id, 'Equipment', 'BattleMech', 'Heavy');  SET @eq8 = LAST_INSERT_ID();
+
+-- Equipment roles
+INSERT INTO toe_slot_roles (slot_id, battlefield_role) VALUES
+(@eq5, 'Sniper'), (@eq5, 'Missile Boat'),
+(@eq6, 'Sniper'), (@eq6, 'Missile Boat'),
+(@eq7, 'Sniper'), (@eq7, 'Missile Boat'),
+(@eq8, 'Sniper'), (@eq8, 'Missile Boat');
+
+-- Personnel (Lieutenant + 3 Sergeants)
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@fire_lance_id, 'Personnel', 'MechWarrior', @lieutenant, @lieutenant); SET @p5 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@fire_lance_id, 'Personnel', 'MechWarrior', @sergeant, @sergeant);     SET @p6 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@fire_lance_id, 'Personnel', 'MechWarrior', @sergeant, @sergeant);     SET @p7 = LAST_INSERT_ID();
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@fire_lance_id, 'Personnel', 'MechWarrior', @sergeant, @sergeant);     SET @p8 = LAST_INSERT_ID();
+
+-- Crew
+INSERT INTO toe_slot_crews (equipment_slot_id, personnel_slot_id, crew_role) VALUES
+(@eq5, @p5, 'Pilot'),
+(@eq6, @p6, 'Pilot'),
+(@eq7, @p7, 'Pilot'),
+(@eq8, @p8, 'Pilot');
+
+-- Attach lances to Battle Company
+INSERT INTO toe_subunits (parent_template_id, child_template_id, quantity, is_core)
+VALUES (@battle_company_id, @battle_lance_id, 2, TRUE),
+       (@battle_company_id, @fire_lance_id, 1, TRUE);
 
 -- ================================
 -- Striker Company
 -- ================================
-INSERT INTO toe_templates (name, description, unit_type)
-VALUES ('Striker Company', 'Fast BattleMech company with striker and fire lances', 'Company');
+INSERT INTO toe_templates (name, description, unit_type, role)
+VALUES ('Striker Company', 'Fast BattleMech company with striker and fire lances', 'Company', 'Striker');
 SET @striker_company_id = LAST_INSERT_ID();
 
 INSERT INTO toe_subunits (parent_template_id, child_template_id, quantity, is_core)
 VALUES (@battalion_id, @striker_company_id, 1, TRUE);
 
 -- Striker Lance
-INSERT INTO toe_templates (name, description, unit_type)
-VALUES ('Striker Lance', 'Fast medium BattleMech lance', 'Lance');
+INSERT INTO toe_templates (name, description, unit_type, role)
+VALUES ('Striker Lance', 'Fast medium BattleMech lance', 'Lance', 'Striker');
 SET @striker_lance_id = LAST_INSERT_ID();
 
 -- Equipment
@@ -118,8 +216,8 @@ INSERT INTO toe_slot_crews (equipment_slot_id, personnel_slot_id, crew_role) VAL
 (@eq4, @p4, 'Pilot');
 
 -- Fire Lance
-INSERT INTO toe_templates (name, description, unit_type)
-VALUES ('Fire Lance', 'Missile boat/sniper lance for long-range firepower', 'Lance');
+INSERT INTO toe_templates (name, description, unit_type, role)
+VALUES ('Fire Lance', 'Missile boat/sniper lance for long-range firepower', 'Lance', 'Fire');
 SET @fire_lance_id = LAST_INSERT_ID();
 
 -- Equipment
@@ -164,16 +262,16 @@ VALUES (@striker_company_id, @striker_lance_id, 2, TRUE),
 -- ================================
 -- Reinforced Vehicle Company
 -- ================================
-INSERT INTO toe_templates (name, description, unit_type)
-VALUES ('Reinforced Vehicle Company', 'Company with 4 armored lances', 'Company');
+INSERT INTO toe_templates (name, description, unit_type, role)
+VALUES ('Reinforced Vehicle Company', 'Company with 4 armored lances', 'Company', 'Battle');
 SET @vehicle_company_id = LAST_INSERT_ID();
 
 INSERT INTO toe_subunits (parent_template_id, child_template_id, quantity, is_core)
 VALUES (@battalion_id, @vehicle_company_id, 1, TRUE);
 
 -- Vehicle Lance
-INSERT INTO toe_templates (name, description, unit_type)
-VALUES ('Vehicle Lance', '4 combat vehicles with full crews', 'Lance');
+INSERT INTO toe_templates (name, description, unit_type, role)
+VALUES ('Vehicle Lance', '4 combat vehicles with full crews', 'Lance', 'Battle');
 SET @vehicle_lance_id = LAST_INSERT_ID();
 
 -- ================================
@@ -184,7 +282,7 @@ VALUES (@vehicle_lance_id, 'Equipment', 'Vehicle', 'Heavy');
 SET @v1_eq = LAST_INSERT_ID();
 
 INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
-VALUES (@vehicle_lance_id, 'Personnel', 'Tanker', @sergeant, @sergeant); SET @v1_p1 = LAST_INSERT_ID();
+VALUES (@vehicle_lance_id, 'Personnel', 'Tanker', @lieutenant, @lieutenant); SET @v1_p1 = LAST_INSERT_ID();
 INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
 VALUES (@vehicle_lance_id, 'Personnel', 'Tanker', @corporal, @corporal); SET @v1_p2 = LAST_INSERT_ID();
 INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
@@ -259,9 +357,13 @@ VALUES (@vehicle_company_id, @vehicle_lance_id, 4, TRUE);
 -- ================================
 -- Infantry Company
 -- ================================
-INSERT INTO toe_templates (name, description, unit_type)
-VALUES ('Infantry Company', 'Standard foot infantry with platoons and squads', 'Company');
+INSERT INTO toe_templates (name, description, unit_type, role)
+VALUES ('Infantry Company', 'Standard foot infantry with platoons and squads', 'Company', 'Infantry');
 SET @infantry_company_id = LAST_INSERT_ID();
+
+-- Company commander (Captain)
+INSERT INTO toe_slots (template_id, slot_type, mos, min_rank_id, max_rank_id)
+VALUES (@infantry_company_id, 'Personnel', 'Infantry', @captain, @captain);
 
 INSERT INTO toe_subunits (parent_template_id, child_template_id, quantity, is_core)
 VALUES (@battalion_id, @infantry_company_id, 1, TRUE);

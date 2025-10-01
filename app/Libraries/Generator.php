@@ -259,6 +259,10 @@ class Generator
         return true;
     }
 
-
+    public function promotePersonnel(int $personnelId, int $newRankId): void {
+        $this->db->table('personnel')
+            ->where('personnel_id', $personnelId)
+            ->update(['rank_id' => $newRankId]);
+    }
    
 }
