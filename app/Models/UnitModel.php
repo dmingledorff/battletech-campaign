@@ -61,6 +61,7 @@ class UnitModel extends Model
             r.abbreviation AS rank_abbr,
             r.grade AS rank_grade,
             p.status,
+            p.morale,
             ANY_VALUE(pa.unit_id) as unit_id,
             MAX(pa.date_assigned) as date_assigned
         ')
@@ -92,7 +93,7 @@ class UnitModel extends Model
 
         $totalMorale = 0;
         $count       = 0;
-
+        log_message('info', 'BTECH: ' . json_encode($personnel));
         foreach ($personnel as $p) {
             if (isset($p['morale']) && $p['morale'] !== null) {
                 $totalMorale += (float)$p['morale'];
