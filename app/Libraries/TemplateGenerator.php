@@ -283,7 +283,12 @@ class TemplateGenerator
                 return $this->ordinal($num) . " Lance";
 
             case 'Platoon':
-                return $this->ordinal($num) . " Platoon";
+                if (!empty($template['mobility'])) {
+                    return $this->ordinal($num) . ' '
+                     . $template['mobility'] . ' ' . $unitType;
+                } else {
+                    $this->ordinal($num) . " Platoon";
+                }
 
             case 'Squad':
                 return $this->ordinal($num) . " Squad";

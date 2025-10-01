@@ -355,7 +355,7 @@ INSERT INTO toe_subunits (parent_template_id, child_template_id, quantity, is_co
 VALUES (@vehicle_company_id, @vehicle_lance_id, 4, TRUE);
 
 -- ================================
--- Infantry Company
+-- Infantry Company - Mechanized
 -- ================================
 INSERT INTO toe_templates (name, description, unit_type, role)
 VALUES ('Infantry Company', 'Standard foot infantry with platoons and squads', 'Company', 'Infantry');
@@ -369,8 +369,8 @@ INSERT INTO toe_subunits (parent_template_id, child_template_id, quantity, is_co
 VALUES (@battalion_id, @infantry_company_id, 1, TRUE);
 
 -- Infantry Platoon
-INSERT INTO toe_templates (name, description, unit_type)
-VALUES ('Infantry Platoon', '4 squads led by a Lieutenant', 'Platoon');
+INSERT INTO toe_templates (name, description, unit_type, role, mobility)
+VALUES ('Infantry Platoon', 'Mechanized infantry platoon riding in APCs', 'Platoon', 'Infantry', 'Mechanized');
 SET @infantry_platoon_id = LAST_INSERT_ID();
 
 -- Platoon commander (Lieutenant)

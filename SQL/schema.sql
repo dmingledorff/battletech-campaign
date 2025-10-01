@@ -191,6 +191,7 @@ CREATE TABLE toe_templates (
         'Command','Battle','Striker','Pursuit',
         'Fire','Security','Support','Assault', 'Recon', 'Urban Combat', 'Infantry'
     ) NULL,
+    mobility ENUM('Foot','Mechanized','Motorized','Airborne','Jump','Hover') NULL,
     faction VARCHAR(50), -- optional filter
     era VARCHAR(50) -- optional filter
 );
