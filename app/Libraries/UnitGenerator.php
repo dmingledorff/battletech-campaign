@@ -31,7 +31,8 @@ class UnitGenerator
         string $allegiance = 'Independent',
         ?int $parentId = null,
         ?int $commanderId = null,
-        ?string $role = null
+        ?string $role = null,
+        int $templateId = null
     ): int {
         $data = [
             'name'           => $name,
@@ -41,7 +42,8 @@ class UnitGenerator
             'allegiance'     => $allegiance,
             'parent_unit_id' => $parentId,
             'commander_id'   => $commanderId,
-            'role'           => $role
+            'role'           => $role,
+            'template_id'    => $templateId
         ];
 
         $this->db->table('units')->insert($data);

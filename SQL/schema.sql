@@ -78,6 +78,20 @@ CREATE TABLE locations (
     FOREIGN KEY (planet_id) REFERENCES planets(planet_id)
 );
 
+CREATE TABLE toe_templates (
+    template_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    unit_type ENUM('Regiment','Battalion','Company','Lance','Platoon','Squad') NOT NULL,
+    role ENUM(
+        'Command','Battle','Striker','Pursuit',
+        'Fire','Security','Support','Assault', 'Recon', 'Urban Combat', 'Infantry'
+    ) NULL,
+    mobility ENUM('Foot','Mechanized','Motorized','Airborne','Jump','Hover') NULL,
+    faction VARCHAR(50), -- optional filter
+    era VARCHAR(50) -- optional filter
+);
+
 CREATE TABLE units (
     unit_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -92,9 +106,11 @@ CREATE TABLE units (
     parent_unit_id INT,
     commander_id INT,
     location_id INT,
+    template_id INT NULL,
     FOREIGN KEY (parent_unit_id) REFERENCES units(unit_id),
     FOREIGN KEY (commander_id) REFERENCES personnel(personnel_id),
-    FOREIGN KEY (location_id) REFERENCES locations(location_id)
+    FOREIGN KEY (location_id) REFERENCES locations(location_id),
+    FOREIGN KEY (template_id) REFERENCES toe_templates(template_id)
 );
 
 CREATE TABLE chassis (
@@ -180,20 +196,6 @@ CREATE TABLE callsign_pool (
     id INT AUTO_INCREMENT PRIMARY KEY,
     value VARCHAR(50) NOT NULL,
     used BOOLEAN DEFAULT FALSE
-);
-
-CREATE TABLE toe_templates (
-    template_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    unit_type ENUM('Regiment','Battalion','Company','Lance','Platoon','Squad') NOT NULL,
-    role ENUM(
-        'Command','Battle','Striker','Pursuit',
-        'Fire','Security','Support','Assault', 'Recon', 'Urban Combat', 'Infantry'
-    ) NULL,
-    mobility ENUM('Foot','Mechanized','Motorized','Airborne','Jump','Hover') NULL,
-    faction VARCHAR(50), -- optional filter
-    era VARCHAR(50) -- optional filter
 );
 
 CREATE TABLE toe_slots (

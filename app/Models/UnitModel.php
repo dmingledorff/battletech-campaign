@@ -154,4 +154,94 @@ class UnitModel extends Model
         return array_reverse($breadcrumb);
     }
 
+    public function getPersonnelStrengthRecursive(int $unitId, array $children): array {
+        // 1. Authorized slots for this unit
+        $authorized = $this->db->table('toe_slots s')
+            ->select('COUNT(*) as cnt')
+            ->join('toe_templates t', 's.template_id = t.template_id')
+            ->join('units u', 'u.template_id = t.template_id')
+            ->where('u.unit_id', $unitId)
+            ->where('s.slot_type', 'Personnel')
+            ->get()
+            ->getRow('cnt') ?? 0;
+
+        // 2. Assigned personnel for this unit
+        $assigned = $this->db->table('personnel_assignments pa')
+            ->select('COUNT(*) as cnt')
+            ->where('pa.unit_id', $unitId)
+            ->where('pa.date_released IS NULL')
+            ->get()
+            ->getRow('cnt') ?? 0;
+
+        // 3. Recurse into children
+        if (isset($children[$unitId])) {
+            foreach ($children[$unitId] as $child) {
+                $childStrength = $this->getPersonnelStrengthRecursive($child['unit_id'], $children);
+                $authorized += $childStrength['authorized'];
+                $assigned   += $childStrength['assigned'];
+            }
+        }
+
+        $percent = $authorized > 0 ? round(($assigned / $authorized) * 100, 1) : 0;
+
+        return [
+            'assigned'   => (int) $assigned,
+            'authorized' => (int) $authorized,
+            'percent'    => $percent,
+        ];
+    }
+
+    public function getEquipmentStrengthRecursive(int $unitId, array $children): array {
+        // 1. Authorized slots for this unit
+        $authorized = $this->db->table('toe_slots s')
+            ->select('COUNT(*) as cnt')
+            ->join('toe_templates t', 's.template_id = t.template_id')
+            ->join('units u', 'u.template_id = t.template_id')
+            ->where('u.unit_id', $unitId)
+            ->where('s.slot_type', 'Equipment')
+            ->get()
+            ->getRow('cnt') ?? 0;
+
+        // 2. Operational equipment in this unit
+        $operational = $this->db->table('equipment e')
+            ->select('COUNT(*) as cnt')
+            ->where('e.assigned_unit_id', $unitId)
+            ->where('e.equipment_status', 'Active')
+            ->get()
+            ->getRow('cnt') ?? 0;
+
+        // 3. Recurse into children
+        if (isset($children[$unitId])) {
+            foreach ($children[$unitId] as $child) {
+                $childStrength = $this->getEquipmentStrengthRecursive($child['unit_id'], $children);
+                $authorized  += $childStrength['authorized'];
+                $operational += $childStrength['operational'];
+            }
+        }
+
+        $percent = $authorized > 0 ? round(($operational / $authorized) * 100, 1) : 0;
+
+        return [
+            'operational' => (int) $operational,
+            'authorized'  => (int) $authorized,
+            'percent'     => $percent,
+        ];
+    }
+
+    public function getAuthorizedPersonnel(int $unitId): int {
+        return $this->db->table('toe_slots')
+            ->join('units', 'units.template_id = toe_slots.template_id')
+            ->where('units.unit_id', $unitId)
+            ->where('toe_slots.slot_type', 'Personnel')
+            ->countAllResults();
+    }
+
+    public function getAuthorizedEquipment(int $unitId): int {
+        return $this->db->table('toe_slots')
+            ->join('units', 'units.template_id = toe_slots.template_id')
+            ->where('units.unit_id', $unitId)
+            ->where('toe_slots.slot_type', 'Equipment')
+            ->countAllResults();
+    }
+
 }

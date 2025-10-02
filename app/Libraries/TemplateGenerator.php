@@ -61,7 +61,8 @@ class TemplateGenerator
             $allegiance,
             $parentUnitId,
             null,
-            $template['role'] ?? null
+            $template['role'] ?? null,
+            $template['template_id']
         );
 
         // Pass A: personnel slots

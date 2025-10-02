@@ -12,6 +12,10 @@ class Units extends BaseController
         // Base unit
         $unit = $unitModel->getUnit($id);
 
+        if (!$unit) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound("Unit not found: {$id}");
+        }
+
         // Add required supply roll-up
         $unit['required_supply'] = 0;
         $equipment = $unitModel->getAllEquipmentRecursive($id, $children);
@@ -28,12 +32,17 @@ class Units extends BaseController
         // Breadcrumb
         $breadcrumb = $unitModel->getBreadcrumb($id);
 
+        $personnelStrength = $unitModel->getPersonnelStrengthRecursive($id, $children);
+        $equipmentStrength = $unitModel->getEquipmentStrengthRecursive($id, $children);
+
         return view('layout/header')
             . view('units/show', [
                 'unit'       => $unit,
                 'personnel'  => $personnel,
                 'equipment'  => $equipment,
                 'breadcrumb' => $breadcrumb,
+                'personnelStrength' => $personnelStrength,
+                'equipmentStrength' => $equipmentStrength,
                 'children'   => $children
             ])
             . view('layout/footer');
