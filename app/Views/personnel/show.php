@@ -8,6 +8,8 @@
         <p><strong>Rank:</strong> <?= esc($person['rank_full']) ?></p>
         <p><strong>Gender:</strong> <?= esc($person['gender']) ?></p>
         <p><strong>Callsign:</strong> <?= esc($person['callsign']) ?></p>
+        <p><strong>Date of Birth:</strong> <?= esc($person['date_of_birth']) ?></p>
+        <p><strong>Age:</strong> <?= esc($age) ?> years</p>
       </div>
 
       <!-- Right column -->

@@ -60,6 +60,23 @@ class Generator
                 ->getRow();
         }
 
+        $gameState = new \App\Models\GameStateModel();
+        $currentDate = new \DateTime($gameState->getProperty('current_date'));
+
+        // Map experience → min/max age
+        $ageRanges = [
+            'Green'   => [18, 25],
+            'Regular' => [22, 35],
+            'Veteran' => [28, 45],
+            'Elite'   => [35, 55],
+        ];
+
+        $range = $ageRanges[$experience] ?? [18, 30]; // fallback
+
+        $age = rand($range[0], $range[1]);
+        $dob = clone $currentDate;
+        $dob->modify("-{$age} years");
+
         $personnel = [
             'first_name' => $first,
             'last_name'  => $last,
@@ -68,7 +85,8 @@ class Generator
             'callsign'   => $callsign->value ?? null,
             'mos'        => $role,
             'experience' => $experience,
-            'status'     => $status
+            'status'     => $status,
+            'date_of_birth'=> $dob->format('Y-m-d'),
         ];
 
         $this->db->table('personnel')->insert($personnel);

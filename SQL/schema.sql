@@ -69,11 +69,12 @@ CREATE TABLE personnel (
     first_name VARCHAR(50),
     last_name VARCHAR(50),
     rank_id INT,
-    status ENUM('Active','KIA','Retired') DEFAULT 'Active',
+    status ENUM('Active','KIA','Retired', 'Injured', 'MIA') DEFAULT 'Active',
     gender ENUM('Male','Female','Other'),
     callsign VARCHAR(50),
     mos VARCHAR(50),  -- Military Occupational Specialty
     experience ENUM('Green','Regular','Veteran','Elite') DEFAULT 'Green',
+    date_of_birth DATE NULL,
     morale DECIMAL(5,2) NOT NULL DEFAULT 100.00,
     missions INT DEFAULT 0,
     FOREIGN KEY (rank_id) REFERENCES ranks(id)
