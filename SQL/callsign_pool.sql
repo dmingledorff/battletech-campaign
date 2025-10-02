@@ -43,3 +43,29 @@ INSERT INTO callsign_pool (value) VALUES
 ('Mongoose'),('Nightshade'),('Obsidian'),('Outrider'),('Overlord'),
 ('Panther'),('Patriot'),('Pike'),('Pitbull'),('Puma'),
 ('Quicksilver'),('Rampart'),('Raptor'),('Raven'),('Relentless');
+
+INSERT INTO callsign_pool (value) VALUES
+('Clutch'),('Turbo'),('Slick'),('Jester'),('Goose'),
+('Maverick Jr'),('Snacktime'),('Hotdog'),('Pogo'),('Bingo'),
+('Lucky Shot'),('Banana'),('Pickle'),('Tater'),('Waffles'),
+('Cupcake'),('Gravy'),('Meatball'),('Beans'),('Spam'),
+('Boomstick'),('Duck'),('Mooseknuckle'),('Sledge'),('Spud'),
+('Loaf'),('Dusty'),('Slinky'),('Hiccup'),('Sidecar'),
+('Crash'),('Oops'),('Whoops'),('Donut'),('Cookie'),
+('Pancake'),('Biscuit'),('Chowder'),('Grunt'),('Lugnut'),
+('Clown'),('Dozer'),('Runt'),('Tiny'),('Stretch'),
+('Shifty'),('Gremlin'),('Goblin'),('Hobbit'),('Grease'),
+('Rusty'),('Gravytrain'),('Jellybean'),('Soggy'),('Butterfingers'),
+('Turtle'),('Sloth'),('Zippy'),('Fumbles'),('Bubbles');
+
+INSERT INTO callsign_pool (value) VALUES
+('Potato'),('Pickles'),('Taco'),('Nacho'),('Meatloaf'),
+('Pudding'),('Cheeseball'),('Popcorn'),('Cabbage'),('Noodles'),
+('Muffin'),('Cornbread'),('Ketchup'),('Salsa'),('Hotdogger'),
+('Turkey'),('Chickenhawk'),('Liver'),('Tofu'),('Broccoli'),
+('Goober'),('Gooseberry'),('Snickers'),('Twinkie'),('Skittles'),
+('Milkshake'),('Slappy'),('Whiskers'),('Binky'),('Wiggles'),
+('Booger'),('Sneezy'),('Snort'),('Burp'),('Gassy'),
+('Dumpster'),('Toaster'),('Microwave'),('Spork'),('Spoon'),
+('Clippy'),('Paperclip'),('Rubber Ducky'),('Fuzzy'),('Pajamas'),
+('Gremlin King'),('Madcat Lite'),('Tinfoil'),('Pottymouth'),('PogoStick');

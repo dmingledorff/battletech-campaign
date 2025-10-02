@@ -30,7 +30,7 @@ INSERT INTO chassis
 ('Clint','CLNT-2-4T','BattleMech','Medium','Sniper',62,22,90,0.70,10,40,97.0),
 ('Vulcan','VL-5T','BattleMech','Medium','Striker',60,22,100,0.70,10,40,97.0),
 
--- Heavy / Assault Mechs
+-- Heavy Mechs
 ('Rifleman','RFL-3N','BattleMech','Heavy','Sniper',72,24,120,0.70,12.5,60,64.8),
 ('Catapult','CPLT-C1','BattleMech','Heavy','Missile Boat',76,26,130,0.80,13.0,65,64.8),
 ('JagerMech','JM6-S','BattleMech','Heavy','Sniper',70,20,125,0.80,12.8,65,64.8),
@@ -42,6 +42,18 @@ INSERT INTO chassis
 ('Thunderbolt','TDR-5S','BattleMech','Heavy','Brawler',78,22,150,0.60,12.9,65,64.8),
 ('Warhammer','WHM-6R','BattleMech','Heavy','Brawler',84,28,145,0.70,13.8,70,64.8),
 ('Black Knight','BL-6-KNT','BattleMech','Heavy','Brawler',84,28,150,0.10,8.0,75,64.8),
+
+-- Assault Mechs
+('Atlas','AS7-D','BattleMech','Assault','Juggernaut',100,30,200,0.70,15.0,100,54.0),
+('Awesome','AWS-8Q','BattleMech','Assault','Sniper',95,25,190,0.60,14.5,80,54.0),
+('BattleMaster','BLR-1G','BattleMech','Assault','Brawler',92,28,185,0.65,14.2,85,54.0),
+('Stalker','STK-3H','BattleMech','Assault','Missile Boat',88,26,180,0.80,13.5,85,54.0),
+('Zeus','ZEU-6S','BattleMech','Assault','Brawler',85,24,175,0.60,13.0,80,54.0),
+('Victor','VTR-9B','BattleMech','Assault','Skirmisher',86,22,160,0.55,12.5,80,64.8),
+('Cyclops','CP-10-Z','BattleMech','Assault','Command',84,20,165,0.50,12.0,90,54.0),
+('Mauler','MAL-1R','BattleMech','Assault','Sniper',88,22,170,0.70,13.0,90,54.0),
+('Banshee','BNC-3E','BattleMech','Assault','Juggernaut',82,20,160,0.50,11.5,95,54.0),
+('Highlander','HGN-732','BattleMech','Assault','Juggernaut',95,28,185,0.60,14.0,90,54.0),
 
 -- Light Vehicles
 ('Scorpion Light Tank','SLT-STD','Vehicle','Light','Scout',35,12,80,0.50,6.8,25,64.8),
