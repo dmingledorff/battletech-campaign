@@ -62,6 +62,8 @@ class UnitModel extends Model
             r.grade AS rank_grade,
             p.status,
             p.morale,
+            p.callsign,
+            p.morale,
             ANY_VALUE(pa.unit_id) as unit_id,
             MAX(pa.date_assigned) as date_assigned
         ')
@@ -77,7 +79,11 @@ class UnitModel extends Model
 
     public function getEquipment($unitId) {
         return $this->db->table('equipment')
-            ->select('equipment.*, chassis.name as chassis_name, chassis.type as chassis_type, chassis.weight_class')
+            ->select('equipment.*, 
+            chassis.name as chassis_name, 
+            chassis.type as chassis_type, 
+            chassis.weight_class,
+            chassis.variant as chassis_variant')
             ->join('chassis','chassis.chassis_id=equipment.chassis_id')
             ->where('equipment.assigned_unit_id',$unitId)
             ->get()->getResultArray();

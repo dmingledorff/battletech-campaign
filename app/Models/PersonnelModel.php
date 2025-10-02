@@ -98,8 +98,10 @@ class PersonnelModel extends Model
                 e.equipment_id,
                 e.serial_number,
                 e.equipment_status,
+                e.damage_percentage,
                 c.name as chassis_name,
                 c.type as chassis_type,
+                c.variant as chassis_variant,
                 c.weight_class,
                 pe.role
             ')

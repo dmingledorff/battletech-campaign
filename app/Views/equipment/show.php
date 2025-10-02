@@ -3,9 +3,11 @@
     <div class="card shadow mb-3">
       <div class="card-header">Equipment Details</div>
       <div class="card-body">
-        <p><strong>Chassis:</strong> <?= esc($equipment['chassis_name']) ?></p>
+        <p><strong>Chassis:</strong> <?= esc($equipment['chassis_name'])
+         . ' ' . esc($equipment['chassis_variant'])?></p>
         <p><strong>Type:</strong> <?= esc($equipment['chassis_type'] ?? 'Unknown') ?></p>
         <p><strong>Weight Class:</strong> <?= esc($equipment['weight_class'] ?? 'Unknown') ?></p>
+        <p><strong>Role:</strong> <?= esc($equipment['role'] ?? 'Unknown') ?></p>
         <p><strong>Tonnage:</strong> <?= esc($equipment['tonnage'] . ' tons' ?? 'Unknown') ?></p>
         <p><strong>Speed:</strong> <?= esc($equipment['speed'] . ' km/h' ?? 'Unknown') ?></p>
         <p><strong>Serial Number:</strong> <?= esc($equipment['serial_number']) ?></p>
@@ -31,7 +33,7 @@
         <?php if (!empty($crew)): ?>
           <table class="table table-dark table-sm mb-0">
             <thead>
-              <tr><th>Name</th><th>Grade</th><th>Role</th><th>Status</th></tr>
+              <tr><th>Name</th><th>Rank</th><th>Role</th><th>Status</th><th>Morale</th></tr>
             </thead>
             <tbody>
               <?php foreach($crew as $c): ?>
@@ -41,9 +43,10 @@
                       <?= esc($c['first_name'].' '.$c['last_name']) ?>
                     </a>
                   </td>
-                  <td><?= esc($c['grade']) ?></td>
+                  <td><?= esc($c['rank_full']) ?></td>
                   <td><?= esc($c['role']) ?></td>
                   <td><?= esc($c['status']) ?></td>
+                  <td><?= esc($c['morale']) ?>%</td>
                 </tr>
               <?php endforeach; ?>
             </tbody>

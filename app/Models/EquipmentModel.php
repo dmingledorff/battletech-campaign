@@ -14,8 +14,12 @@ class EquipmentModel extends Model
     // Get equipment with chassis and unit info
     public function getEquipment($id) {
         return $this->db->table('equipment')
-            ->select('equipment.*, chassis.name as chassis_name, chassis.type as chassis_type, chassis.weight_class,
-                    units.name as unit_name, units.unit_type, units.nickname, chassis.tonnage as tonnage, chassis.speed as speed')
+            ->select('equipment.*, chassis.name as chassis_name,
+             chassis.type as chassis_type, chassis.weight_class,
+                    units.name as unit_name, units.unit_type, 
+                    units.nickname, chassis.tonnage as tonnage, 
+                    chassis.speed as speed, chassis.variant as chassis_variant,
+                    chassis.battlefield_role as role')
             ->join('chassis','chassis.chassis_id=equipment.chassis_id')
             ->join('units','units.unit_id=equipment.assigned_unit_id','left')
             ->where('equipment.equipment_id',$id)
@@ -34,7 +38,8 @@ class EquipmentModel extends Model
                 r.full_name AS rank_full,
                 r.abbreviation AS rank_abbr,
                 r.grade,
-                p.status
+                p.status,
+                p.morale
             ')
             ->join('personnel p', 'p.personnel_id = pe.personnel_id')
             ->join('ranks r', 'p.rank_id = r.id', 'left')
