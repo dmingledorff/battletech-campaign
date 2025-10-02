@@ -16,13 +16,11 @@ class Personnel extends BaseController
         $assignments = $personnelModel->getAssignments($id);
         $equipment   = $personnelModel->getEquipmentAssignments($id);
 
-        return view('layout/header')
-            . view('personnel/show', [
+        return $this->render('personnel/show', [
                 'person'      => $person,
                 'assignments' => $assignments,
                 'equipment'   => $equipment
-            ])
-            . view('layout/footer');
+            ]);
     }
 
 }

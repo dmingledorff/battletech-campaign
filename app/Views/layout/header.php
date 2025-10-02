@@ -14,5 +14,8 @@
       <img src="<?= base_url('images/logo.png') ?>" alt="Unit Logo" style="height:40px; width:auto;">
     </a>
   </div>
+    <div class="ml-auto text-light" style="white-space: nowrap; padding-right: 1rem;">
+    <strong>Date:</strong> <?= esc($gameDate) ?>
+  </div>
 </nav>
 <div class="container">

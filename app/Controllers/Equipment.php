@@ -18,11 +18,9 @@ class Equipment extends BaseController
         // Fetch crew assigned to this equipment
         $crew = $equipmentModel->getCrew($id);
 
-        return view('layout/header')
-             . view('equipment/show', [
+        return $this->render('equipment/show', [
                  'equipment' => $equipment,
                  'crew'      => $crew
-             ])
-             . view('layout/footer');
+             ]);
     }
 }

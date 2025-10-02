@@ -34,9 +34,7 @@ class Dashboard extends BaseController
             'rootId'   => 1
         ];
 
-        echo view('layout/header', $data);
-        echo view('dashboard/index', $data);
-        echo view('layout/footer');
+        return $this->render('dashboard/index', $data);
     }
 
     private function rollupTotals($unitId, $children, &$summaryById)

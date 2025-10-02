@@ -33,6 +33,15 @@ DROP TABLE IF EXISTS ranks;
 
 -- Core tables
 
+CREATE TABLE game_state (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    property_name VARCHAR(50) NOT NULL UNIQUE,
+    property_value VARCHAR(255) NOT NULL,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+INSERT INTO game_state (property_name, property_value) 
+VALUES ('current_date', '3025-01-01');
+
 CREATE TABLE planets (
     planet_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,

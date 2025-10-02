@@ -35,8 +35,7 @@ class Units extends BaseController
         $personnelStrength = $unitModel->getPersonnelStrengthRecursive($id, $children);
         $equipmentStrength = $unitModel->getEquipmentStrengthRecursive($id, $children);
 
-        return view('layout/header')
-            . view('units/show', [
+        return $this->render('units/show', [
                 'unit'       => $unit,
                 'personnel'  => $personnel,
                 'equipment'  => $equipment,
@@ -44,7 +43,6 @@ class Units extends BaseController
                 'personnelStrength' => $personnelStrength,
                 'equipmentStrength' => $equipmentStrength,
                 'children'   => $children
-            ])
-            . view('layout/footer');
+            ]);
     }
 }
