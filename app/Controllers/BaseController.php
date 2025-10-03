@@ -4,12 +4,14 @@ namespace App\Controllers;
 
 use CodeIgniter\Controller;
 use App\Models\GameStateModel;
+use App\Models\PlanetModel;
 
 class BaseController extends Controller
 {
     protected $helpers = ['url','form','html'];
     protected $gameDate;
     protected $gameState;
+    protected $allPlanets;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger) {
         parent::initController($request, $response, $logger);
@@ -23,6 +25,9 @@ class BaseController extends Controller
 
         // Save formatted date for all controllers
         $this->gameDate = $dateObj->format('j F Y');
+
+        $planetModel = new PlanetModel();
+        $this->allPlanets = $planetModel->getAllWithSystems();
     }
 
     /**
@@ -34,6 +39,7 @@ class BaseController extends Controller
         // Always include game date in every render
         $data['gameState'] = $this->gameState;
         $data['gameDate'] = $this->gameDate;
+        $data['allPlanets'] = $this->allPlanets;
 
         return view('layout/header', $data)
              . view($view, $data)

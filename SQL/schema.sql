@@ -20,6 +20,7 @@ DROP TABLE IF EXISTS personnel;
 DROP TABLE IF EXISTS locations;
 DROP TABLE IF EXISTS campaigns;
 DROP TABLE IF EXISTS planets;
+DROP TABLE IF EXISTS star_systems;
 DROP TABLE IF EXISTS name_pool;
 DROP TABLE IF EXISTS callsign_pool;
 DROP TABLE IF EXISTS lance_template_slots;
@@ -43,10 +44,33 @@ CREATE TABLE game_state (
 INSERT INTO game_state (property_name, property_value) 
 VALUES ('current_date', '3025-01-01');
 
+CREATE TABLE star_systems (
+    system_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+
 CREATE TABLE planets (
     planet_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    allegiance VARCHAR(100)
+    system_id INT NOT NULL,
+    position INT NOT NULL,
+    time_to_jump_point INT NOT NULL,
+    allegiance VARCHAR(100),
+    map_background VARCHAR(255) NULL,  -- e.g., /images/maps/galtor3.png
+    display_order INT DEFAULT 0,
+    FOREIGN KEY (system_id) REFERENCES star_systems(system_id)
+);
+
+CREATE TABLE locations (
+    location_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type ENUM('City', 'Spaceport', 'Base', 'Industrial Zone'),                -- City, Spaceport, Base, Industrial Zone, etc.
+    terrain ENUM('Urban', 'Dense Urban', 'Rural', 'Plains', 'Mountains', 'Hills', 'Woods', 'Marsh', 'Desert'),
+    planet_id INT NOT NULL,
+    coord_x FLOAT NOT NULL DEFAULT 0,
+    coord_y FLOAT NOT NULL DEFAULT 0,
+    display_order INT DEFAULT 0,
+    FOREIGN KEY (planet_id) REFERENCES planets(planet_id)
 );
 
 CREATE TABLE campaigns (
@@ -79,14 +103,6 @@ CREATE TABLE personnel (
     morale DECIMAL(5,2) NOT NULL DEFAULT 100.00,
     missions INT DEFAULT 0,
     FOREIGN KEY (rank_id) REFERENCES ranks(id)
-);
-
-CREATE TABLE locations (
-    location_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    type VARCHAR(50),                -- City, Spaceport, Base, Industrial Zone, etc.
-    planet_id INT NOT NULL,
-    FOREIGN KEY (planet_id) REFERENCES planets(planet_id)
 );
 
 CREATE TABLE toe_templates (
@@ -135,9 +151,10 @@ CREATE TABLE chassis (
         'Brawler',
         'Missile Boat',
         'Juggernaut',
-        'Scout','Sniper'
-        ,'Skirmisher'
-        ,'Striker'
+        'Scout','Sniper',
+        'Skirmisher',
+        'Striker',
+        'Command'
     ) DEFAULT 'Brawler',
     hard_attack INT,
     soft_attack INT,
