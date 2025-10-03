@@ -8,7 +8,8 @@
         <p><strong>Rank:</strong> <?= esc($person['rank_full']) ?></p>
         <p><strong>Gender:</strong> <?= esc($person['gender']) ?></p>
         <p><strong>Callsign:</strong> <?= esc($person['callsign']) ?></p>
-        <p><strong>Date of Birth:</strong> <?= esc($person['date_of_birth']) ?></p>
+        <?php $dob = new \DateTime($person['date_of_birth']); $dobFormatted = $dob->format('j F Y')?>
+        <p><strong>Date of Birth:</strong> <?= esc($dobFormatted) ?></p>
         <p><strong>Age:</strong> <?= esc($age) ?> years</p>
       </div>
 

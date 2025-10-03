@@ -40,16 +40,23 @@ class PersonnelProfileService
         [$minAge, $maxAge] = $entry['age'];
         $age = rand($minAge, $maxAge);
 
-        // Pull current date from GameState
+        // Current game date
         $currentDate = $this->gameState->getProperty('current_date') ?? '3025-01-01';
         $now = new DateTime($currentDate);
 
-        // Set DOB by subtracting age from current game date
-        $dob = (clone $now)->modify("-{$age} years")->format('Y-m-d');
+        // Birth year based on current date and chosen age
+        $birthYear = (int) $now->format('Y') - $age;
+
+        // Random month and day (valid for the year)
+        $month = rand(1, 12);
+        $day   = rand(1, cal_days_in_month(CAL_GREGORIAN, $month, $birthYear));
+
+        $dobObj = new DateTime();
+        $dobObj->setDate($birthYear, $month, $day);
 
         return [
             'experience' => $entry['experience'],
-            'dob'        => $dob,
+            'dob'        => $dobObj->format('Y-m-d'),
             'age'        => $age
         ];
     }
