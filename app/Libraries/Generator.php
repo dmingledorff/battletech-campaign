@@ -81,7 +81,6 @@ class Generator
             'status'     => $status,
             'date_of_birth'=> $profile['dob']
         ];
-        log_message('debug', 'Personnel insert payload: ' . print_r($personnel, true));
         $this->db->table('personnel')->insert($personnel);
         $id = $this->db->insertID();
 
