@@ -1,6 +1,8 @@
 <?php namespace App\Libraries;
 
 use CodeIgniter\Database\ConnectionInterface;
+use App\Models\RankModel;
+use App\Libraries\PersonnelProfileService;
 
 class Generator
 {
@@ -27,7 +29,7 @@ class Generator
     public function generatePersonnel(
         string $faction = 'Davion',
         string $role = 'MechWarrior',
-        int $rank = 1,
+        int $rankId = 1,
         string $experience = 'Green',
         string $status = 'Active',
         string $gender = null,
@@ -63,32 +65,23 @@ class Generator
         $gameState = new \App\Models\GameStateModel();
         $currentDate = new \DateTime($gameState->getProperty('current_date'));
 
-        // Map experience → min/max age
-        $ageRanges = [
-            'Green'   => [18, 25],
-            'Regular' => [22, 35],
-            'Veteran' => [28, 45],
-            'Elite'   => [35, 55],
-        ];
-
-        $range = $ageRanges[$experience] ?? [18, 30]; // fallback
-
-        $age = rand($range[0], $range[1]);
-        $dob = clone $currentDate;
-        $dob->modify("-{$age} years");
+        $profileService = new PersonnelProfileService();
+        $rankModel = new RankModel();
+        $rank     = $rankModel->find($rankId);
+        $profile = $profileService->generateProfileForRank($rank['full_name']);
 
         $personnel = [
             'first_name' => $first,
             'last_name'  => $last,
-            'rank_id'    => $rank,
+            'rank_id'    => $rankId,
             'gender'     => $gender,
             'callsign'   => $callsign->value ?? null,
             'mos'        => $role,
-            'experience' => $experience,
+            'experience' => $experience ?? $profile['experience'],
             'status'     => $status,
-            'date_of_birth'=> $dob->format('Y-m-d'),
+            'date_of_birth'=> $profile['dob']
         ];
-
+        log_message('debug', 'Personnel insert payload: ' . print_r($personnel, true));
         $this->db->table('personnel')->insert($personnel);
         $id = $this->db->insertID();
 
@@ -277,10 +270,23 @@ class Generator
         return true;
     }
 
-    public function promotePersonnel(int $personnelId, int $newRankId): void {
+    public function promotePersonnel(int $personnelId, int $newRankId) {
+        $profileService = new PersonnelProfileService();
+        $rankModel = new RankModel();
+        $newRank      = $rankModel->find($newRankId);
+
+        if (!$newRank) {
+            return; // fail safe: rank not found
+        }
+
+        $profile = $profileService->generateProfileForRank($newRank['full_name']);
+
         $this->db->table('personnel')
             ->where('personnel_id', $personnelId)
-            ->update(['rank_id' => $newRankId]);
+            ->update([
+                'rank_id'       => $newRankId,
+                'experience'    => $profile['experience'],
+                'date_of_birth' => $profile['dob']
+            ]);
     }
-   
 }

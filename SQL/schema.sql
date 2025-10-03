@@ -30,6 +30,7 @@ DROP TABLE IF EXISTS toe_slots;
 DROP TABLE IF EXISTS toe_subunits;
 DROP TABLE IF EXISTS toe_templates;
 DROP TABLE IF EXISTS ranks;
+DROP TABLE IF EXISTS game_state;
 
 -- Core tables
 

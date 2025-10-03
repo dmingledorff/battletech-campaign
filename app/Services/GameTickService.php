@@ -72,7 +72,7 @@ class GameTickService
         foreach ($personnel as $p) {
             $morale = $p['morale'] ?? 100;
             if ($morale < 100) {
-                $morale = min(100, $morale + 0.1); // tiny recovery
+                $morale = min(100, $morale + 2.0); // tiny recovery
                 $this->db->table('personnel')
                     ->where('personnel_id', $p['personnel_id'])
                     ->update(['morale' => $morale]);
