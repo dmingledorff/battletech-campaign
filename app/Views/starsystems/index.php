@@ -42,6 +42,18 @@
         const backgroundImage = new Image();
         backgroundImage.src = "<?= base_url(esc($selectedPlanet['map_background'])) ?>";
 
+        // Preload location icons
+        const locationIcons = {
+          City: new Image(),
+          Spaceport: new Image(),
+          Base: new Image(),
+          "Industrial Zone": new Image()
+        };
+        locationIcons.City.src = "/images/icons/modern-city.svg";
+        locationIcons.Spaceport.src = "/images/icons/space-shuttle.svg";
+        locationIcons.Base.src = "/images/icons/military-fort.svg";
+        locationIcons["Industrial Zone"].src = "/images/icons/factory.svg";
+
         // Chart.js plugin to draw background image
         const backgroundPlugin = {
           id: 'backgroundImagePlugin',
@@ -50,38 +62,63 @@
             const ctx = chart.ctx;
             const { left, top, width, height } = chart.chartArea;
             ctx.save();
-            ctx.globalAlpha = 0.7; // make it slightly transparent if desired
+            ctx.globalAlpha = 0.7; // slightly transparent
             ctx.drawImage(backgroundImage, left, top, width, height);
             ctx.restore();
           }
         };
 
-        // Colors per type
+        const locationLabelPlugin = {
+        id: 'locationLabelPlugin',
+        afterDatasetsDraw(chart) {
+          const ctx = chart.ctx;
+          chart.data.datasets.forEach((dataset, i) => {
+            if (dataset.label === 'Locations') {
+              const meta = chart.getDatasetMeta(i);
+              meta.data.forEach((element, index) => {
+                const { x, y, label } = dataset.data[index];
+
+                ctx.save();
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(label, element.x + 14, element.y + 8); // offset text from icon
+                ctx.restore();
+              });
+            }
+          });
+        }
+      };
+
+        // Colors per unit type
         const colors = {
-          Location: 'yellow',
           Company: 'blue',
-          Lance: 'green',
-          Battalion: 'orange',
-          Regiment: 'red',
-          Platoon: 'purple',
-          Squad: 'cyan'
+          Lance: 'blue', // all player units in blue
+          Battalion: 'blue',
+          Regiment: 'blue',
+          Platoon: 'blue',
+          Squad: 'blue'
         };
 
         const datasets = [];
 
-        // Add locations
+        // Add locations (with icons + labels)
         datasets.push({
           label: 'Locations',
           data: <?= json_encode(array_map(function($loc) {
             return [
               'x' => (float) ($loc['coord_x'] ?? 0),
               'y' => (float) ($loc['coord_y'] ?? 0),
-              'label' => $loc['name']
+              'label' => $loc['name'],
+              'iconType' => $loc['type']
             ];
           }, $selectedPlanet['locations'] ?? [])) ?>,
-            pointBackgroundColor: 'rgba(255, 215, 0, 0.5)', // gold with transparency
-            pointBorderColor: 'black',
-            pointRadius: 18
+          pointStyle: (ctx) => {
+            const type = ctx.raw.iconType;
+            return locationIcons[type] || 'circle';
+          },
+          pointRadius: 20
         });
 
         // Group units by type
@@ -99,7 +136,7 @@
           datasets.push({
             label: type,
             data: items,
-            pointBackgroundColor: colors[type] || 'white',
+            pointBackgroundColor: colors[type] || 'blue', // default all blue
             pointRadius: 6
           });
         }
@@ -122,7 +159,7 @@
               y: { type: 'linear', min: 0, max: 100 }
             }
           },
-          plugins: [backgroundPlugin]
+          plugins: [backgroundPlugin, locationLabelPlugin]
         });
       </script>
     <?php else: ?>
