@@ -2,6 +2,7 @@
 
 use CodeIgniter\Database\ConnectionInterface;
 use App\Models\RankModel;
+use App\Models\FactionModel;
 use App\Libraries\PersonnelProfileService;
 
 class Generator
@@ -27,7 +28,7 @@ class Generator
      * @return int                Inserted personnel_id
      */
     public function generatePersonnel(
-        string $faction = 'Davion',
+        string $house = 'Davion',
         string $role = 'MechWarrior',
         int $rankId = 1,
         string $experience = 'Green',
@@ -40,16 +41,19 @@ class Generator
         if ($gender === null) {
             $gender = (mt_rand(0,100) <= 65) ? 'Male' : 'Female';
         }
+
+        $factionModel = new FactionModel();
+        $faction = $factionModel->where('house', $house)->first();
         
         // Map to name_pool type
         $firstType = ($gender === 'Female') ? 'first_female' : 'first_male';
 
         // Pick first + last names with faction fallback
-        if ($first == null) $first = $this->pickRandomNameRow($faction, $firstType)->value;
-        if ($last == null)  $last  = $this->pickRandomNameRow($faction, 'last')->value;
+        if ($first == null) $first = $this->pickRandomNameRow($faction['house'], $firstType)->value;
+        if ($last == null)  $last  = $this->pickRandomNameRow($faction['house'], 'last')->value;
 
         if (!$first || !$last) {
-            throw new \RuntimeException("No names available for faction: {$faction}");
+            throw new \RuntimeException("No names available for faction: {$faction['house']}");
         }
 
         // Random callsign only for MechWarriors
@@ -71,15 +75,16 @@ class Generator
         $profile = $profileService->generateProfileForRank($rank['full_name']);
 
         $personnel = [
-            'first_name' => $first,
-            'last_name'  => $last,
-            'rank_id'    => $rankId,
-            'gender'     => $gender,
-            'callsign'   => $callsign->value ?? null,
-            'mos'        => $role,
-            'experience' => $experience ?? $profile['experience'],
-            'status'     => $status,
-            'date_of_birth'=> $profile['dob']
+            'first_name'   => $first,
+            'last_name'    => $last,
+            'rank_id'      => $rankId,
+            'gender'       => $gender,
+            'callsign'     => $callsign->value ?? null,
+            'mos'          => $role,
+            'experience'   => $experience ?? $profile['experience'],
+            'status'       => $status,
+            'date_of_birth'=> $profile['dob'],
+            'faction_id'   => $faction['faction_id'] ?? null
         ];
         $this->db->table('personnel')->insert($personnel);
         $id = $this->db->insertID();
@@ -112,6 +117,7 @@ class Generator
         $battlefieldRole = null,         // can be string or array of roles
         string $weightClass = null,      // optional: Light/Medium/etc
         int $unitId = null,
+        string $house = 'Davion',
         string $status = 'Active'
     ) {
         $builder = $this->db->table('chassis');
@@ -161,13 +167,17 @@ class Generator
         // Serial number
         $serial = strtoupper($chassis->variant ?? $chassis->name) . '_' . str_pad(rand(1, 9999999999), 10, '0', STR_PAD_LEFT);
 
+        $factionModel = new FactionModel();
+        $faction = $factionModel->where('house', $house)->first();
+
         // Insert into equipment
         $data = [
             'chassis_id'       => $chassis->chassis_id,
             'serial_number'    => $serial,
             'assigned_unit_id' => $unitId,
             'damage_percentage'=> 0.0,
-            'equipment_status' => $status
+            'equipment_status' => $status,
+            'faction_id'       => $faction['faction_id']
         ];
 
         $this->db->table('equipment')->insert($data);

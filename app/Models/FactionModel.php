@@ -10,7 +10,8 @@ class FactionModel extends Model
         'name',
         'description',
         'emblem_path',
-        'color'
+        'color',
+        'house'
     ];
     protected $returnType = 'array';
 }

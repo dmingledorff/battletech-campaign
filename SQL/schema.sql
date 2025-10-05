@@ -47,6 +47,7 @@ VALUES ('current_date', '3025-01-01');
 CREATE TABLE factions (
     faction_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
+    house VARCHAR(50),
     description TEXT,
     emblem_path VARCHAR(255) NULL, -- optional image path for logo
     color VARCHAR(20) DEFAULT '#FFFFFF' -- optional color theme for UI
@@ -141,7 +142,6 @@ CREATE TABLE units (
         'Command','Battle','Striker','Pursuit',
         'Fire','Security','Support','Assault', 'Recon', 'Urban Combat'
     ) NULL,
-    allegiance VARCHAR(100),
     parent_unit_id INT,
     commander_id INT,
     location_id INT,
@@ -183,6 +183,8 @@ CREATE TABLE equipment (
     chassis_id INT NOT NULL,
     serial_number VARCHAR(50) UNIQUE NOT NULL,
     assigned_unit_id INT,
+    location_id INT,
+    faction_id INT,
     damage_percentage DECIMAL(5,2) DEFAULT 0.0,
     equipment_status ENUM(
         'Active',
@@ -192,7 +194,9 @@ CREATE TABLE equipment (
         'Mothballed'
     ) NOT NULL DEFAULT 'Active',
     FOREIGN KEY (chassis_id) REFERENCES chassis(chassis_id) ON DELETE CASCADE,
-    FOREIGN KEY (assigned_unit_id) REFERENCES units(unit_id) ON DELETE SET NULL
+    FOREIGN KEY (assigned_unit_id) REFERENCES units(unit_id) ON DELETE SET NULL,
+    FOREIGN KEY (location_id) REFERENCES locations(location_id) ON DELETE SET NULL,
+    FOREIGN KEY (faction_id) REFERENCES factions(faction_id) ON DELETE SET NULL
 );
 
 CREATE TABLE personnel_assignments (

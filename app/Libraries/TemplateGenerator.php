@@ -2,6 +2,7 @@
 
 use App\Models\ToeTemplateModel;
 use App\Models\RankModel;
+use App\Models\FactionModel;
 
 class TemplateGenerator
 {
@@ -53,12 +54,15 @@ class TemplateGenerator
             $unitName = $this->generateUnitName($unitType, $template, $num, $parentUnitId);
         }
 
+        $factionModel = new FactionModel();
+        $faction = $factionModel->where('house', $allegiance)->first();
+
         // Create unit
         $unitId = $this->unitGenerator->createUnit(
             $template['unit_type'],
             $unitName,
             $template['nickname'] ?? null,
-            $allegiance,
+            $faction['faction_id'],
             $parentUnitId,
             null,
             $template['role'] ?? null,
@@ -99,6 +103,7 @@ class TemplateGenerator
                 $slot['roles'] ?? null,
                 $slot['weight_class'] ?? null,
                 $unitId,
+                'Davion',
                 'Active'
             );
 
