@@ -34,6 +34,7 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
+        'faction'       => \App\Filters\FactionFilter::class
     ];
 
     /**
@@ -83,6 +84,12 @@ class Filters extends BaseFilters
                     'js/*',
                 ],
             ],
+            'faction' => ['except' => [
+                'login*',
+                'register*',
+                'logout*',
+                'auth/*'
+            ]],
         ],
         'after' => [
             'toolbar',

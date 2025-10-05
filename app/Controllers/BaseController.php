@@ -12,6 +12,7 @@ class BaseController extends Controller
     protected $gameDate;
     protected $gameState;
     protected $allPlanets;
+    protected $currentFaction;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger) {
         parent::initController($request, $response, $logger);
@@ -28,6 +29,15 @@ class BaseController extends Controller
 
         $planetModel = new PlanetModel();
         $this->allPlanets = $planetModel->getAllWithSystems();
+
+        $auth         = service('auth');
+        $currentUser  = $auth->loggedIn() ? $auth->user() : null;
+        $this->currentFaction = null;
+
+        if ($currentUser && ! empty($currentUser->faction_id)) {
+        $this->currentFaction = model('\App\Models\FactionModel')->find($currentUser->faction_id); // array
+}
+
     }
 
     /**
@@ -40,6 +50,8 @@ class BaseController extends Controller
         $data['gameState'] = $this->gameState;
         $data['gameDate'] = $this->gameDate;
         $data['allPlanets'] = $this->allPlanets;
+        $data['currentFaction'] = $this->currentFaction;
+
 
         return view('layout/header', $data)
              . view($view, $data)

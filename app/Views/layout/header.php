@@ -8,8 +8,10 @@
   <link href="/css/app.css" rel="stylesheet">
 </head>
 <body class="bg-dark text-light">
+
 <nav class="navbar navbar-expand-lg navbar-dark bg-black border-bottom border-secondary mb-3">
   <div class="container-fluid">
+    <!-- Brand -->
     <a class="navbar-brand d-flex align-items-center" href="<?= base_url('/') ?>">
       <img src="<?= base_url('images/logo.png') ?>" alt="Unit Logo" style="height:40px; width:auto;">
     </a>
@@ -23,14 +25,11 @@
     <!-- Navbar links -->
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav me-auto">
-
-        <!-- Example: Star Systems link -->
         <li class="nav-item">
           <a class="nav-link <?= (service('uri')->getSegment(1) === 'starsystems' ? 'active' : '') ?>"
-             href="<?= '/starsystems' ?>">Star Systems</a>
+             href="<?= base_url('/starsystems') ?>">Star Systems</a>
         </li>
 
-        <!-- Example dropdown with planets -->
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarPlanets" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Planets
@@ -39,7 +38,7 @@
             <?php if (!empty($allPlanets)): ?>
               <?php foreach ($allPlanets as $planet): ?>
                 <li>
-                  <a class="dropdown-item" href="<?= '/planets/show/'.$planet['planet_id'] ?>">
+                  <a class="dropdown-item" href="<?= base_url('/planets/show/'.$planet['planet_id']) ?>">
                     <?= esc($planet['name']) ?>
                   </a>
                 </li>
@@ -49,14 +48,50 @@
             <?php endif; ?>
           </ul>
         </li>
+      </ul>
+
+      <!-- Right section: date + faction + user info -->
+      <ul class="navbar-nav ms-auto align-items-center">
+
+        <!-- Game Date -->
+        <li class="nav-item me-3">
+          <span class="text-light small"><strong>Date:</strong> <?= esc($gameDate) ?></span>
+        </li>
+
+        <!-- Divider -->
+        <li class="nav-item">
+          <div class="vr text-secondary mx-2"></div>
+        </li>
+
+        <!-- Faction Info -->
+        <?php if (!empty($currentFaction)): ?>
+          <li class="nav-item me-3 d-flex align-items-center">
+            <img src="<?= $currentFaction['emblem_path'] ?>"
+                 alt="<?= esc($currentFaction['name']) ?>"
+                 style="height: 24px; margin-right: 8px;">
+            <span class="text-light small"><strong><?= esc($currentFaction['name']) ?></strong></span>
+          </li>
+
+          <!-- Divider -->
+          <li class="nav-item">
+            <div class="vr text-secondary mx-2"></div>
+          </li>
+        <?php endif; ?>
+
+        <!-- User Dropdown -->
+        <?php if (auth()->loggedIn()): ?>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <?= esc(auth()->user()->username ?? auth()->user()->email) ?>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+              <li><a class="dropdown-item text-danger" href="<?= base_url('/logout') ?>">Logout</a></li>
+            </ul>
+          </li>
+        <?php endif; ?>
 
       </ul>
     </div>
-  </div>
-
-  <!-- Right-aligned date -->
-  <div class="ml-auto text-light" style="white-space: nowrap; padding-right: 1rem;">
-    <strong>Date:</strong> <?= esc($gameDate) ?>
   </div>
 </nav>
 

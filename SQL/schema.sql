@@ -44,6 +44,15 @@ CREATE TABLE game_state (
 INSERT INTO game_state (property_name, property_value) 
 VALUES ('current_date', '3025-01-01');
 
+CREATE TABLE factions (
+    faction_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    emblem_path VARCHAR(255) NULL, -- optional image path for logo
+    color VARCHAR(20) DEFAULT '#FFFFFF' -- optional color theme for UI
+);
+
+
 CREATE TABLE star_systems (
     system_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
@@ -94,6 +103,7 @@ CREATE TABLE personnel (
     first_name VARCHAR(50),
     last_name VARCHAR(50),
     rank_id INT,
+    faction_id INT,
     status ENUM('Active','KIA','Retired', 'Injured', 'MIA') DEFAULT 'Active',
     gender ENUM('Male','Female','Other'),
     callsign VARCHAR(50),
@@ -102,7 +112,8 @@ CREATE TABLE personnel (
     date_of_birth DATE NULL,
     morale DECIMAL(5,2) NOT NULL DEFAULT 100.00,
     missions INT DEFAULT 0,
-    FOREIGN KEY (rank_id) REFERENCES ranks(id)
+    FOREIGN KEY (rank_id) REFERENCES ranks(id),
+    FOREIGN KEY (faction_id) REFERENCES factions(faction_id) ON DELETE SET NULL
 );
 
 CREATE TABLE toe_templates (
@@ -122,6 +133,7 @@ CREATE TABLE toe_templates (
 CREATE TABLE units (
     unit_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
+    faction_id INT,
     nickname VARCHAR(100),
     current_supply DECIMAL(10,2) DEFAULT 0,
     unit_type ENUM('Regiment','Battalion','Company','Lance','Platoon','Squad') NOT NULL,
@@ -137,7 +149,8 @@ CREATE TABLE units (
     FOREIGN KEY (parent_unit_id) REFERENCES units(unit_id),
     FOREIGN KEY (commander_id) REFERENCES personnel(personnel_id),
     FOREIGN KEY (location_id) REFERENCES locations(location_id),
-    FOREIGN KEY (template_id) REFERENCES toe_templates(template_id)
+    FOREIGN KEY (template_id) REFERENCES toe_templates(template_id),
+    FOREIGN KEY (faction_id) REFERENCES factions(faction_id) ON DELETE SET NULL
 );
 
 CREATE TABLE chassis (

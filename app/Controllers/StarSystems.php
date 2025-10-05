@@ -40,6 +40,7 @@ class StarSystems extends BaseController
             $units = $unitModel->select('units.unit_id, units.name, units.unit_type, l.coord_x, l.coord_y')
                 ->join('locations l', 'l.location_id = units.location_id', 'left')
                 ->where('l.planet_id', $selectedPlanet['planet_id'])
+                ->where('units.faction_id', auth()->user()->faction_id)
                 ->findAll();
         }
 

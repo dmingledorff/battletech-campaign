@@ -17,6 +17,8 @@ $routes->get('starsystems', 'StarSystems::index');
 $routes->get('starsystems/index', 'StarSystems::index');
 $routes->get('starsystems/index/(:num)', 'StarSystems::index/$1'); // system_id
 $routes->get('starsystems/index/(:num)/(:num)', 'StarSystems::index/$1/$2'); // system_id + planet_id
+$routes->get('faction/select', 'Faction::select');
+$routes->post('faction/save', 'Faction::save');
 
 service('auth')->routes($routes);
 
