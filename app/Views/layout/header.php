@@ -5,7 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Battletech Campaign</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <link href="/css/app.css" rel="stylesheet">
+  <!-- Standard favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <!-- PNG favicons for better quality -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <!-- Apple Touch Icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180x180.png">
+  <!-- Android Chrome icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png">
 </head>
 <body class="bg-dark text-light">
 
