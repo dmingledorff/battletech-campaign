@@ -21,6 +21,8 @@ $routes->get('starsystems/index/(:num)/(:num)', 'StarSystems::index/$1/$2'); // 
 $routes->get('faction/select', 'Faction::select');
 $routes->post('faction/save', 'Faction::save');
 
+$routes->get('equipment/getCrew/(:num)', 'Equipment::getCrew/$1');
+
 // Unit Management Routes
 $routes->group('units', ['filter' => 'session'], static function($routes) {
     $routes->get('show/(:num)', 'Units::show/$1');
