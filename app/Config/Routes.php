@@ -23,6 +23,9 @@ $routes->post('faction/save', 'Faction::save');
 
 $routes->get('equipment/getCrew/(:num)', 'Equipment::getCrew/$1');
 
+$routes->post('units/assignCommander/(:num)', 'Units::assignCommander/$1');
+$routes->post('units/dismissCommander/(:num)', 'Units::dismissCommander/$1');
+
 // Unit Management Routes
 $routes->group('units', ['filter' => 'session'], static function($routes) {
     $routes->get('show/(:num)', 'Units::show/$1');

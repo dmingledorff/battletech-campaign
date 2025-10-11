@@ -44,3 +44,9 @@ a:hover {
 .btn-success:hover {
   box-shadow: 0 0 16px var(--faction-color, #00ff00);
 }
+
+#commanderSelect option:checked {
+  background-color: #1a4d2e;
+  color: #fff;
+  font-weight: bold;
+}

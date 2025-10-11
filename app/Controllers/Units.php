@@ -1,12 +1,15 @@
-<?php namespace App\Controllers;
+<?php
+
+namespace App\Controllers;
 
 use App\Models\UnitModel;
 
 class Units extends BaseController
 {
-// app/Controllers/Units.php
+    // app/Controllers/Units.php
 
-    public function show($id) {
+    public function show($id)
+    {
         $unitModel = new \App\Models\UnitModel();
         $children  = $unitModel->getAllChildren();
 
@@ -104,8 +107,8 @@ class Units extends BaseController
             $db = \Config\Database::connect();
             $builder = $db->table('personnel_assignments');
             $builder->where('personnel_id', $personnelId)
-                    ->where('unit_id', $unitId)
-                    ->update(['date_released' => date('Y-m-d')]);
+                ->where('unit_id', $unitId)
+                ->update(['date_released' => date('Y-m-d')]);
         }
         return redirect()->to("/units/$unitId");
     }
@@ -117,7 +120,7 @@ class Units extends BaseController
             $db = \Config\Database::connect();
             $builder = $db->table('equipment');
             $builder->where('equipment_id', $equipmentId)
-                    ->update(['assigned_unit_id' => $unitId]);
+                ->update(['assigned_unit_id' => $unitId]);
         }
         return redirect()->to("/units/$unitId");
     }
@@ -129,7 +132,7 @@ class Units extends BaseController
             $db = \Config\Database::connect();
             $builder = $db->table('equipment');
             $builder->where('equipment_id', $equipmentId)
-                    ->update(['assigned_unit_id' => null]);
+                ->update(['assigned_unit_id' => null]);
         }
         return redirect()->to("/units/$unitId");
     }
@@ -144,4 +147,30 @@ class Units extends BaseController
         return redirect()->to("/units/$unitId");
     }
 
+    public function assignCommander($unitId)
+    {
+        $data = $this->request->getJSON(true);
+        $personnelId = $data['personnel_id'] ?? null;
+
+        if (!$personnelId) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'No personnel selected']);
+        }
+
+        $db = \Config\Database::connect();
+        $db->table('units')
+            ->where('unit_id', $unitId)
+            ->update(['commander_id' => $personnelId]);
+
+        return $this->response->setJSON(['status' => 'success']);
+    }
+
+    public function dismissCommander($unitId)
+    {
+        $db = \Config\Database::connect();
+        $db->table('units')
+            ->where('unit_id', $unitId)
+            ->update(['commander_id' => null]);
+
+        return $this->response->setJSON(['status' => 'success']);
+    }
 }

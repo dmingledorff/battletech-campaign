@@ -23,13 +23,20 @@
         <p><strong>Nickname:</strong> <?= esc($unit['nickname']) ?></p>
         <p><strong>Type:</strong> <?= esc($unit['unit_type']) ?></p>
         <p><strong>Role:</strong> <?= esc($unit['role']) ?></p>
-        <p><strong>Commander:</strong>
+        <p>
+          <strong>Commander:</strong>
           <?php if (!empty($unit['commander_id'])): ?>
             <a class="link-info" href="/personnel/<?= esc($unit['commander_id']) ?>">
               <?= esc($unit['rank_abbr']) ?>. <?= esc($unit['last_name'] . ', ' . $unit['first_name']) ?>
             </a>
+            <button class="btn btn-sm btn-outline-danger ms-2" data-bs-toggle="modal" data-bs-target="#assignCommanderModal">
+              Dismiss
+            </button>
           <?php else: ?>
             <span class="text-muted">Unassigned</span>
+            <button class="btn btn-sm btn-outline-info ms-2" data-bs-toggle="modal" data-bs-target="#assignCommanderModal">
+              Assign
+            </button>
           <?php endif; ?>
         </p>
       </div>
@@ -189,6 +196,7 @@
               <th>Type</th>
               <th>Weight Class</th>
               <th>Status</th>
+              <th>Damage</th>
             </tr>
           </thead>
           <tbody>
@@ -199,6 +207,7 @@
                 <td><?= esc($e['chassis_type']) ?></td>
                 <td><?= esc($e['weight_class']) ?></td>
                 <td><?= esc($e['equipment_status']) ?></td>
+                <td><?= esc($e['damage_percentage']) ?>%</td>
               </tr>
             <?php endforeach; ?>
           </tbody>
@@ -220,6 +229,7 @@
                 <th>Type</th>
                 <th>Unit</th>
                 <th>Status</th>
+              <th>Damage</th>
               </tr>
             </thead>
             <tbody>
@@ -230,6 +240,7 @@
                   <td><?= esc($e['chassis_type']) ?></td>
                   <td><?= esc($e['unit_name'] ?? '-') ?></td>
                   <td><?= esc($e['equipment_status']) ?></td>
+                  <td><?= esc($e['damage_percentage']) ?>%</td>
                 </tr>
               <?php endforeach; ?>
             </tbody>
@@ -239,215 +250,248 @@
     </div>
 
   </div>
+</div>
+<!-- Manage Personnel Modal -->
+<div class="modal fade" id="managePersonnelModal" tabindex="-1" aria-labelledby="managePersonnelLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content bg-dark text-light border-secondary shadow-lg">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="managePersonnelLabel">
+          <i class="bi bi-people-fill me-2"></i>Manage Unit Personnel
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
 
-  <!-- Manage Personnel Modal -->
-  <div class="modal fade" id="managePersonnelModal" tabindex="-1" aria-labelledby="managePersonnelLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-      <div class="modal-content bg-dark text-light border-secondary shadow-lg">
-        <div class="modal-header border-secondary">
-          <h5 class="modal-title" id="managePersonnelLabel">
-            <i class="bi bi-people-fill me-2"></i>Manage Unit Personnel
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-
-        <div class="modal-body">
-          <div class="row">
-            <!-- Unassigned (Available) -->
-            <div class="col-md-5">
-              <h6 class="text-info mb-2">Available Personnel</h6>
-              <select multiple id="availablePersonnel" class="form-select bg-black text-light border-secondary" size="15">
-                <?php foreach ($availablePersonnel as $p): ?>
-                  <option value="<?= $p['personnel_id'] ?>"
-                    data-name="<?= esc($p['first_name'] . ' ' . $p['last_name']) ?>"
-                    data-mos="<?= esc($p['mos']) ?>"
-                    data-status="<?= esc($p['status']) ?>"
-                    data-dob="<?= esc($p['date_of_birth'] ?? 'N/A') ?>"
-                    data-experience="<?= esc($p['experience']) ?>"
-                    data-morale="<?= esc($p['morale']) ?>">
-                    <?= esc($p['last_name'] . ', ' . $p['first_name'] . ' (' . $p['rank_full'] . ')') ?>
-                  </option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-
-            <!-- Control Buttons -->
-            <div class="col-md-2 d-flex flex-column justify-content-center align-items-center">
-              <button id="assignBtn" class="btn btn-outline-success btn-sm my-2" title="Assign Selected">
-                <i class="bi bi-arrow-right-circle-fill fs-4"></i>
-              </button>
-              <button id="unassignBtn" class="btn btn-outline-danger btn-sm my-2" title="Unassign Selected">
-                <i class="bi bi-arrow-left-circle-fill fs-4"></i>
-              </button>
-            </div>
-
-            <!-- Assigned (Direct) -->
-            <div class="col-md-5">
-              <h6 class="text-warning mb-2">Assigned to Unit</h6>
-              <select multiple id="assignedPersonnel" class="form-select bg-black text-light border-secondary" size="15">
-                <?php foreach ($assignedDirectPersonnel as $p): ?>
-                  <option value="<?= $p['personnel_id'] ?>"
-                    data-name="<?= esc($p['first_name'] . ' ' . $p['last_name']) ?>"
-                    data-mos="<?= esc($p['mos']) ?>"
-                    data-status="<?= esc($p['status']) ?>"
-                    data-dob="<?= esc($p['date_of_birth'] ?? 'N/A') ?>"
-                    data-experience="<?= esc($p['experience']) ?>"
-                    data-morale="<?= esc($p['morale']) ?>">
-                    <?= esc($p['last_name'] . ', ' . $p['first_name'] . ' (' . $p['rank_full'] . ')') ?>
-                  </option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-
-            <!-- Personnel Detail Panel -->
-            <div class="mt-4">
-              <h6 class="text-center text-info">Selected Personnel Details</h6>
-              <div id="personnelDetails" class="p-3 bg-black border border-secondary rounded">
-                <p class="text-muted mb-0">Select a personnel member to view their details.</p>
-              </div>
-            </div>
+      <div class="modal-body">
+        <div class="row">
+          <!-- Unassigned (Available) -->
+          <div class="col-md-5">
+            <h6 class="text-info mb-2">Available Personnel</h6>
+            <select multiple id="availablePersonnel" class="form-select bg-black text-light border-secondary" size="15">
+              <?php foreach ($availablePersonnel as $p): ?>
+                <option value="<?= $p['personnel_id'] ?>"
+                  data-name="<?= esc($p['first_name'] . ' ' . $p['last_name']) ?>"
+                  data-mos="<?= esc($p['mos']) ?>"
+                  data-status="<?= esc($p['status']) ?>"
+                  data-dob="<?= esc($p['date_of_birth'] ?? 'N/A') ?>"
+                  data-experience="<?= esc($p['experience']) ?>"
+                  data-morale="<?= esc($p['morale']) ?>">
+                  <?= esc($p['last_name'] . ', ' . $p['first_name'] . ' (' . $p['rank_full'] . ')') ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
           </div>
-          <div class="modal-footer justify-content-between border-secondary">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="button" id="savePersonnelChanges"
-              class="btn border-secondary text-light">
-              Save Changes
+
+          <!-- Control Buttons -->
+          <div class="col-md-2 d-flex flex-column justify-content-center align-items-center">
+            <button id="assignBtn" class="btn btn-outline-success btn-sm my-2" title="Assign Selected">
+              <i class="bi bi-arrow-right-circle-fill fs-4"></i>
+            </button>
+            <button id="unassignBtn" class="btn btn-outline-danger btn-sm my-2" title="Unassign Selected">
+              <i class="bi bi-arrow-left-circle-fill fs-4"></i>
             </button>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Manage Equipment Modal -->
-  <div class="modal fade" id="manageEquipmentModal" tabindex="-1" aria-labelledby="manageEquipmentLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-      <div class="modal-content bg-dark text-light border-secondary shadow-lg">
-        <div class="modal-header border-secondary">
-          <h5 class="modal-title" id="manageEquipmentLabel">
-            <i class="bi bi-gear-wide-connected me-2"></i>Manage Unit Equipment
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-
-        <div class="modal-body">
-          <div class="row">
-            <!-- Unassigned Equipment -->
-            <div class="col-md-5">
-              <h6 class="text-info mb-2">Available Equipment</h6>
-              <select multiple id="availableEquipment" class="form-select bg-black text-light border-secondary" size="15">
-                <?php foreach ($availableEquipment as $e): ?>
-                  <option value="<?= $e['equipment_id'] ?>"
-                    data-chassis="<?= esc($e['chassis_name']) ?>"
-                    data-variant="<?= esc($e['chassis_variant'] ?? 'Unknown') ?>"
-                    data-type="<?= esc($e['chassis_type'] ?? 'Unknown') ?>"
-                    data-weight="<?= esc($e['weight_class'] ?? 'Unknown') ?>"
-                    data-status="<?= esc($e['equipment_status'] ?? 'Unknown') ?>">
-                    <?= esc($e['chassis_name'] . ' ' . $e['chassis_variant'] . ' (' . $e['weight_class'] . ')') ?>
-                  </option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-
-            <!-- Control Buttons -->
-            <div class="col-md-2 d-flex flex-column justify-content-center align-items-center">
-              <button id="assignEquipmentBtn" class="btn btn-outline-success btn-sm my-2" title="Assign Selected">
-                <i class="bi bi-arrow-right-circle-fill fs-4"></i>
-              </button>
-              <button id="unassignEquipmentBtn" class="btn btn-outline-danger btn-sm my-2" title="Unassign Selected">
-                <i class="bi bi-arrow-left-circle-fill fs-4"></i>
-              </button>
-            </div>
-
-            <!-- Assigned Equipment -->
-            <div class="col-md-5">
-              <h6 class="text-warning mb-2">Assigned Equipment</h6>
-              <select multiple id="assignedEquipment" class="form-select bg-black text-light border-secondary" size="15">
-                <?php foreach ($directEquipment as $e): ?>
-                  <option value="<?= $e['equipment_id'] ?>"
-                    data-chassis="<?= esc($e['chassis_name']) ?>"
-                    data-variant="<?= esc($e['chassis_variant'] ?? 'Unknown') ?>"
-                    data-type="<?= esc($e['chassis_type'] ?? 'Unknown') ?>"
-                    data-weight="<?= esc($e['weight_class'] ?? 'Unknown') ?>"
-                    data-status="<?= esc($e['equipment_status'] ?? 'Unknown') ?>">
-                    <?= esc($e['chassis_name'] . ' ' . $e['chassis_variant'] . ' (' . $e['weight_class'] . ')') ?>
-                  </option>
-                <?php endforeach; ?>
-              </select>
-            </div>
+          <!-- Assigned (Direct) -->
+          <div class="col-md-5">
+            <h6 class="text-warning mb-2">Assigned to Unit</h6>
+            <select multiple id="assignedPersonnel" class="form-select bg-black text-light border-secondary" size="15">
+              <?php foreach ($assignedDirectPersonnel as $p): ?>
+                <option value="<?= $p['personnel_id'] ?>"
+                  data-name="<?= esc($p['first_name'] . ' ' . $p['last_name']) ?>"
+                  data-mos="<?= esc($p['mos']) ?>"
+                  data-status="<?= esc($p['status']) ?>"
+                  data-dob="<?= esc($p['date_of_birth'] ?? 'N/A') ?>"
+                  data-experience="<?= esc($p['experience']) ?>"
+                  data-morale="<?= esc($p['morale']) ?>">
+                  <?= esc($p['last_name'] . ', ' . $p['first_name'] . ' (' . $p['rank_full'] . ')') ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
           </div>
 
-          <!-- Equipment Details Panel -->
+          <!-- Personnel Detail Panel -->
           <div class="mt-4">
-            <h6 class="text-center text-info">Selected Equipment Details</h6>
-            <div id="equipmentDetails" class="p-3 bg-black border border-secondary rounded">
-              <p class="text-muted mb-0">Select an equipment item to view its details and crew.</p>
+            <h6 class="text-center text-info">Selected Personnel Details</h6>
+            <div id="personnelDetails" class="p-3 bg-black border border-secondary rounded">
+              <p class="text-muted mb-0">Select a personnel member to view their details.</p>
             </div>
           </div>
         </div>
-
         <div class="modal-footer justify-content-between border-secondary">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="button" id="saveEquipmentChanges" class="btn border-secondary text-light">Save Changes</button>
+          <button type="button" id="savePersonnelChanges"
+            class="btn border-secondary text-light">
+            Save Changes
+          </button>
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      // Move selected options between lists
-      function moveSelected(from, to) {
-        const selected = Array.from(from.selectedOptions);
-        selected.forEach(opt => to.appendChild(opt));
-      }
+<!-- Manage Equipment Modal -->
+<div class="modal fade" id="manageEquipmentModal" tabindex="-1" aria-labelledby="manageEquipmentLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content bg-dark text-light border-secondary shadow-lg">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="manageEquipmentLabel">
+          <i class="bi bi-gear-wide-connected me-2"></i>Manage Unit Equipment
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
 
-      const availablePersonnel = document.getElementById("availablePersonnel");
-      const assignedPersonnel = document.getElementById("assignedPersonnel");
-      const assignBtn = document.getElementById("assignBtn");
-      const unassignBtn = document.getElementById("unassignBtn");
+      <div class="modal-body">
+        <div class="row">
+          <!-- Unassigned Equipment -->
+          <div class="col-md-5">
+            <h6 class="text-info mb-2">Available Equipment</h6>
+            <select multiple id="availableEquipment" class="form-select bg-black text-light border-secondary" size="15">
+              <?php foreach ($availableEquipment as $e): ?>
+                <option value="<?= $e['equipment_id'] ?>"
+                  data-chassis="<?= esc($e['chassis_name']) ?>"
+                  data-variant="<?= esc($e['chassis_variant'] ?? 'Unknown') ?>"
+                  data-type="<?= esc($e['chassis_type'] ?? 'Unknown') ?>"
+                  data-weight="<?= esc($e['weight_class'] ?? 'Unknown') ?>"
+                  data-status="<?= esc($e['equipment_status'] ?? 'Unknown') ?>">
+                  <?= esc($e['chassis_name'] . ' ' . $e['chassis_variant'] . ' (' . $e['weight_class'] . ')') ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
 
-      // Assign/unassign actions
-      assignBtn.onclick = () => moveSelected(availablePersonnel, assignedPersonnel);
-      unassignBtn.onclick = () => moveSelected(assignedPersonnel, availablePersonnel);
+          <!-- Control Buttons -->
+          <div class="col-md-2 d-flex flex-column justify-content-center align-items-center">
+            <button id="assignEquipmentBtn" class="btn btn-outline-success btn-sm my-2" title="Assign Selected">
+              <i class="bi bi-arrow-right-circle-fill fs-4"></i>
+            </button>
+            <button id="unassignEquipmentBtn" class="btn btn-outline-danger btn-sm my-2" title="Unassign Selected">
+              <i class="bi bi-arrow-left-circle-fill fs-4"></i>
+            </button>
+          </div>
 
-      // Save Personnel Changes
-      document.getElementById("savePersonnelChanges")?.addEventListener("click", () => {
-        const assignedIds = Array.from(assignedPersonnel.options).map(o => o.value);
-        fetch(`/units/managePersonnel/<?= $unit['unit_id'] ?>`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            personnel_ids: assignedIds
-          })
-        }).then(() => location.reload());
-      });
+          <!-- Assigned Equipment -->
+          <div class="col-md-5">
+            <h6 class="text-warning mb-2">Assigned Equipment</h6>
+            <select multiple id="assignedEquipment" class="form-select bg-black text-light border-secondary" size="15">
+              <?php foreach ($directEquipment as $e): ?>
+                <option value="<?= $e['equipment_id'] ?>"
+                  data-chassis="<?= esc($e['chassis_name']) ?>"
+                  data-variant="<?= esc($e['chassis_variant'] ?? 'Unknown') ?>"
+                  data-type="<?= esc($e['chassis_type'] ?? 'Unknown') ?>"
+                  data-weight="<?= esc($e['weight_class'] ?? 'Unknown') ?>"
+                  data-status="<?= esc($e['equipment_status'] ?? 'Unknown') ?>">
+                  <?= esc($e['chassis_name'] . ' ' . $e['chassis_variant'] . ' (' . $e['weight_class'] . ')') ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        </div>
 
-      // Equipment buttons (still matched properly)
-      const availableEquipment = document.getElementById("availableEquipment");
-      const assignedEquipment = document.getElementById("assignedEquipment");
-      document.getElementById("assignEquipmentBtn").onclick = () => moveSelected(availableEquipment, assignedEquipment);
-      document.getElementById("unassignEquipmentBtn").onclick = () => moveSelected(assignedEquipment, availableEquipment);
+        <!-- Equipment Details Panel -->
+        <div class="mt-4">
+          <h6 class="text-center text-info">Selected Equipment Details</h6>
+          <div id="equipmentDetails" class="p-3 bg-black border border-secondary rounded">
+            <p class="text-muted mb-0">Select an equipment item to view its details and crew.</p>
+          </div>
+        </div>
+      </div>
 
-      document.getElementById("saveEquipmentChanges").onclick = () => {
-        const ids = Array.from(assignedEquipment.options).map(o => o.value);
-        fetch(`/units/manageEquipment/<?= $unit['unit_id'] ?>`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            equipment_ids: ids
-          })
-        }).then(() => location.reload());
-      };
+      <div class="modal-footer justify-content-between border-secondary">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" id="saveEquipmentChanges" class="btn border-secondary text-light">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-      // Show selected personnel details
-      const details = document.getElementById('personnelDetails');
-      const populateDetails = (option) => {
-        details.innerHTML = `
+<!-- Assign Commander Modal -->
+<div class="modal fade" id="assignCommanderModal" tabindex="-1" aria-labelledby="assignCommanderLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content bg-dark text-light border-secondary shadow-lg">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="assignCommanderLabel">
+          <i class="bi bi-person-badge-fill me-2"></i>Assign or Dismiss Commander
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <p>Select a personnel member from this unit or its subunits to assign as commander.</p>
+
+        <select id="commanderSelect" class="form-select bg-black text-light border-secondary" size="10">
+          <?php foreach ($personnel as $p): ?>
+            <option value="<?= $p['personnel_id'] ?>"
+              <?= $unit['commander_id'] == $p['personnel_id'] ? 'selected' : '' ?>>
+              <?= esc($p['last_name'] . ', ' . $p['first_name'] . ' — ' . $p['rank_full'] . ' (' . $p['unit_name'] . ')') ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-outline-danger" id="dismissCommanderBtn">Dismiss</button>
+        <button type="button" class="btn btn-outline-success" id="assignCommanderBtn">Assign</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // Move selected options between lists
+    function moveSelected(from, to) {
+      const selected = Array.from(from.selectedOptions);
+      selected.forEach(opt => to.appendChild(opt));
+    }
+
+    const availablePersonnel = document.getElementById("availablePersonnel");
+    const assignedPersonnel = document.getElementById("assignedPersonnel");
+    const assignBtn = document.getElementById("assignBtn");
+    const unassignBtn = document.getElementById("unassignBtn");
+
+    // Assign/unassign actions
+    assignBtn.onclick = () => moveSelected(availablePersonnel, assignedPersonnel);
+    unassignBtn.onclick = () => moveSelected(assignedPersonnel, availablePersonnel);
+
+    // Save Personnel Changes
+    document.getElementById("savePersonnelChanges")?.addEventListener("click", () => {
+      const assignedIds = Array.from(assignedPersonnel.options).map(o => o.value);
+      fetch(`/units/managePersonnel/<?= $unit['unit_id'] ?>`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          personnel_ids: assignedIds
+        })
+      }).then(() => location.reload());
+    });
+
+    // Equipment buttons (still matched properly)
+    const availableEquipment = document.getElementById("availableEquipment");
+    const assignedEquipment = document.getElementById("assignedEquipment");
+    document.getElementById("assignEquipmentBtn").onclick = () => moveSelected(availableEquipment, assignedEquipment);
+    document.getElementById("unassignEquipmentBtn").onclick = () => moveSelected(assignedEquipment, availableEquipment);
+
+    document.getElementById("saveEquipmentChanges").onclick = () => {
+      const ids = Array.from(assignedEquipment.options).map(o => o.value);
+      fetch(`/units/manageEquipment/<?= $unit['unit_id'] ?>`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          equipment_ids: ids
+        })
+      }).then(() => location.reload());
+    };
+
+    // Show selected personnel details
+    const details = document.getElementById('personnelDetails');
+    const populateDetails = (option) => {
+      details.innerHTML = `
       <div class="row text-center">
         <div class="col-md-4"><strong>Name:</strong><br>${option.dataset.name}</div>
         <div class="col-md-4"><strong>MOS:</strong><br>${option.dataset.mos}</div>
@@ -459,35 +503,35 @@
         <div class="col-md-4"><strong>Morale:</strong><br>${option.dataset.morale}%</div>
       </div>
     `;
-      };
+    };
 
-      document.querySelectorAll('#availablePersonnel, #assignedPersonnel').forEach(select => {
-        select.addEventListener('change', e => {
-          const selected = e.target.selectedOptions[0];
-          if (selected) populateDetails(selected);
-        });
+    document.querySelectorAll('#availablePersonnel, #assignedPersonnel').forEach(select => {
+      select.addEventListener('change', e => {
+        const selected = e.target.selectedOptions[0];
+        if (selected) populateDetails(selected);
       });
     });
+  });
 
-    // Equipment details panel
-    const eqDetails = document.getElementById('equipmentDetails');
+  // Equipment details panel
+  const eqDetails = document.getElementById('equipmentDetails');
 
-    // Helper to populate details
-    const showEquipmentDetails = async (option) => {
-      const eqId = option.value;
-      const chassis = option.dataset.chassis;
-      const variant = option.dataset.variant;
-      const type = option.dataset.type;
-      const weight = option.dataset.weight;
-      const status = option.dataset.status;
+  // Helper to populate details
+  const showEquipmentDetails = async (option) => {
+    const eqId = option.value;
+    const chassis = option.dataset.chassis;
+    const variant = option.dataset.variant;
+    const type = option.dataset.type;
+    const weight = option.dataset.weight;
+    const status = option.dataset.status;
 
-      // Fetch crew data for this equipment
-      const response = await fetch(`/equipment/getCrew/${eqId}`);
-      let crewList = [];
-      if (response.ok) crewList = await response.json();
+    // Fetch crew data for this equipment
+    const response = await fetch(`/equipment/getCrew/${eqId}`);
+    let crewList = [];
+    if (response.ok) crewList = await response.json();
 
-      // Build HTML
-      eqDetails.innerHTML = `
+    // Build HTML
+    eqDetails.innerHTML = `
     <div class="row text-center">
       <div class="col-md-3"><strong>Chassis:</strong><br>${chassis}</div>
       <div class="col-md-3"><strong>Variant:</strong><br>${variant}</div>
@@ -513,21 +557,54 @@
         : `<p class="text-muted text-center mb-0">No crew assigned.</p>`
     }
   `;
-    };
+  };
 
-    // Listen for equipment selection
-    ['availableEquipment', 'assignedEquipment'].forEach(id => {
-      document.getElementById(id)?.addEventListener('change', (e) => {
-        const selected = e.target.selectedOptions[0];
-        if (selected) showEquipmentDetails(selected);
-      });
+  // Listen for equipment selection
+  ['availableEquipment', 'assignedEquipment'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', (e) => {
+      const selected = e.target.selectedOptions[0];
+      if (selected) showEquipmentDetails(selected);
     });
+  });
 
-    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const icon = btn.querySelector('i');
-        if (icon) icon.classList.toggle('bi-chevron-up');
-        if (icon) icon.classList.toggle('bi-chevron-down');
-      });
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const icon = btn.querySelector('i');
+      if (icon) icon.classList.toggle('bi-chevron-up');
+      if (icon) icon.classList.toggle('bi-chevron-down');
     });
-  </script>
+  });
+
+  // Commander Assign / Dismiss
+  document.getElementById("assignCommanderBtn")?.addEventListener("click", () => {
+    const commanderId = document.getElementById("commanderSelect").value;
+    if (!commanderId) return;
+
+    fetch(`/units/assignCommander/<?= $unit['unit_id'] ?>`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        personnel_id: commanderId
+      })
+    }).then(() => location.reload());
+  });
+
+  document.getElementById("dismissCommanderBtn")?.addEventListener("click", () => {
+    fetch(`/units/dismissCommander/<?= $unit['unit_id'] ?>`, {
+        method: "POST"
+      })
+      .then(() => location.reload());
+  });
+
+  document.getElementById('assignCommanderModal')?.addEventListener('shown.bs.modal', () => {
+    const select = document.getElementById('commanderSelect');
+    const selected = select.selectedOptions[0];
+    if (selected) {
+      selected.scrollIntoView({
+        block: 'center'
+      });
+    }
+  });
+</script>
