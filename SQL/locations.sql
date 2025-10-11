@@ -14,18 +14,18 @@ SET @galtor3_id = LAST_INSERT_ID();
 
 -- Insert major locations (cities with coordinates)
 INSERT INTO locations (name, type, terrain, planet_id, coord_x, coord_y) VALUES
-('New Derry', 'City', 'Dense Urban', @galtor3_id, 30.5, 42.0),
-('New Wuhan City', 'City', 'Dense Urban', @galtor3_id, 72.0, 55.5),
-('Changlee', 'City', 'Dense Urban', @galtor3_id, 68.0, 48.0),
-('Maeglin', 'City', 'Urban', @galtor3_id, 40.0, 25.0),
-('St. Colm', 'City', 'Urban', @galtor3_id, 28.0, 38.5),
-('Glencar', 'City', 'Urban', @galtor3_id, 26.5, 41.0),
-('Webster', 'City', 'Urban', @galtor3_id, 36.0, 28.0),
-('Lifford', 'City', 'Rural', @galtor3_id, 29.0, 36.5),
-('Cead Cathair', 'City', 'Urban', @galtor3_id, 33.0, 39.0),
-('Buncrana', 'City', 'Urban', @galtor3_id, 25.0, 43.0),
-('Rathmullan', 'City', 'Urban', @galtor3_id, 27.0, 44.5),
-('Cloc Ceann Faola', 'City', 'Urban', @galtor3_id, 24.0, 46.0);
+('New Derry', 'City', 'Dense Urban', @galtor3_id, 62, 46),
+('New Wuhan City', 'City', 'Dense Urban', @galtor3_id, 11, 45),
+('Changlee', 'City', 'Dense Urban', @galtor3_id, 45, 15),
+('Maeglin', 'City', 'Urban', @galtor3_id, 59, 53),
+('St. Colm', 'City', 'Urban', @galtor3_id, 71, 17),
+('Glencar', 'City', 'Urban', @galtor3_id, 65, 65),
+('Webster', 'City', 'Urban', @galtor3_id, 45, 50),
+('Lifford', 'City', 'Rural', @galtor3_id, 38, 65),
+('Cead Cathair', 'City', 'Urban', @galtor3_id, 49, 70),
+('Buncrana', 'City', 'Urban', @galtor3_id, 70, 85),
+('Rathmullan', 'City', 'Urban', @galtor3_id, 49, 88),
+('Cloc Ceann Faola', 'City', 'Urban', @galtor3_id, 8, 82);
 
 -- ===========================
 -- Marduk System Inserts
@@ -36,8 +36,8 @@ VALUES ('Marduk');
 SET @marduk_system_id = LAST_INSERT_ID();
 
 -- Insert the planet Marduk IV
-INSERT INTO planets (name, system_id, position, time_to_jump_point, allegiance)
-VALUES ('Marduk IV', @marduk_system_id, 4, 6, 'Davion');
+INSERT INTO planets (name, system_id, position, time_to_jump_point, allegiance, map_background)
+VALUES ('Marduk IV', @marduk_system_id, 4, 6, 'Davion', '/images/maps/marduk4.jpg');
 SET @marduk4_id = LAST_INSERT_ID();
 
 -- Insert major locations (cities, rough placeholder coords until mapped)
