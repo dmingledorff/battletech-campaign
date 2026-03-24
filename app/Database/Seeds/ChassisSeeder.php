@@ -9,6 +9,7 @@ class ChassisSeeder extends Seeder
     public function run()
     {
         $this->db->disableForeignKeyChecks();
+        $this->db->table('chassis_crew_requirements')->truncate();
         $this->db->table('chassis')->truncate();
         $this->db->enableForeignKeyChecks();
 

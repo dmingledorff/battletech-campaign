@@ -14,7 +14,7 @@ class BattletechSeeder extends Seeder
         $this->call('CallsignPoolSeeder');
         $this->call('ChassisSeeder');
         $this->call('DavionNamesSeeder');
-        $this->call('RanksSeeder');
+        $this->call('RankSeeder');
         $this->call('ToeSeeder');
     }
 }
