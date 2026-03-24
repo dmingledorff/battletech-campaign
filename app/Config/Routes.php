@@ -22,6 +22,9 @@ $routes->get('faction/select', 'Faction::select');
 $routes->post('faction/save', 'Faction::save');
 
 $routes->get('equipment/getCrew/(:num)', 'Equipment::getCrew/$1');
+$routes->get('equipment/getAvailableCrew/(:num)/(:num)', 'Equipment::getAvailableCrew/$1/$2');
+$routes->post('equipment/assignCrew/(:num)', 'Equipment::assignCrew/$1');
+$routes->post('equipment/removeCrew/(:num)', 'Equipment::removeCrew/$1');
 
 $routes->post('units/assignCommander/(:num)', 'Units::assignCommander/$1');
 $routes->post('units/dismissCommander/(:num)', 'Units::dismissCommander/$1');

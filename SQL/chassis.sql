@@ -84,3 +84,49 @@ INSERT INTO chassis
 ('APC','Wheeled','APC','Light','Scout',10,8,60,0.40,4.0,10,97.2),
 ('APC','Tracked','APC','Light','Scout',10,8,65,0.40,4.2,10,97.2),
 ('APC','Hover','APC','Light','Scout',10,8,55,0.40,3.8,10,162.0);
+
+-- BattleMechs
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Pilot', TRUE, 'MechWarrior'
+FROM chassis WHERE type = 'BattleMech';
+
+-- Vehicles
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', TRUE, 'Tanker' FROM chassis WHERE type = 'Vehicle';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Gunner', TRUE, 'Tanker' FROM chassis WHERE type = 'Vehicle';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Commander', FALSE, 'Tanker' FROM chassis WHERE type = 'Vehicle';
+
+-- Manticore only: Loader optional
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Loader', FALSE, 'Tanker' FROM chassis WHERE name = 'Manticore';
+
+-- APCs: Driver and Gunner required - Infantry MOS
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', TRUE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Gunner', TRUE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+-- APCs: Commander optional - Infantry MOS
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Commander', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+-- APCs: Dismounts optional - Infantry MOS
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';

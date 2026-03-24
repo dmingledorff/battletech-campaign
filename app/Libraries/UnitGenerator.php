@@ -97,5 +97,20 @@ class UnitGenerator
             ->getRowArray();
     }
 
+    public function findUnassignedPersonnelByMos(int $unitId, string $mos): ?int
+    {
+        $row = $this->db->table('personnel_assignments pa')
+            ->select('pa.personnel_id')
+            ->join('personnel p', 'p.personnel_id = pa.personnel_id')
+            ->join('personnel_equipment pe',
+                'pe.personnel_id = p.personnel_id AND pe.date_released IS NULL', 'left')
+            ->where('pa.unit_id', $unitId)
+            ->where('pa.date_released IS NULL')
+            ->where('p.mos', $mos)
+            ->where('pe.personnel_id IS NULL', null, false)
+            ->get(1)
+            ->getRowArray();
 
+        return $row['personnel_id'] ?? null;
+    }
 }

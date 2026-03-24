@@ -14,7 +14,6 @@ DROP TABLE IF EXISTS unit_command_history;
 DROP TABLE IF EXISTS personnel_equipment;
 DROP TABLE IF EXISTS personnel_assignments;
 DROP TABLE IF EXISTS equipment;
-DROP TABLE IF EXISTS chassis;
 DROP TABLE IF EXISTS units;
 DROP TABLE IF EXISTS personnel;
 DROP TABLE IF EXISTS locations;
@@ -23,17 +22,16 @@ DROP TABLE IF EXISTS planets;
 DROP TABLE IF EXISTS star_systems;
 DROP TABLE IF EXISTS name_pool;
 DROP TABLE IF EXISTS callsign_pool;
-DROP TABLE IF EXISTS lance_template_slots;
-DROP TABLE IF EXISTS lance_templates;
 DROP TABLE IF EXISTS toe_slot_roles;
-DROP TABLE IF EXISTS toe_slot_crews;
 DROP TABLE IF EXISTS toe_slots;
 DROP TABLE IF EXISTS toe_subunits;
 DROP TABLE IF EXISTS toe_templates;
 DROP TABLE IF EXISTS ranks;
 DROP TABLE IF EXISTS game_state;
+DROP TABLE IF EXISTS chassis_crew_requirements;
 SET FOREIGN_KEY_CHECKS=0;
 DROP TABLE IF EXISTS factions;
+DROP TABLE IF EXISTS chassis;
 SET FOREIGN_KEY_CHECKS=1;
 
 -- Core tables
@@ -181,6 +179,15 @@ CREATE TABLE chassis (
     speed DECIMAL(5,2)
 );
 
+CREATE TABLE chassis_crew_requirements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    chassis_id INT NOT NULL,
+    crew_role ENUM('Commander','Driver','Gunner','Loader','Pilot','Dismount') NOT NULL,
+    is_required BOOLEAN DEFAULT TRUE,
+    required_mos VARCHAR(50) NOT NULL DEFAULT 'Infantry',
+    FOREIGN KEY (chassis_id) REFERENCES chassis(chassis_id) ON DELETE CASCADE
+);
+
 CREATE TABLE equipment (
     equipment_id INT AUTO_INCREMENT PRIMARY KEY,
     chassis_id INT NOT NULL,
@@ -216,11 +223,14 @@ CREATE TABLE personnel_equipment (
     id INT AUTO_INCREMENT PRIMARY KEY,
     personnel_id INT NOT NULL,
     equipment_id INT NOT NULL,
+    slot_id INT NULL,
     role VARCHAR(50),
     date_assigned DATE,
     date_released DATE,
     FOREIGN KEY (personnel_id) REFERENCES personnel(personnel_id) ON DELETE CASCADE,
-    FOREIGN KEY (equipment_id) REFERENCES equipment(equipment_id) ON DELETE CASCADE
+    FOREIGN KEY (equipment_id) REFERENCES equipment(equipment_id) ON DELETE CASCADE,
+    FOREIGN KEY (slot_id) REFERENCES chassis_crew_requirements(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_slot_assignment (equipment_id, slot_id)
 );
 
 CREATE TABLE unit_command_history (
@@ -285,15 +295,6 @@ CREATE TABLE toe_slot_roles (
         'Scout','Sniper','Skirmisher','Striker'
     ) NOT NULL,
     FOREIGN KEY (slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
-);
-
-CREATE TABLE toe_slot_crews (
-    crew_id INT AUTO_INCREMENT PRIMARY KEY,
-    equipment_slot_id INT NOT NULL,
-    personnel_slot_id INT NOT NULL,
-    crew_role ENUM('Commander','Driver','Gunner','Loader','Tech', 'Pilot', 'Dismount') NOT NULL,
-    FOREIGN KEY (equipment_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE,
-    FOREIGN KEY (personnel_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
 );
 
 

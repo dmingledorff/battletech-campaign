@@ -206,21 +206,41 @@ class Generator
             throw new \RuntimeException("Personnel {$personnelId} has no active unit assignment.");
         }
 
-        $unitId = $unitRow->unit_id;
+        // Step 2: Find the matching crew requirement slot for this equipment + role
+        $slotRow = $this->db->table('chassis_crew_requirements ccr')
+            ->select('ccr.id AS slot_id')
+            ->join('equipment e', 'e.chassis_id = ccr.chassis_id')
+            ->where('e.equipment_id', $equipmentId)
+            ->where('ccr.crew_role', $role)
+            ->where('ccr.id NOT IN (
+                SELECT slot_id FROM personnel_equipment
+                WHERE equipment_id = ' . $equipmentId . '
+                AND date_released IS NULL
+                AND slot_id IS NOT NULL
+            )', null, false)
+            ->get(1)
+            ->getRow();
 
-        // Step 2: Insert into personnel_equipment
+        if (!$slotRow) {
+            throw new \RuntimeException(
+                "No available slot for role '{$role}' on equipment {$equipmentId}."
+            );
+        }
+
+        // Step 3: Insert into personnel_equipment with slot_id
         $this->db->table('personnel_equipment')->insert([
             'personnel_id' => $personnelId,
             'equipment_id' => $equipmentId,
             'role'         => $role,
+            'slot_id'      => $slotRow->slot_id,
             'date_assigned'=> $dateAssigned,
             'date_released'=> null
         ]);
 
-        // Step 3: Update the equipment’s assigned_unit_id
+        // Step 4: Update the equipment's assigned_unit_id
         $this->db->table('equipment')
             ->where('equipment_id', $equipmentId)
-            ->update(['assigned_unit_id' => $unitId]);
+            ->update(['assigned_unit_id' => $unitRow->unit_id]);
 
         return true;
     }

@@ -3,12 +3,14 @@
 use App\Models\ToeTemplateModel;
 use App\Models\RankModel;
 use App\Models\FactionModel;
+use App\Models\ChassisModel;
 
 class TemplateGenerator
 {
     protected $generator;
     protected $unitGenerator;
     protected $toeModel;
+    protected $chassisModel;
     protected $alphabet;
     protected $rankCache = [];
 
@@ -20,6 +22,7 @@ class TemplateGenerator
         $this->generator     = new Generator(db_connect());
         $this->unitGenerator = new UnitGenerator(db_connect());
         $this->toeModel      = new ToeTemplateModel();
+        $this->chassisModel  = new ChassisModel();
         $this->alphabet      = $this->toeModel->getAlphabet();
 
         // Preload ranks for all factions
@@ -107,27 +110,24 @@ class TemplateGenerator
                 'Active'
             );
 
-            $crews = $this->toeModel->getCrewForSlot($slot['slot_id']);
-            foreach ($crews as $crew) {
-                $personnelSlotId = (int)($crew['personnel_slot_id'] ?? 0);
+            $chassisId        = $this->chassisModel->getChassisIdForEquipment($eid);
+            $crewRequirements = $this->chassisModel->getCrewRequirements($chassisId);
 
-                if ($personnelSlotId && isset($personBySlotId[$personnelSlotId])) {
-                    $crewId = $personBySlotId[$personnelSlotId];
-                } else {
+            foreach ($crewRequirements as $req) {
+                $crewId = $this->unitGenerator->findUnassignedPersonnelByMos($unitId, $req['required_mos']);
+
+                if (!$crewId) {
+                    $rankId = $this->getRankIdByName(
+                        $req['crew_role'] === 'Commander' ? 'Sergeant' : 'Private'
+                    );
                     $crewId = $this->generator->generatePersonnel(
-                        $allegiance,
-                        $crew['mos'] ?? 'Tanker',
-                        (int)($crew['min_rank_id'] ?? 1),
-                        'Regular'
+                        $allegiance, $req['required_mos'], $rankId, 'Regular'
                     );
                     $this->generator->assignPersonnelToUnit($crewId, $unitId, '3025-01-01');
                 }
 
                 $this->generator->assignEquipmentToPersonnel(
-                    $crewId,
-                    $eid,
-                    $crew['crew_role'],
-                    '3025-01-01'
+                    $crewId, $eid, $req['crew_role'], '3025-01-01'
                 );
             }
         }

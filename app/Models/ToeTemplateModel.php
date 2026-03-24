@@ -71,12 +71,7 @@ class ToeTemplateModel extends Model
     }
 
     public function getCrewForSlot($slotId): array {
-        return $this->db->table('toe_slot_crews c')
-            ->select('c.equipment_slot_id, c.personnel_slot_id, c.crew_role, ps.mos, ps.min_rank_id, ps.max_rank_id')
-            ->join('toe_slots ps', 'ps.slot_id = c.personnel_slot_id', 'left')
-            ->where('c.equipment_slot_id', $slotId)
-            ->get()
-            ->getResultArray();
+        return [];
     }
 
     public function getAlphabet(): array {

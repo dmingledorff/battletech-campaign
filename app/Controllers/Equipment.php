@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\EquipmentModel;
+use App\Models\GameStateModel;
 
 class Equipment extends BaseController
 {
@@ -19,27 +20,59 @@ class Equipment extends BaseController
 
         // Fetch crew assigned to this equipment
         $crew = $equipmentModel->getCrew($id);
+        $crewManifest = $equipmentModel->getCrewManifest($id);
 
         return $this->render('equipment/show', [
             'equipment' => $equipment,
-            'crew'      => $crew
+            'crew'      => $crew,
+            'crewManifest' => $crewManifest,
         ]);
     }
+
     public function getCrew($equipmentId)
     {
-        $db = \Config\Database::connect();
-
-        // Join personnel through personnel_equipment (your actual link table)
-        $crew = $db->table('personnel p')
-            ->select('p.personnel_id, p.first_name, p.last_name, p.mos, p.status, r.abbreviation AS rank_abbr, pe.role')
-            ->join('ranks r', 'p.rank_id = r.id', 'left')
-            ->join('personnel_equipment pe', 'pe.personnel_id = p.personnel_id', 'inner')
-            ->where('pe.equipment_id', $equipmentId)
-            ->where('pe.date_released IS NULL') // only active crew members
-            ->get()
-            ->getResultArray();
-
+        $equipmentModel = new EquipmentModel();
+        $crew = $equipmentModel->getCrew($equipmentId);
         return $this->response->setJSON($crew);
     }
 
+    public function getAvailableCrew(int $equipmentId, int $slotId)
+    {
+        $equipmentModel = new EquipmentModel();
+        $available = $equipmentModel->getAvailableCrewForSlot($equipmentId, $slotId);
+        return $this->response->setJSON($available);
+    }
+
+    public function assignCrew(int $equipmentId)
+    {
+        $data        = $this->request->getJSON(true);
+        $personnelId = (int)($data['personnel_id'] ?? 0);
+        $slotId      = (int)($data['slot_id'] ?? 0);
+        $role        = $data['crew_role'] ?? '';
+
+        if (!$personnelId || !$slotId || !$role) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Missing data']);
+        }
+
+        $equipmentModel = new EquipmentModel();
+        $ok = $equipmentModel->assignCrew($equipmentId, $personnelId, $slotId, $role);
+
+        return $this->response->setJSON(['success' => $ok]);
+    }
+
+    public function removeCrew(int $equipmentId)
+    {
+        $data        = $this->request->getJSON(true);
+        $personnelId = (int)($data['personnel_id'] ?? 0);
+        $slotId      = (int)($data['slot_id'] ?? 0);
+
+        if (!$personnelId || !$slotId) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Missing data']);
+        }
+
+        $equipmentModel = new EquipmentModel();
+        $ok = $equipmentModel->removeCrew($equipmentId, $personnelId, $slotId);
+
+        return $this->response->setJSON(['success' => $ok]);
+    }
 }
