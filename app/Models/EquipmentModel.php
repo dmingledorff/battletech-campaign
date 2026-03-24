@@ -48,7 +48,7 @@ class EquipmentModel extends Model
 
         return $this->db->affectedRows() > 0;
     }
-    
+
     // Get equipment with chassis and unit info
     public function getEquipment($id) {
         return $this->db->table('equipment')
@@ -81,7 +81,7 @@ class EquipmentModel extends Model
             ->join('personnel p', 'p.personnel_id = pe.personnel_id')
             ->join('ranks r', 'p.rank_id = r.id', 'left')
             ->where('pe.equipment_id', $equipmentId)
-            ->where('pe.date_released IS NULL')
+            ->where('pe.is_active', true)
             ->orderBy('r.grade', 'DESC')
             ->get()->getResultArray();
     }
@@ -109,7 +109,7 @@ class EquipmentModel extends Model
             ->join('personnel_equipment pe',
                 'pe.equipment_id = e.equipment_id
                 AND pe.slot_id = ccr.id
-                AND pe.date_released IS NULL', 'left')
+                AND pe.is_active = 1', 'left')
             ->join('personnel p', 'p.personnel_id = pe.personnel_id', 'left')
             ->join('ranks r', 'r.id = p.rank_id', 'left')
             ->where('e.equipment_id', $equipmentId)
@@ -147,7 +147,7 @@ class EquipmentModel extends Model
             ')
             ->join('ranks r', 'r.id = p.rank_id', 'left')
             ->join('personnel_assignments pa', 'pa.personnel_id = p.personnel_id AND pa.date_released IS NULL')
-            ->join('personnel_equipment pe', 'pe.personnel_id = p.personnel_id AND pe.date_released IS NULL', 'left')
+            ->join('personnel_equipment pe', 'pe.personnel_id = p.personnel_id AND pe.is_active = 1', 'left')
             ->where('pa.unit_id', $equipment['assigned_unit_id'])
             ->where('p.mos', $slot['required_mos'])
             ->where('p.status', 'Active')

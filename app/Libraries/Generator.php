@@ -216,7 +216,7 @@ class Generator
             ->where('ccr.id NOT IN (
                 SELECT slot_id FROM personnel_equipment
                 WHERE equipment_id = ' . $equipmentId . '
-                AND date_released IS NULL
+                AND is_active = 1
                 AND slot_id IS NOT NULL
             )', null, false)
             ->get(1)
