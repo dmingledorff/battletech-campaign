@@ -7,6 +7,7 @@ use App\Libraries\PersonnelProfileService;
 
 class Generator
 {
+    /** @var \CodeIgniter\Database\BaseConnection $db */
     protected $db;
 
     public function __construct(ConnectionInterface $db = null)
@@ -33,9 +34,9 @@ class Generator
         int $rankId = 1,
         string $experience = 'Green',
         string $status = 'Active',
-        string $gender = null,
-        string $first = null,
-        string $last = null
+        ?string $gender = null,
+        ?string $first = null,
+        ?string $last = null
     ) {
         // Decide gender if not provided (weighted male)
         if ($gender === null) {
@@ -111,12 +112,12 @@ class Generator
     }  
 
     public function generateEquipment(
-        string $type = null,             // e.g. 'BattleMech','Vehicle'
-        string $name = null,             // optional: chassis name
-        string $variant = null,          // NEW: variant priority filter
+        ?string $type = null,             // e.g. 'BattleMech','Vehicle'
+        ?string $name = null,             // optional: chassis name
+        ?string $variant = null,          // NEW: variant priority filter
         $battlefieldRole = null,         // can be string or array of roles
-        string $weightClass = null,      // optional: Light/Medium/etc
-        int $unitId = null,
+        ?string $weightClass = null,      // optional: Light/Medium/etc
+        ?int $unitId = null,
         string $house = 'Davion',
         string $status = 'Active'
     ) {
@@ -189,7 +190,7 @@ class Generator
         int $personnelId,
         int $equipmentId,
         string $role = 'Pilot',
-        string $dateAssigned = null
+        ?string $dateAssigned = null
     ) {
         $dateAssigned = $dateAssigned ?? date('Y-m-d');
 
@@ -248,7 +249,7 @@ class Generator
     public function unassignEquipmentFromPersonnel(
         int $personnelId,
         int $equipmentId,
-        string $dateReleased = null
+        ?string $dateReleased = null
     ) {
         $dateReleased = $dateReleased ?? date('Y-m-d');
 
@@ -278,7 +279,7 @@ class Generator
     public function assignPersonnelToUnit(
         int $personnelId,
         int $unitId,
-        string $dateAssigned = null
+        ?string $dateAssigned = null
     ) {
         $dateAssigned = $dateAssigned ?? date('Y-m-d');
 

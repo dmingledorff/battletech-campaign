@@ -108,6 +108,7 @@ class PersonnelModel extends Model
             ->join('equipment e', 'e.equipment_id = pe.equipment_id')
             ->join('chassis c', 'c.chassis_id = e.chassis_id')
             ->where('pe.personnel_id', $personnelId)
+            ->where('pe.is_active', true)
             ->get()
             ->getResultArray();
     }

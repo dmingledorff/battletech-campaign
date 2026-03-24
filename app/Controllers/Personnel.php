@@ -16,7 +16,7 @@ class Personnel extends BaseController
         $equipment   = $personnelModel->getEquipmentAssignments($id);
 
         $currentDate = new \DateTime($this->gameState['current_date']);
-        $dob = new \DateTime($person['date_of_birth']);
+        $dob = new \DateTime((string)$person['date_of_birth']);
         $age = $dob->diff($currentDate)->y;
 
         return $this->render('personnel/show', [

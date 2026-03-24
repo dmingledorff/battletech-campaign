@@ -227,10 +227,11 @@ CREATE TABLE personnel_equipment (
     role VARCHAR(50),
     date_assigned DATE,
     date_released DATE,
+    is_active TINYINT(1) AS (date_released IS NULL) STORED,
     FOREIGN KEY (personnel_id) REFERENCES personnel(personnel_id) ON DELETE CASCADE,
     FOREIGN KEY (equipment_id) REFERENCES equipment(equipment_id) ON DELETE CASCADE,
     FOREIGN KEY (slot_id) REFERENCES chassis_crew_requirements(id) ON DELETE SET NULL,
-    UNIQUE KEY unique_slot_assignment (equipment_id, slot_id)
+    UNIQUE KEY unique_slot_assignment (equipment_id, slot_id, is_active)
 );
 
 CREATE TABLE unit_command_history (

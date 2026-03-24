@@ -46,12 +46,12 @@
             <?php foreach ($crewManifest as $slot): ?>
               <tr class="<?= !$slot['is_required'] && !$slot['personnel_id'] ? 'text-muted' : '' ?>">
                 <td>
-                  <?= esc($slot['crew_role']) ?>
                   <?php if ($slot['is_required']): ?>
                     <span class="badge bg-danger ms-1" title="Required">R</span>
                   <?php else: ?>
                     <span class="badge bg-secondary ms-1" title="Optional">O</span>
                   <?php endif; ?>
+                  <?= esc($slot['crew_role']) ?>
                 </td>
                 <?php if ($slot['personnel_id']): ?>
                   <td>
@@ -236,7 +236,4 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
-
-
-  <pre><?= print_r($crewManifest, true) ?></pre>
 </div>
