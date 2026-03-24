@@ -375,7 +375,7 @@ class UnitModel extends Model
     {
         // get game date if not provided
         if ($effectiveDate === null) {
-            $gs = new \App\Models\GameStateModel();
+            $gs = new GameStateModel();
             $effectiveDate = $gs->getProperty('current_date') ?? '3025-01-01';
         }
 
@@ -405,6 +405,13 @@ class UnitModel extends Model
                 ->set('date_released', $effectiveDate)
                 ->update();
         }
+
+        // Release any active equipment assignments for these personnel
+        $this->db->table('personnel_equipment')
+            ->whereIn('personnel_id', $toUnassign)
+            ->where('is_active', true)
+            ->set('date_released', $effectiveDate)
+            ->update();
 
         // assign new ones
         foreach ($toAssign as $pid) {
