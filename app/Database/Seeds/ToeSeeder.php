@@ -15,7 +15,14 @@ class ToeSeeder extends Seeder
         $this->db->table('toe_templates')->truncate();
         $this->db->enableForeignKeyChecks();
 
-        $sql = file_get_contents(APPPATH . '../SQL/toe.sql');
-        $this->db->query($sql);
+        $config = config('Database')->default;
+        $cmd = sprintf(
+            'mysql -u%s -p%s %s < %s',
+            $config['username'],
+            $config['password'],
+            $config['database'],
+            APPPATH . '../SQL/toe.sql'
+        );
+        shell_exec($cmd);
     }
 }
