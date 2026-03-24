@@ -63,12 +63,12 @@
             <?= number_format($morale, 2) ?>%
           </span></p>
         <p><strong>Personnel Strength:</strong>
-          <?= esc($personnelStrength['assigned']) ?>/<?= esc($personnelStrength['authorized']) ?>
-          (<?= number_format($personnelStrength['percent'], 2) ?>%)
+          <?= esc($strength['asgn_personnel']) ?>/<?= esc($strength['auth_personnel']) ?>
+          (<?= number_format($strength['pct_personnel'], 2) ?>%)
         </p>
         <p><strong>Equipment Strength:</strong>
-          <?= esc($equipmentStrength['operational']) ?>/<?= esc($equipmentStrength['authorized']) ?>
-          (<?= number_format($equipmentStrength['percent'], 2) ?>%)
+          <?= esc($strength['asgn_equipment']) ?>/<?= esc($strength['auth_equipment']) ?>
+          (<?= number_format($strength['pct_equipment'], 2) ?>%)
         </p>
         <p><strong>Current Supply:</strong> <?= esc($unit['current_supply']) ?></p>
         <p><strong>Daily Supply Use:</strong> </p>

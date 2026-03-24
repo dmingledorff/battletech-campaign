@@ -21,10 +21,14 @@ class Units extends BaseController
         // roll-ups and recursive lists (unchanged)
         $personnel = $unitModel->getAllPersonnelRecursive($id, $children);
         $equipment = $unitModel->getAllEquipmentRecursive($id, $children);
-        $unit['avg_morale'] = $unitModel->getUnitMorale($id, $children);
+        //$unit['avg_morale'] = $unitModel->getUnitMorale($id, $children);
+        $moraleValues = array_filter(array_column($personnel, 'morale'), fn($m) => $m !== null);
+        $unit['avg_morale'] = count($moraleValues) > 0
+            ? array_sum($moraleValues) / count($moraleValues)
+            : null;
         $breadcrumb = $unitModel->getBreadcrumb($id);
-        $personnelStrength = $unitModel->getPersonnelStrengthRecursive($id, $children);
-        $equipmentStrength = $unitModel->getEquipmentStrengthRecursive($id, $children);
+        $strengthMap = $unitModel->getStrengthAll();
+        $strength    = $unitModel->rollupStrength($id, $children, $strengthMap);
 
         // direct personnel/equipment for the modal (IMPORTANT)
         $assignedDirectPersonnel = $unitModel->getDirectPersonnel($id);
@@ -46,8 +50,7 @@ class Units extends BaseController
             'personnel'               => $personnel,               // recursive for the table
             'equipment'               => $equipment,               // recursive for the table
             'breadcrumb'              => $breadcrumb,
-            'personnelStrength'       => $personnelStrength,
-            'equipmentStrength'       => $equipmentStrength,
+            'strength'                => $strength,
             'children'                => $children,
             'availablePersonnel'      => $availablePersonnel,
             'availableEquipment'      => $availableEquipment,

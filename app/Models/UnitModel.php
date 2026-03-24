@@ -1,4 +1,6 @@
-<?php namespace App\Models;
+<?php
+
+namespace App\Models;
 
 use CodeIgniter\Model;
 use App\Models\GameStateModel;
@@ -7,33 +9,42 @@ class UnitModel extends Model
 {
     protected $table = 'units';
     protected $primaryKey = 'unit_id';
-        protected $allowedFields = [
-        'name', 'nickname', 'unit_type', 'role',
-        'parent_unit_id', 'commander_id', 'location_id', 'template_id',
+    protected $allowedFields = [
+        'name',
+        'nickname',
+        'unit_type',
+        'role',
+        'parent_unit_id',
+        'commander_id',
+        'location_id',
+        'template_id',
         'current_supply'
     ];
 
-    protected function getGameDate(): string {
+    protected function getGameDate(): string
+    {
         $state = new GameStateModel();
         return $state->getProperty('current_date') ?? date('3025-01-01');
     }
 
-    public function getSummary() {
+    public function getSummary()
+    {
         return $this->db->table('units')
             ->select('units.unit_id, units.name, units.unit_type, units.parent_unit_id, units.nickname,
                       units.current_supply,
                       COUNT(DISTINCT personnel.personnel_id) AS personnel_count,
                       COUNT(DISTINCT equipment.equipment_id) AS equipment_count,
                       COALESCE(SUM(chassis.supply_consumption),0) AS required_supply')
-            ->join('personnel_assignments','personnel_assignments.unit_id=units.unit_id','left')
-            ->join('personnel','personnel.personnel_id=personnel_assignments.personnel_id','left')
-            ->join('equipment','equipment.assigned_unit_id=units.unit_id','left')
-            ->join('chassis','chassis.chassis_id=equipment.chassis_id','left')
+            ->join('personnel_assignments', 'personnel_assignments.unit_id=units.unit_id', 'left')
+            ->join('personnel', 'personnel.personnel_id=personnel_assignments.personnel_id', 'left')
+            ->join('equipment', 'equipment.assigned_unit_id=units.unit_id', 'left')
+            ->join('chassis', 'chassis.chassis_id=equipment.chassis_id', 'left')
             ->groupBy('units.unit_id')
             ->get()->getResultArray();
     }
 
-    public function getAllChildren() {
+    public function getAllChildren()
+    {
         $units = $this->orderBy('parent_unit_id')->findAll();
         $children = [];
 
@@ -43,7 +54,7 @@ class UnitModel extends Model
 
         // Sort each child group by name (natural order: 1st, 2nd, 10th…)
         foreach ($children as &$group) {
-            usort($group, function($a, $b) {
+            usort($group, function ($a, $b) {
                 return strnatcmp($a['name'], $b['name']);
             });
         }
@@ -51,7 +62,8 @@ class UnitModel extends Model
         return $children;
     }
 
-    public function getUnit($unit_id) {
+    public function getUnit($unit_id)
+    {
         return $this->db->table('units u')
             ->select('u.*, p.first_name, p.last_name, r.full_name AS rank_full, r.abbreviation AS rank_abbr')
             ->join('personnel p', 'u.commander_id = p.personnel_id', 'left')
@@ -61,7 +73,8 @@ class UnitModel extends Model
             ->getRowArray();
     }
 
-    public function getPersonnel($unitId) {
+    public function getPersonnel($unitId)
+    {
         return $this->db->table('personnel p')
             ->select('
                 p.*,
@@ -83,41 +96,97 @@ class UnitModel extends Model
             ->getResultArray();
     }
 
-    public function getEquipment($unitId) {
+    public function getEquipment($unitId)
+    {
         return $this->db->table('equipment')
             ->select('equipment.*, 
             chassis.name as chassis_name, 
             chassis.type as chassis_type, 
             chassis.weight_class,
             chassis.variant as chassis_variant')
-            ->join('chassis','chassis.chassis_id=equipment.chassis_id')
-            ->where('equipment.assigned_unit_id',$unitId)
+            ->join('chassis', 'chassis.chassis_id=equipment.chassis_id')
+            ->where('equipment.assigned_unit_id', $unitId)
             ->get()->getResultArray();
     }
 
-    public function getUnitMorale($unitId, $children) {
-        // Gather all personnel recursively (this includes children units!)
-        $personnel = $this->getAllPersonnelRecursive($unitId, $children);
+    public function getStrengthAll(): array
+    {
+        // One query: authorized slots per unit
+        $authorized = $this->db->query("
+            SELECT u.unit_id,
+                SUM(s.slot_type = 'Personnel') AS auth_personnel,
+                SUM(s.slot_type = 'Equipment') AS auth_equipment
+            FROM units u
+            JOIN toe_slots s ON s.template_id = u.template_id
+            GROUP BY u.unit_id
+        ")->getResultArray();
 
-        if (empty($personnel)) {
-            return null; // or 0 if you prefer a default
+        // One query: assigned personnel per unit
+        $personnel = $this->db->query("
+            SELECT unit_id, COUNT(*) AS assigned
+            FROM personnel_assignments
+            WHERE date_released IS NULL
+            GROUP BY unit_id
+        ")->getResultArray();
+
+        // One query: active equipment per unit
+        $equipment = $this->db->query("
+            SELECT assigned_unit_id AS unit_id, COUNT(*) AS assigned
+            FROM equipment
+            WHERE equipment_status = 'Active'
+            AND assigned_unit_id IS NOT NULL
+            GROUP BY assigned_unit_id
+        ")->getResultArray();
+
+        // Index by unit_id
+        $auth = array_column($authorized, null, 'unit_id');
+        $pers = array_column($personnel, 'assigned', 'unit_id');
+        $equp = array_column($equipment, 'assigned', 'unit_id');
+
+        // Build flat strength map
+        $strength = [];
+        $allUnits = $this->findAll();
+        foreach ($allUnits as $u) {
+            $id = $u['unit_id'];
+            $strength[$id] = [
+                'auth_personnel'  => (int)($auth[$id]['auth_personnel'] ?? 0),
+                'auth_equipment'  => (int)($auth[$id]['auth_equipment'] ?? 0),
+                'asgn_personnel'  => (int)($pers[$id] ?? 0),
+                'asgn_equipment'  => (int)($equp[$id] ?? 0),
+            ];
         }
 
-        $totalMorale = 0;
-        $count       = 0;
-        log_message('info', 'BTECH: ' . json_encode($personnel));
-        foreach ($personnel as $p) {
-            if (isset($p['morale']) && $p['morale'] !== null) {
-                $totalMorale += (float)$p['morale'];
-                $count++;
-            }
+        return $strength;
+    }
+
+    public function rollupStrength(int $unitId, array $children, array $strengthMap): array
+    {
+        $totals = $strengthMap[$unitId] ?? [
+            'auth_personnel' => 0,
+            'auth_equipment' => 0,
+            'asgn_personnel' => 0,
+            'asgn_equipment' => 0,
+        ];
+
+        foreach ($children[$unitId] ?? [] as $child) {
+            $child = $this->rollupStrength($child['unit_id'], $children, $strengthMap);
+            $totals['auth_personnel'] += $child['auth_personnel'];
+            $totals['auth_equipment'] += $child['auth_equipment'];
+            $totals['asgn_personnel'] += $child['asgn_personnel'];
+            $totals['asgn_equipment'] += $child['asgn_equipment'];
         }
 
-        return $count > 0 ? ($totalMorale / $count) : null;
+        $totals['pct_personnel'] = $totals['auth_personnel'] > 0
+            ? round($totals['asgn_personnel'] / $totals['auth_personnel'] * 100, 1) : 0;
+        $totals['pct_equipment'] = $totals['auth_equipment'] > 0
+            ? round($totals['asgn_equipment'] / $totals['auth_equipment'] * 100, 1) : 0;
+
+        return $totals;
     }
 
     // Recursive personnel
-    public function getAllPersonnelRecursive($unitId, $children) {
+    public function getAllPersonnelRecursive($unitId, $children)
+    {
         $personnel = $this->getPersonnel($unitId);
 
         if (isset($children[$unitId])) {
@@ -139,7 +208,8 @@ class UnitModel extends Model
 
 
     // Recursive equipment
-    public function getAllEquipmentRecursive($unitId, $children) {
+    public function getAllEquipmentRecursive($unitId, $children)
+    {
         $equipment = $this->getEquipment($unitId);
         if (isset($children[$unitId])) {
             foreach ($children[$unitId] as $child) {
@@ -149,7 +219,8 @@ class UnitModel extends Model
         return $equipment;
     }
 
-    public function getBreadcrumb($unitId) {
+    public function getBreadcrumb($unitId)
+    {
         $breadcrumb = [];
         $current = $this->find($unitId);
         while ($current) {
@@ -160,81 +231,8 @@ class UnitModel extends Model
         return array_reverse($breadcrumb);
     }
 
-    public function getPersonnelStrengthRecursive(int $unitId, array $children): array {
-        // 1. Authorized slots for this unit
-        $authorized = $this->db->table('toe_slots s')
-            ->select('COUNT(*) as cnt')
-            ->join('toe_templates t', 's.template_id = t.template_id')
-            ->join('units u', 'u.template_id = t.template_id')
-            ->where('u.unit_id', $unitId)
-            ->where('s.slot_type', 'Personnel')
-            ->get()
-            ->getRow('cnt') ?? 0;
-
-        // 2. Assigned personnel for this unit
-        $assigned = $this->db->table('personnel_assignments pa')
-            ->select('COUNT(*) as cnt')
-            ->where('pa.unit_id', $unitId)
-            ->where('pa.date_released IS NULL')
-            ->get()
-            ->getRow('cnt') ?? 0;
-
-        // 3. Recurse into children
-        if (isset($children[$unitId])) {
-            foreach ($children[$unitId] as $child) {
-                $childStrength = $this->getPersonnelStrengthRecursive($child['unit_id'], $children);
-                $authorized += $childStrength['authorized'];
-                $assigned   += $childStrength['assigned'];
-            }
-        }
-
-        $percent = $authorized > 0 ? round(($assigned / $authorized) * 100, 1) : 0;
-
-        return [
-            'assigned'   => (int) $assigned,
-            'authorized' => (int) $authorized,
-            'percent'    => $percent,
-        ];
-    }
-
-    public function getEquipmentStrengthRecursive(int $unitId, array $children): array {
-        // 1. Authorized slots for this unit
-        $authorized = $this->db->table('toe_slots s')
-            ->select('COUNT(*) as cnt')
-            ->join('toe_templates t', 's.template_id = t.template_id')
-            ->join('units u', 'u.template_id = t.template_id')
-            ->where('u.unit_id', $unitId)
-            ->where('s.slot_type', 'Equipment')
-            ->get()
-            ->getRow('cnt') ?? 0;
-
-        // 2. Operational equipment in this unit
-        $operational = $this->db->table('equipment e')
-            ->select('COUNT(*) as cnt')
-            ->where('e.assigned_unit_id', $unitId)
-            ->where('e.equipment_status', 'Active')
-            ->get()
-            ->getRow('cnt') ?? 0;
-
-        // 3. Recurse into children
-        if (isset($children[$unitId])) {
-            foreach ($children[$unitId] as $child) {
-                $childStrength = $this->getEquipmentStrengthRecursive($child['unit_id'], $children);
-                $authorized  += $childStrength['authorized'];
-                $operational += $childStrength['operational'];
-            }
-        }
-
-        $percent = $authorized > 0 ? round(($operational / $authorized) * 100, 1) : 0;
-
-        return [
-            'operational' => (int) $operational,
-            'authorized'  => (int) $authorized,
-            'percent'     => $percent,
-        ];
-    }
-
-    public function getAuthorizedPersonnel(int $unitId): int {
+    public function getAuthorizedPersonnel(int $unitId): int
+    {
         return $this->db->table('toe_slots')
             ->join('units', 'units.template_id = toe_slots.template_id')
             ->where('units.unit_id', $unitId)
@@ -242,7 +240,8 @@ class UnitModel extends Model
             ->countAllResults();
     }
 
-    public function getAuthorizedEquipment(int $unitId): int {
+    public function getAuthorizedEquipment(int $unitId): int
+    {
         return $this->db->table('toe_slots')
             ->join('units', 'units.template_id = toe_slots.template_id')
             ->where('units.unit_id', $unitId)
@@ -464,5 +463,4 @@ class UnitModel extends Model
         $this->db->transComplete();
         return $this->db->transStatus();
     }
-
 }
