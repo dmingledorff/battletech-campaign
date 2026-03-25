@@ -106,6 +106,7 @@ CREATE TABLE personnel (
     last_name VARCHAR(50),
     rank_id INT,
     faction_id INT,
+    location_id INT NULL,
     status ENUM('Active','KIA','Retired', 'Injured', 'MIA') DEFAULT 'Active',
     gender ENUM('Male','Female','Other'),
     callsign VARCHAR(50),
@@ -115,7 +116,8 @@ CREATE TABLE personnel (
     morale DECIMAL(5,2) NOT NULL DEFAULT 100.00,
     missions INT DEFAULT 0,
     FOREIGN KEY (rank_id) REFERENCES ranks(id),
-    FOREIGN KEY (faction_id) REFERENCES factions(faction_id) ON DELETE SET NULL
+    FOREIGN KEY (faction_id) REFERENCES factions(faction_id) ON DELETE SET NULL,
+    FOREIGN KEY (location_id) REFERENCES locations(location_id) ON DELETE SET NULL
 );
 
 CREATE TABLE toe_templates (
@@ -227,7 +229,7 @@ CREATE TABLE personnel_equipment (
     role VARCHAR(50),
     date_assigned DATE,
     date_released DATE,
-    is_active TINYINT AS (date_released IS NULL) STORED,
+    is_active TINYINT AS (IF(date_released IS NULL, 1, NULL)) STORED,
     FOREIGN KEY (personnel_id) REFERENCES personnel(personnel_id) ON DELETE CASCADE,
     FOREIGN KEY (equipment_id) REFERENCES equipment(equipment_id) ON DELETE CASCADE,
     FOREIGN KEY (slot_id) REFERENCES chassis_crew_requirements(id) ON DELETE SET NULL,

@@ -23,6 +23,18 @@
         <p><strong>Nickname:</strong> <?= esc($unit['nickname']) ?></p>
         <p><strong>Type:</strong> <?= esc($unit['unit_type']) ?></p>
         <p><strong>Role:</strong> <?= esc($unit['role']) ?></p>
+        <p><strong>Location:</strong>
+          <?php if (!empty($unit['location_id'])): ?>
+            <a class="link-info" href="/location/<?= esc($unit['location_id']) ?>">
+              <?= esc($unit['location_name']) ?>
+              <?php if (!empty($unit['planet_name'])): ?>
+                <span class="text-muted">(<?= esc($unit['planet_name']) ?>)</span>
+              <?php endif; ?>
+            </a>
+          <?php else: ?>
+            <span class="text-muted">Unknown</span>
+          <?php endif; ?>
+        </p>
         <p>
           <strong>Commander:</strong>
           <?php if (!empty($unit['commander_id'])): ?>
@@ -270,13 +282,15 @@
             <select multiple id="availablePersonnel" class="form-select bg-black text-light border-secondary" size="15">
               <?php foreach ($availablePersonnel as $p): ?>
                 <option value="<?= $p['personnel_id'] ?>"
-                  data-name="<?= esc($p['first_name'] . ' ' . $p['last_name']) ?>"
+                  <?= !$p['can_assign'] ? 'disabled class="text-muted"' : '' ?>
+                  data-name="<?= esc($p['first_name'].' '.$p['last_name']) ?>"
                   data-mos="<?= esc($p['mos']) ?>"
                   data-status="<?= esc($p['status']) ?>"
-                  data-dob="<?= esc($p['date_of_birth'] ?? 'N/A') ?>"
+                  data-dob="<?= esc($p['date_of_birth']) ?>"
                   data-experience="<?= esc($p['experience']) ?>"
                   data-morale="<?= esc($p['morale']) ?>">
-                  <?= esc($p['last_name'] . ', ' . $p['first_name'] . ' (' . $p['rank_full'] . ')') ?>
+                  <?= esc($p['last_name'].', '.$p['first_name'].' ('.$p['rank_abbr'].')') ?>
+                  <?= !$p['can_assign'] ? ' — ' . esc($p['location_name'] ?? 'Unknown Location') : '' ?>
                 </option>
               <?php endforeach; ?>
             </select>

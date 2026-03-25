@@ -53,14 +53,18 @@ class EquipmentModel extends Model
     public function getEquipment($id) {
         return $this->db->table('equipment')
             ->select('equipment.*, chassis.name as chassis_name,
-             chassis.type as chassis_type, chassis.weight_class,
-                    units.name as unit_name, units.unit_type, 
-                    units.nickname, chassis.tonnage as tonnage, 
+                    chassis.type as chassis_type, chassis.weight_class,
+                    units.name as unit_name, units.unit_type,
+                    units.nickname, chassis.tonnage as tonnage,
                     chassis.speed as speed, chassis.variant as chassis_variant,
-                    chassis.battlefield_role as role')
-            ->join('chassis','chassis.chassis_id=equipment.chassis_id')
-            ->join('units','units.unit_id=equipment.assigned_unit_id','left')
-            ->where('equipment.equipment_id',$id)
+                    chassis.battlefield_role as role,
+                    loc.name AS location_name, loc.location_id AS location_id,
+                    pl.name AS planet_name')
+            ->join('chassis', 'chassis.chassis_id = equipment.chassis_id')
+            ->join('units', 'units.unit_id = equipment.assigned_unit_id', 'left')
+            ->join('locations loc', 'loc.location_id = equipment.location_id', 'left')
+            ->join('planets pl', 'pl.planet_id = loc.planet_id', 'left')
+            ->where('equipment.equipment_id', $id)
             ->get()->getRowArray();
     }
 

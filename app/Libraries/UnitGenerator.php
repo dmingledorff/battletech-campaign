@@ -1,4 +1,6 @@
-<?php namespace App\Libraries;
+<?php
+
+namespace App\Libraries;
 
 use CodeIgniter\Database\BaseConnection;
 
@@ -28,11 +30,12 @@ class UnitGenerator
         string $unitType,
         string $name,
         ?string $nickname = null,
-        string $factionId = null,
+        ?string $factionId = null,
         ?int $parentId = null,
         ?int $commanderId = null,
         ?string $role = null,
-        int $templateId = null
+        ?int $templateId = null,
+        ?int $locationId = 1
     ): int {
         $data = [
             'name'           => $name,
@@ -43,7 +46,8 @@ class UnitGenerator
             'parent_unit_id' => $parentId,
             'commander_id'   => $commanderId,
             'role'           => $role,
-            'template_id'    => $templateId
+            'template_id'    => $templateId,
+            'location_id'    => $locationId
         ];
 
         $this->db->table('units')->insert($data);
@@ -84,13 +88,15 @@ class UnitGenerator
         $this->db->table('units')->delete(['unit_id' => $unitId]);
     }
 
-    public function assignCommander(int $unitId, int $personnelId): void {
+    public function assignCommander(int $unitId, int $personnelId): void
+    {
         $this->db->table('units')
             ->where('unit_id', $unitId)
             ->update(['commander_id' => $personnelId]);
     }
 
-    public function getUnitById(int $unitId): ?array {
+    public function getUnitById(int $unitId): ?array
+    {
         return $this->db->table('units')
             ->where('unit_id', $unitId)
             ->get()
@@ -102,8 +108,11 @@ class UnitGenerator
         $row = $this->db->table('personnel_assignments pa')
             ->select('pa.personnel_id')
             ->join('personnel p', 'p.personnel_id = pa.personnel_id')
-            ->join('personnel_equipment pe',
-                'pe.personnel_id = p.personnel_id AND pe.date_released IS NULL', 'left')
+            ->join(
+                'personnel_equipment pe',
+                'pe.personnel_id = p.personnel_id AND pe.date_released IS NULL',
+                'left'
+            )
             ->where('pa.unit_id', $unitId)
             ->where('pa.date_released IS NULL')
             ->where('p.mos', $mos)

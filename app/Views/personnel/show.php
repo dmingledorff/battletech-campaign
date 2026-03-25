@@ -21,6 +21,18 @@
         ?>
         <p><strong>Morale:</strong> <span style="color: <?= $color ?>"><?= number_format($morale, 2) ?>%</span></p>
         <p><strong>Status:</strong> <?= esc($person['status']) ?></p>
+        <p><strong>Location:</strong>
+          <?php if (!empty($person['location_id'])): ?>
+            <a class="link-info" href="/location/<?= esc($person['location_id']) ?>">
+              <?= esc($person['location_name']) ?>
+              <?php if (!empty($person['planet_name'])): ?>
+                <span class="text-muted">(<?= esc($person['planet_name']) ?>)</span>
+              <?php endif; ?>
+            </a>
+          <?php else: ?>
+            <span class="text-muted">Unknown</span>
+          <?php endif; ?>
+        </p>
         <p><strong>Unit:</strong>
           <?php if ($unitChain): ?>
             <a class="link-info" href="/units/<?= esc($currentAssignment['unit_id']) ?>">

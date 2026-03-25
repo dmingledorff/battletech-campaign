@@ -22,6 +22,18 @@
             <span class="text-muted">Unassigned</span>
           <?php endif; ?>
         </p>
+        <p><strong>Location:</strong>
+          <?php if (!empty($equipment['location_id'])): ?>
+            <a class="link-info" href="/location/<?= esc($equipment['location_id']) ?>">
+              <?= esc($equipment['location_name']) ?>
+              <?php if (!empty($equipment['planet_name'])): ?>
+                <span class="text-muted">(<?= esc($equipment['planet_name']) ?>)</span>
+              <?php endif; ?>
+            </a>
+          <?php else: ?>
+            <span class="text-muted">Unknown</span>
+          <?php endif; ?>
+        </p>
       </div>
     </div>
   </div>

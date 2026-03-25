@@ -62,12 +62,15 @@ class UnitModel extends Model
         return $children;
     }
 
-    public function getUnit($unit_id)
-    {
+    public function getUnit($unit_id) {
         return $this->db->table('units u')
-            ->select('u.*, p.first_name, p.last_name, r.full_name AS rank_full, r.abbreviation AS rank_abbr')
+            ->select('u.*, p.first_name, p.last_name, r.full_name AS rank_full, 
+                    r.abbreviation AS rank_abbr, loc.name AS location_name,
+                    loc.location_id, pl.name AS planet_name', false)
             ->join('personnel p', 'u.commander_id = p.personnel_id', 'left')
             ->join('ranks r', 'p.rank_id = r.id', 'left')
+            ->join('locations loc', 'loc.location_id = u.location_id', 'left')
+            ->join('planets pl', 'pl.planet_id = loc.planet_id', 'left')
             ->where('u.unit_id', $unit_id)
             ->get()
             ->getRowArray();
@@ -255,22 +258,33 @@ class UnitModel extends Model
             ->countAllResults();
     }
 
-    public function getAvailablePersonnel(int $factionId): array
+    public function getAvailablePersonnel(int $factionId, int $unitId): array
     {
+        // Get the unit's location
+        $unit = $this->find($unitId);
+        $unitLocationId = $unit['location_id'] ?? null;
+
         return $this->db->table('personnel p')
             ->select('
                 p.*,
                 r.full_name AS rank_full,
                 r.abbreviation AS rank_abbr,
-                r.grade AS rank_grade
-            ')
+                r.grade AS rank_grade,
+                CASE 
+                    WHEN p.location_id IS NULL THEN 1
+                    WHEN p.location_id = ' . (int)$unitLocationId . ' THEN 1
+                    ELSE 0
+                END AS can_assign,
+                l.name AS location_name
+            ', false)
             ->join('ranks r', 'r.id = p.rank_id', 'left')
+            ->join('locations l', 'l.location_id = p.location_id', 'left')
             ->where('p.faction_id', $factionId)
             ->where('p.personnel_id NOT IN (
-                SELECT personnel_id
-                FROM personnel_assignments
+                SELECT personnel_id FROM personnel_assignments
                 WHERE date_released IS NULL
-            )', null, false) // strict unassigned filter
+            )', null, false)
+            ->orderBy('can_assign', 'DESC')
             ->orderBy('r.grade', 'ASC')
             ->orderBy('p.last_name', 'ASC')
             ->get()
@@ -421,12 +435,25 @@ class UnitModel extends Model
         }
 
         // assign new ones
-        foreach ($toAssign as $pid) {
-            $this->db->table('personnel_assignments')->insert([
-                'personnel_id'  => $pid,
-                'unit_id'       => $unitId,
-                'date_assigned' => $effectiveDate,
-            ]);
+        if (!empty($toAssign)) {
+            // Get the unit's current location
+            $unit = $this->find($unitId);
+            $locationId = $unit['location_id'] ?? null;
+
+            foreach ($toAssign as $pid) {
+                $this->db->table('personnel_assignments')->insert([
+                    'personnel_id'  => $pid,
+                    'unit_id'       => $unitId,
+                    'date_assigned' => $effectiveDate,
+                ]);
+
+                // Sync location to unit's location
+                if ($locationId) {
+                    $this->db->table('personnel')
+                        ->where('personnel_id', $pid)
+                        ->update(['location_id' => $locationId]);
+                }
+            }
         }
 
         $this->db->transComplete();
@@ -476,5 +503,36 @@ class UnitModel extends Model
 
         $this->db->transComplete();
         return $this->db->transStatus();
+    }
+
+    public function moveUnit(int $unitId, int $locationId, array $children): void
+    {
+        $this->db->transStart();
+
+        // Update the unit's location
+        $this->db->table('units')
+            ->where('unit_id', $unitId)
+            ->update(['location_id' => $locationId]);
+
+        // Update all directly assigned personnel
+        $assigned = $this->db->table('personnel_assignments')
+            ->select('personnel_id')
+            ->where('unit_id', $unitId)
+            ->where('date_released IS NULL', null, false)
+            ->get()->getResultArray();
+
+        if (!empty($assigned)) {
+            $ids = array_column($assigned, 'personnel_id');
+            $this->db->table('personnel')
+                ->whereIn('personnel_id', $ids)
+                ->update(['location_id' => $locationId]);
+        }
+
+        // Cascade to child units recursively
+        foreach ($children[$unitId] ?? [] as $child) {
+            $this->moveUnit($child['unit_id'], $locationId, $children);
+        }
+
+        $this->db->transComplete();
     }
 }

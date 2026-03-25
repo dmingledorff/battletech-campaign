@@ -36,7 +36,7 @@ class Units extends BaseController
 
         // available pools by faction
         $factionId = $this->currentFaction['faction_id'] ?? null;
-        $availablePersonnel = $factionId ? $unitModel->getAvailablePersonnel((int)$factionId) : [];
+        $availablePersonnel = $factionId ? $unitModel->getAvailablePersonnel((int)$factionId, (int)$id) : [];
         $availableEquipment = $factionId ? $unitModel->getAvailableEquipment((int)$factionId) : [];
 
         // required supply calc (unchanged)

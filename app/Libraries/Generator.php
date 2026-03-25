@@ -194,12 +194,13 @@ class Generator
     ) {
         $dateAssigned = $dateAssigned ?? date('Y-m-d');
 
-        // Step 1: Find the personnel's current unit
-        $unitRow = $this->db->table('personnel_assignments')
-            ->select('unit_id')
-            ->where('personnel_id', $personnelId)
-            ->where('date_released IS NULL')
-            ->orderBy('date_assigned', 'DESC')
+        // Step 1: Find the personnel's current unit and its location
+        $unitRow = $this->db->table('personnel_assignments pa')
+            ->select('pa.unit_id, u.location_id')
+            ->join('units u', 'u.unit_id = pa.unit_id')
+            ->where('pa.personnel_id', $personnelId)
+            ->where('pa.date_released IS NULL')
+            ->orderBy('pa.date_assigned', 'DESC')
             ->get()
             ->getRow();
 
@@ -207,7 +208,7 @@ class Generator
             throw new \RuntimeException("Personnel {$personnelId} has no active unit assignment.");
         }
 
-        // Step 2: Find the matching crew requirement slot for this equipment + role
+        // Step 2: Find the matching crew requirement slot
         $slotRow = $this->db->table('chassis_crew_requirements ccr')
             ->select('ccr.id AS slot_id')
             ->join('equipment e', 'e.chassis_id = ccr.chassis_id')
@@ -216,7 +217,7 @@ class Generator
             ->where('ccr.id NOT IN (
                 SELECT slot_id FROM personnel_equipment
                 WHERE equipment_id = ' . $equipmentId . '
-                AND is_active = 1
+                AND date_released IS NULL
                 AND slot_id IS NOT NULL
             )', null, false)
             ->get(1)
@@ -228,20 +229,23 @@ class Generator
             );
         }
 
-        // Step 3: Insert into personnel_equipment with slot_id
+        // Step 3: Insert crew assignment
         $this->db->table('personnel_equipment')->insert([
             'personnel_id' => $personnelId,
             'equipment_id' => $equipmentId,
-            'role'         => $role,
             'slot_id'      => $slotRow->slot_id,
+            'role'         => $role,
             'date_assigned'=> $dateAssigned,
-            'date_released'=> null
+            'date_released'=> null,
         ]);
 
-        // Step 4: Update the equipment's assigned_unit_id
+        // Step 4: Update equipment — assign to unit and sync location
         $this->db->table('equipment')
             ->where('equipment_id', $equipmentId)
-            ->update(['assigned_unit_id' => $unitRow->unit_id]);
+            ->update([
+                'assigned_unit_id' => $unitRow->unit_id,
+                'location_id'      => $unitRow->location_id,
+            ]);
 
         return true;
     }
@@ -296,6 +300,19 @@ class Generator
             'date_assigned'=> $dateAssigned,
             'date_released'=> null
         ]);
+
+        // Sync personnel location to unit location
+        $unit = $this->db->table('units')
+            ->select('location_id')
+            ->where('unit_id', $unitId)
+            ->get()
+            ->getRowArray();
+
+        if (!empty($unit['location_id'])) {
+            $this->db->table('personnel')
+                ->where('personnel_id', $personnelId)
+                ->update(['location_id' => $unit['location_id']]);
+        }
 
         return true;
     }

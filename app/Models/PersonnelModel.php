@@ -31,9 +31,14 @@ class PersonnelModel extends Model
                 p.*,
                 r.full_name AS rank_full,
                 r.abbreviation AS rank_abbr,
-                r.grade
+                r.grade,
+                loc.name AS location_name,
+                loc.location_id AS location_id,
+                pl.name AS planet_name
             ')
-            ->join('ranks r', 'p.rank_id = r.id', 'left');
+            ->join('ranks r', 'p.rank_id = r.id', 'left')
+            ->join('locations loc', 'loc.location_id = p.location_id', 'left')
+            ->join('planets pl', 'pl.planet_id = loc.planet_id', 'left');
     }
 
     /**
