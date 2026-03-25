@@ -2,34 +2,34 @@
   <div class="card-header">Personnel Details</div>
   <div class="card-body">
     <div class="row">
-      <!-- Left column -->
       <div class="col-md-6">
         <p><strong>Name:</strong> <?= esc($person['last_name'].', '.$person['first_name']) ?></p>
         <p><strong>Rank:</strong> <?= esc($person['rank_full']) ?></p>
         <p><strong>Gender:</strong> <?= esc($person['gender']) ?></p>
         <p><strong>Callsign:</strong> <?= esc($person['callsign']) ?></p>
-        <?php $dob = new \DateTime($person['date_of_birth']); $dobFormatted = $dob->format('j F Y')?>
+        <?php $dob = new \DateTime($person['date_of_birth']); $dobFormatted = $dob->format('j F Y') ?>
         <p><strong>Date of Birth:</strong> <?= esc($dobFormatted) ?></p>
         <p><strong>Age:</strong> <?= esc($age) ?> years</p>
       </div>
-
-      <!-- Right column -->
       <div class="col-md-6">
         <p><strong>MOS:</strong> <?= esc($person['mos']) ?></p>
         <p><strong>Experience:</strong> <?= esc($person['experience']) ?></p>
         <p><strong>Missions:</strong> <?= esc($person['missions']) ?></p>
         <?php
           $morale = $person['morale'];
-          if ($morale >= 70) {
-              $color = 'green';
-          } elseif ($morale >= 40) {
-              $color = 'yellow';
-          } else {
-              $color = 'red';
-          }
+          $color  = $morale >= 70 ? 'green' : ($morale >= 40 ? 'yellow' : 'red');
         ?>
         <p><strong>Morale:</strong> <span style="color: <?= $color ?>"><?= number_format($morale, 2) ?>%</span></p>
         <p><strong>Status:</strong> <?= esc($person['status']) ?></p>
+        <p><strong>Unit:</strong>
+          <?php if ($unitChain): ?>
+            <a class="link-info" href="/units/<?= esc($currentAssignment['unit_id']) ?>">
+              <?= esc($unitChain) ?>
+            </a>
+          <?php else: ?>
+            <span class="text-muted">Unassigned</span>
+          <?php endif; ?>
+        </p>
       </div>
     </div>
   </div>
@@ -38,27 +38,44 @@
 <div class="row">
   <div class="col-md-6">
     <div class="card shadow mb-3">
-      <div class="card-header">Unit Assignments</div>
+      <div class="card-header">Assignment History</div>
       <div class="card-body p-0">
-        <?php if (!empty($assignments)): ?>
+        <?php if (!empty($assignmentHistory)): ?>
           <table class="table table-dark table-sm mb-0">
-            <thead><tr><th>Unit</th><th>Type</th><th>Nickname</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Unit</th>
+                <th>Assigned</th>
+                <th>Released</th>
+              </tr>
+            </thead>
             <tbody>
-              <?php foreach($assignments as $a): ?>
+              <?php foreach ($assignmentHistory as $a): ?>
                 <tr>
-                  <td><a class="link-info" href="/units/<?= esc($a['unit_id']) ?>"><?= esc($a['name']) ?></a></td>
-                  <td><?= esc($a['unit_type']) ?></td>
-                  <td><?= esc($a['nickname']) ?></td>
+                  <td>
+                    <a class="link-info" href="/units/<?= esc($a['unit_id']) ?>">
+                      <?= esc($a['unit_chain']) ?>
+                    </a>
+                  </td>
+                  <td><?= esc($a['date_assigned']) ?></td>
+                  <td>
+                    <?php if ($a['date_released']): ?>
+                      <?= esc($a['date_released']) ?>
+                    <?php else: ?>
+                      <span class="badge bg-success">Active</span>
+                    <?php endif; ?>
+                  </td>
                 </tr>
               <?php endforeach; ?>
             </tbody>
           </table>
         <?php else: ?>
-          <p class="text-muted">No unit assignments found.</p>
+          <p class="text-muted p-3 mb-0">No assignment history.</p>
         <?php endif; ?>
       </div>
     </div>
   </div>
+
   <div class="col-md-6">
     <div class="card shadow mb-3">
       <div class="card-header">Equipment Assignments</div>
@@ -67,11 +84,12 @@
           <table class="table table-dark table-sm mb-0">
             <thead>
               <tr>
-                <th>Chassis</th><th>Variant</th><th>Role</th><th>Weight</th><th>Status</th><th>Damage</th>
+                <th>Chassis</th><th>Variant</th><th>Role</th>
+                <th>Weight</th><th>Status</th><th>Damage</th>
               </tr>
             </thead>
             <tbody>
-              <?php foreach($equipment as $e): ?>
+              <?php foreach ($equipment as $e): ?>
                 <tr>
                   <td>
                     <a class="link-info" href="/equipment/<?= esc($e['equipment_id']) ?>">
@@ -88,7 +106,7 @@
             </tbody>
           </table>
         <?php else: ?>
-          <p class="text-muted">No equipment assignments found.</p>
+          <p class="text-muted p-3 mb-0">No equipment assignments.</p>
         <?php endif; ?>
       </div>
     </div>

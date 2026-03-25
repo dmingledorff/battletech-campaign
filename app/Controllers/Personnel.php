@@ -1,10 +1,12 @@
 <?php namespace App\Controllers;
 
 use App\Models\PersonnelModel;
+use App\Models\UnitModel;
 
 class Personnel extends BaseController
 {
-    public function show($id) {
+    public function show($id)
+    {
         $personnelModel = new PersonnelModel();
         $person = $personnelModel->find($id);
 
@@ -12,19 +14,34 @@ class Personnel extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound("Personnel ID $id not found.");
         }
 
-        $assignments = $personnelModel->getAssignments($id);
-        $equipment   = $personnelModel->getEquipmentAssignments($id);
+        $unitModel         = new UnitModel();
+        $currentAssignment = $personnelModel->getCurrentAssignment((int)$id);
+        $assignmentHistory = $personnelModel->getAssignmentHistory((int)$id);
+        $equipment         = $personnelModel->getEquipmentAssignments((int)$id);
+
+        // Unit chain only needed for current assignment
+        $unitChain = null;
+        if ($currentAssignment) {
+            $unitChain = $unitModel->getUnitChain($currentAssignment['unit_id']);
+        }
+
+        // Add chain to history rows too
+        foreach ($assignmentHistory as &$row) {
+            $row['unit_chain'] = $unitModel->getUnitChain($row['unit_id']);
+        }
 
         $currentDate = new \DateTime($this->gameState['current_date']);
-        $dob = new \DateTime((string)$person['date_of_birth']);
-        $age = $dob->diff($currentDate)->y;
+        $dob         = new \DateTime((string)$person['date_of_birth']);
+        $age         = $dob->diff($currentDate)->y;
 
         return $this->render('personnel/show', [
-                'person'      => $person,
-                'assignments' => $assignments,
-                'equipment'   => $equipment,
-                'age'         => $age
-            ]);
+            'person'            => $person,
+            'currentAssignment' => $currentAssignment,
+            'unitChain'         => $unitChain,
+            'assignmentHistory' => $assignmentHistory,
+            'equipment'         => $equipment,
+            'age'               => $age,
+        ]);
     }
 
 }

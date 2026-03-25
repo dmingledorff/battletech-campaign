@@ -112,4 +112,31 @@ class PersonnelModel extends Model
             ->get()
             ->getResultArray();
     }
+
+    // Current active assignment only
+    public function getCurrentAssignment(int $personnelId): ?array
+    {
+        $row = $this->db->table('personnel_assignments pa')
+            ->select('u.unit_id, u.name, u.unit_type, u.nickname, pa.date_assigned')
+            ->join('units u', 'u.unit_id = pa.unit_id')
+            ->where('pa.personnel_id', $personnelId)
+            ->where('pa.date_released IS NULL', null, false)
+            ->orderBy('pa.date_assigned', 'DESC')
+            ->get(1)
+            ->getRowArray();
+
+        return $row ?: null;
+    }
+
+    // Full assignment history
+    public function getAssignmentHistory(int $personnelId): array
+    {
+        return $this->db->table('personnel_assignments pa')
+            ->select('u.unit_id, u.name, u.unit_type, u.nickname, pa.date_assigned, pa.date_released')
+            ->join('units u', 'u.unit_id = pa.unit_id')
+            ->where('pa.personnel_id', $personnelId)
+            ->orderBy('pa.date_assigned', 'DESC')
+            ->get()
+            ->getResultArray();
+    }
 }

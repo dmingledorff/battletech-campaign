@@ -231,6 +231,12 @@ class UnitModel extends Model
         return array_reverse($breadcrumb);
     }
 
+    public function getUnitChain(int $unitId): string
+    {
+        $breadcrumb = array_reverse($this->getBreadcrumb($unitId));
+        return implode(', ', array_map(fn($u) => $u['name'], $breadcrumb));
+    }
+
     public function getAuthorizedPersonnel(int $unitId): int
     {
         return $this->db->table('toe_slots')
@@ -404,14 +410,15 @@ class UnitModel extends Model
                 ->where('date_released', null)
                 ->set('date_released', $effectiveDate)
                 ->update();
-        }
 
-        // Release any active equipment assignments for these personnel
-        $this->db->table('personnel_equipment')
-            ->whereIn('personnel_id', $toUnassign)
-            ->where('is_active', true)
-            ->set('date_released', $effectiveDate)
-            ->update();
+            // Release any active equipment assignments for these personnel
+
+            $this->db->table('personnel_equipment')
+                ->whereIn('personnel_id', $toUnassign)
+                ->where('is_active', true)
+                ->set('date_released', $effectiveDate)
+                ->update();
+        }
 
         // assign new ones
         foreach ($toAssign as $pid) {
