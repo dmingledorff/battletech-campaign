@@ -77,11 +77,13 @@ CREATE TABLE locations (
     name VARCHAR(100) NOT NULL,
     type ENUM('City', 'Spaceport', 'Base', 'Industrial Zone'),                -- City, Spaceport, Base, Industrial Zone, etc.
     terrain ENUM('Urban', 'Dense Urban', 'Rural', 'Plains', 'Mountains', 'Hills', 'Woods', 'Marsh', 'Desert'),
+    controlled_by INT NULL,
     planet_id INT NOT NULL,
     coord_x FLOAT NOT NULL DEFAULT 0,
     coord_y FLOAT NOT NULL DEFAULT 0,
     display_order INT DEFAULT 0,
-    FOREIGN KEY (planet_id) REFERENCES planets(planet_id)
+    FOREIGN KEY (planet_id) REFERENCES planets(planet_id),
+    FOREIGN KEY (controlled_by) REFERENCES factions(faction_id) ON DELETE SET NULL
 );
 
 CREATE TABLE campaigns (

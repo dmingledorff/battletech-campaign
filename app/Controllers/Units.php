@@ -176,4 +176,14 @@ class Units extends BaseController
 
         return $this->response->setJSON(['status' => 'success']);
     }
+
+    public function byParent(int $parentId)
+    {
+        $unitModel = new UnitModel();
+        $units = $unitModel->where('parent_unit_id', $parentId)
+            ->orderBy('name', 'ASC')
+            ->findAll();
+
+        return $this->response->setJSON($units);
+    }
 }

@@ -44,4 +44,33 @@ class Personnel extends BaseController
         ]);
     }
 
+    public function roster()
+    {
+        $all = [
+            'unassigned'  => $this->request->getGet('unassigned'),
+            'unit_id'     => $this->request->getGet('unit_id'),
+            'status'      => $this->request->getGet('status'),
+            'mos'         => $this->request->getGet('mos'),
+            'location_id' => $this->request->getGet('location_id'),
+            '_regiment'   => $this->request->getGet('_regiment'),
+            '_battalion'  => $this->request->getGet('_battalion'),
+            '_company'    => $this->request->getGet('_company'),
+            '_lance'      => $this->request->getGet('_lance'),
+            '_planet'     => $this->request->getGet('_planet'),
+        ];
+
+        // Save everything to session including empty cascade keys
+        session()->set('roster_filters', $all);
+
+        // Only pass non-empty values to the query
+        $filters = array_filter($all, fn($v) => $v !== null && $v !== '');
+
+        $page = (int)($this->request->getGet('page') ?? 1);
+
+        $personnelModel = new PersonnelModel();
+        $result = $personnelModel->getRoster($filters, $page);
+
+        return $this->response->setJSON($result);
+    }
+
 }
