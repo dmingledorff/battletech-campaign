@@ -61,6 +61,19 @@ $routes->post('equipment/assignCrew/(:num)', 'Equipment::assignCrew/$1');
 $routes->post('equipment/removeCrew/(:num)', 'Equipment::removeCrew/$1');
 
 // ================================
+// Missions
+// ================================
+$routes->get('missions', 'Missions::index');
+$routes->get('missions/create', 'Missions::create');
+$routes->get('missions/(:num)', 'Missions::show/$1');
+$routes->get('missions/getUnitsAtLocation/(:num)', 'Missions::getUnitsAtLocation/$1');
+$routes->get('missions/getLocations', 'Missions::getLocations');
+$routes->post('missions/store', 'Missions::store');
+$routes->post('missions/update/(:num)', 'Missions::update/$1');
+$routes->post('missions/launch/(:num)', 'Missions::launch/$1');
+$routes->post('missions/abort/(:num)', 'Missions::abort/$1');
+
+// ================================
 // Dev / Testing
 // ================================
 $routes->get('/testgen', 'TestGen');

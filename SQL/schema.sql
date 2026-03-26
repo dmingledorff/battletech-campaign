@@ -44,8 +44,10 @@ CREATE TABLE game_state (
     property_value VARCHAR(255) NOT NULL,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
-INSERT INTO game_state (property_name, property_value) 
-VALUES ('current_date', '3025-01-01');
+INSERT INTO game_state (property_name, property_value) VALUES
+('current_date', '3025-01-01'),
+('km_per_coord_unit', '40'),
+('speed_efficiency', '0.7');
 
 CREATE TABLE factions (
     faction_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -84,6 +86,7 @@ CREATE TABLE locations (
     coord_x FLOAT NOT NULL DEFAULT 0,
     coord_y FLOAT NOT NULL DEFAULT 0,
     display_order INT DEFAULT 0,
+    supply_cache DECIMAL(10,2) DEFAULT 0.00,
     FOREIGN KEY (planet_id) REFERENCES planets(planet_id),
     FOREIGN KEY (controlled_by) REFERENCES factions(faction_id) ON DELETE SET NULL
 );
@@ -323,6 +326,46 @@ CREATE TABLE toe_slot_crews (
     crew_role ENUM('Commander','Driver','Gunner','Loader','Tech','Pilot','Dismount') NOT NULL,
     FOREIGN KEY (equipment_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE,
     FOREIGN KEY (personnel_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
+);
+
+CREATE TABLE missions (
+    mission_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    mission_type ENUM('Transfer','Resupply','Assault','Recon','Harass') NOT NULL,
+    status ENUM('Planning','In Transit','Arrived','Complete','Aborted') DEFAULT 'Planning',
+    origin_location_id INT NOT NULL,
+    destination_location_id INT NOT NULL,
+    launched_date DATE NULL,
+    eta_date DATE NULL,
+    arrived_date DATE NULL,
+    distance DECIMAL(8,4) NOT NULL DEFAULT 0,
+    transit_days INT NOT NULL DEFAULT 0,
+    days_elapsed INT NOT NULL DEFAULT 0,
+    slowest_speed DECIMAL(8,2) NOT NULL DEFAULT 0,
+    current_coord_x DECIMAL(8,4) NULL,
+    current_coord_y DECIMAL(8,4) NULL,
+    faction_id INT NOT NULL,
+    notes TEXT NULL,
+    FOREIGN KEY (origin_location_id) REFERENCES locations(location_id),
+    FOREIGN KEY (destination_location_id) REFERENCES locations(location_id),
+    FOREIGN KEY (faction_id) REFERENCES factions(faction_id)
+);
+
+CREATE TABLE mission_units (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    mission_id INT NOT NULL,
+    unit_id INT NOT NULL,
+    FOREIGN KEY (mission_id) REFERENCES missions(mission_id) ON DELETE CASCADE,
+    FOREIGN KEY (unit_id) REFERENCES units(unit_id) ON DELETE CASCADE
+);
+
+CREATE TABLE mission_log (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    mission_id INT NOT NULL,
+    game_date DATE NOT NULL,
+    event_type ENUM('Launched','In Transit','Arrived','Aborted','Combat') NOT NULL,
+    description TEXT,
+    FOREIGN KEY (mission_id) REFERENCES missions(mission_id) ON DELETE CASCADE
 );
 
 

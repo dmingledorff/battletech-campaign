@@ -108,4 +108,30 @@ class LocationModel extends Model
             ->get()
             ->getResultArray();
     }
+
+    public function getFriendlyLocations(int $factionId): array
+    {
+        return $this->db->table('locations l')
+            ->select('l.*, p.name AS planet_name, p.planet_id')
+            ->join('planets p', 'p.planet_id = l.planet_id')
+            ->where('l.controlled_by', $factionId)
+            ->orderBy('p.name')
+            ->orderBy('l.name')
+            ->get()
+            ->getResultArray();
+    }
+
+    public function getAllLocationsWithFactionInfo(): array
+    {
+        return $this->db->table('locations l')
+            ->select('l.*, p.name AS planet_name, p.planet_id,
+                    f.name AS faction_name, f.color AS faction_color,
+                    f.faction_id AS controlling_faction_id')
+            ->join('planets p', 'p.planet_id = l.planet_id')
+            ->join('factions f', 'f.faction_id = l.controlled_by', 'left')
+            ->orderBy('p.name')
+            ->orderBy('l.name')
+            ->get()
+            ->getResultArray();
+    }
 }
