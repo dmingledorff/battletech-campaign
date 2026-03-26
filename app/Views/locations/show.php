@@ -10,6 +10,9 @@
             </h4>
             <p class="mb-1"><strong>Type:</strong> <?= esc($location['type']) ?></p>
             <p class="mb-1"><strong>Terrain:</strong> <?= esc($location['terrain']) ?></p>
+            <p class="mb-0"><strong>Supply Cache:</strong>
+                <?= esc(number_format((float)$location['supply_cache'], 2)) ?>
+            </p>
             <p class="mb-0"><strong>Controlled By:</strong>
               <?php if (!empty($location['controlled_by_name'])): ?>
                 <span style="color: <?= esc($location['controlled_by_color']) ?>">

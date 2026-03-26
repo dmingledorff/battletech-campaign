@@ -8,7 +8,7 @@ class LocationModel extends Model
     protected $primaryKey = 'location_id';
     protected $allowedFields = [
         'name', 'type', 'terrain', 'planet_id',
-        'coord_x', 'coord_y', 'controlled_by'
+        'coord_x', 'coord_y', 'controlled_by', 'supply_cache'
     ];
 
     public function getByPlanet(int $planetId): array

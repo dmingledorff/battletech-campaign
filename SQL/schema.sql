@@ -10,6 +10,7 @@ DROP VIEW IF EXISTS unit_personnel_equipment;
 DROP VIEW IF EXISTS unit_hierarchy_chain;
 
 -- Drop dependent tables (reverse FK order)
+DROP TABLE IF EXISTS buildings;
 DROP TABLE IF EXISTS unit_command_history;
 DROP TABLE IF EXISTS personnel_equipment;
 DROP TABLE IF EXISTS personnel_assignments;
@@ -22,6 +23,7 @@ DROP TABLE IF EXISTS planets;
 DROP TABLE IF EXISTS star_systems;
 DROP TABLE IF EXISTS name_pool;
 DROP TABLE IF EXISTS callsign_pool;
+DROP TABLE IF EXISTS toe_slot_crews;
 DROP TABLE IF EXISTS toe_slot_roles;
 DROP TABLE IF EXISTS toe_slots;
 DROP TABLE IF EXISTS toe_subunits;
@@ -84,6 +86,18 @@ CREATE TABLE locations (
     display_order INT DEFAULT 0,
     FOREIGN KEY (planet_id) REFERENCES planets(planet_id),
     FOREIGN KEY (controlled_by) REFERENCES factions(faction_id) ON DELETE SET NULL
+);
+
+CREATE TABLE buildings (
+    building_id INT AUTO_INCREMENT PRIMARY KEY,
+    location_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    type ENUM('Barracks','Hospital','Repair Bay','Spaceport',
+              'Command Center','Warehouse','Factory',
+              'Power Plant','Fortification') NOT NULL,
+    capacity INT NULL,
+    status ENUM('Operational','Damaged','Destroyed') DEFAULT 'Operational',
+    FOREIGN KEY (location_id) REFERENCES locations(location_id) ON DELETE CASCADE
 );
 
 CREATE TABLE campaigns (
@@ -300,6 +314,15 @@ CREATE TABLE toe_slot_roles (
         'Scout','Sniper','Skirmisher','Striker'
     ) NOT NULL,
     FOREIGN KEY (slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
+);
+
+CREATE TABLE toe_slot_crews (
+    crew_id INT AUTO_INCREMENT PRIMARY KEY,
+    equipment_slot_id INT NOT NULL,
+    personnel_slot_id INT NOT NULL,
+    crew_role ENUM('Commander','Driver','Gunner','Loader','Tech','Pilot','Dismount') NOT NULL,
+    FOREIGN KEY (equipment_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE,
+    FOREIGN KEY (personnel_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
 );
 
 
