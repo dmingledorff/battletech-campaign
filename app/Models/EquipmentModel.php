@@ -1,7 +1,6 @@
 <?php namespace App\Models;
 
 use CodeIgniter\Model;
-use App\Models\GameStateModel;
 
 class EquipmentModel extends Model
 {
@@ -17,11 +16,8 @@ class EquipmentModel extends Model
         'equipment_status',
     ];
 
-    public function assignCrew(int $equipmentId, int $personnelId, int $slotId, string $role): bool
+    public function assignCrew(int $equipmentId, int $personnelId, int $slotId, string $role, string $date): bool
     {
-        $gs   = new GameStateModel();
-        $date = $gs->getProperty('current_date') ?? '3025-01-01';
-
         $this->db->table('personnel_equipment')->insert([
             'personnel_id' => $personnelId,
             'equipment_id' => $equipmentId,
@@ -30,22 +26,17 @@ class EquipmentModel extends Model
             'date_assigned'=> $date,
             'date_released'=> null,
         ]);
-
         return $this->db->affectedRows() > 0;
     }
 
-    public function removeCrew(int $equipmentId, int $personnelId, int $slotId): bool
+    public function removeCrew(int $equipmentId, int $personnelId, int $slotId, string $date): bool
     {
-        $gs   = new GameStateModel();
-        $date = $gs->getProperty('current_date') ?? '3025-01-01';
-
         $this->db->table('personnel_equipment')
             ->where('personnel_id', $personnelId)
             ->where('equipment_id', $equipmentId)
             ->where('slot_id', $slotId)
             ->where('date_released IS NULL', null, false)
             ->update(['date_released' => $date]);
-
         return $this->db->affectedRows() > 0;
     }
 

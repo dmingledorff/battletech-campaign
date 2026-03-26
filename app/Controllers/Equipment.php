@@ -3,7 +3,6 @@
 namespace App\Controllers;
 
 use App\Models\EquipmentModel;
-use App\Models\GameStateModel;
 
 class Equipment extends BaseController
 {
@@ -49,13 +48,14 @@ class Equipment extends BaseController
         $personnelId = (int)($data['personnel_id'] ?? 0);
         $slotId      = (int)($data['slot_id'] ?? 0);
         $role        = $data['crew_role'] ?? '';
+        $date        = $this->gameState['current_date'] ?? '3025-01-01';
 
         if (!$personnelId || !$slotId || !$role) {
             return $this->response->setJSON(['success' => false, 'message' => 'Missing data']);
         }
 
         $equipmentModel = new EquipmentModel();
-        $ok = $equipmentModel->assignCrew($equipmentId, $personnelId, $slotId, $role);
+        $ok             = $equipmentModel->assignCrew($equipmentId, $personnelId, $slotId, $role, $date);
 
         return $this->response->setJSON(['success' => $ok]);
     }
@@ -65,13 +65,14 @@ class Equipment extends BaseController
         $data        = $this->request->getJSON(true);
         $personnelId = (int)($data['personnel_id'] ?? 0);
         $slotId      = (int)($data['slot_id'] ?? 0);
+        $date        = $this->gameState['current_date'] ?? '3025-01-01';
 
         if (!$personnelId || !$slotId) {
             return $this->response->setJSON(['success' => false, 'message' => 'Missing data']);
         }
 
         $equipmentModel = new EquipmentModel();
-        $ok = $equipmentModel->removeCrew($equipmentId, $personnelId, $slotId);
+        $ok             = $equipmentModel->removeCrew($equipmentId, $personnelId, $slotId, $date);
 
         return $this->response->setJSON(['success' => $ok]);
     }

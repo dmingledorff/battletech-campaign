@@ -391,32 +391,22 @@ class UnitModel extends Model
             ->getResultArray();
     }
 
-    public function syncPersonnelAssignments(int $unitId, array $personnelIds, ?string $effectiveDate = null): bool
+    public function syncPersonnelAssignments(int $unitId, array $personnelIds, string $effectiveDate): bool
     {
-        // get game date if not provided
-        if ($effectiveDate === null) {
-            $gs = new GameStateModel();
-            $effectiveDate = $gs->getProperty('current_date') ?? '3025-01-01';
-        }
-
-        // normalize to ints and uniq
         $newIds = array_values(array_unique(array_map('intval', $personnelIds)));
 
         $this->db->transStart();
 
-        // fetch current direct assignments
-        $current = $this->db->table('personnel_assignments')
+        $current    = $this->db->table('personnel_assignments')
             ->select('personnel_id')
             ->where('unit_id', $unitId)
             ->where('date_released', null)
             ->get()->getResultArray();
-        $currentIds = array_map(static fn($r) => (int) $r['personnel_id'], $current);
+        $currentIds = array_map(static fn($r) => (int)$r['personnel_id'], $current);
 
-        // compute diffs
         $toUnassign = array_diff($currentIds, $newIds);
         $toAssign   = array_diff($newIds, $currentIds);
 
-        // unassign those no longer present
         if (!empty($toUnassign)) {
             $this->db->table('personnel_assignments')
                 ->where('unit_id', $unitId)
@@ -425,19 +415,15 @@ class UnitModel extends Model
                 ->set('date_released', $effectiveDate)
                 ->update();
 
-            // Release any active equipment assignments for these personnel
-
             $this->db->table('personnel_equipment')
                 ->whereIn('personnel_id', $toUnassign)
-                ->where('is_active', true)
+                ->where('date_released IS NULL', null, false)
                 ->set('date_released', $effectiveDate)
                 ->update();
         }
 
-        // assign new ones
         if (!empty($toAssign)) {
-            // Get the unit's current location
-            $unit = $this->find($unitId);
+            $unit       = $this->find($unitId);
             $locationId = $unit['location_id'] ?? null;
 
             foreach ($toAssign as $pid) {
@@ -447,7 +433,6 @@ class UnitModel extends Model
                     'date_assigned' => $effectiveDate,
                 ]);
 
-                // Sync location to unit's location
                 if ($locationId) {
                     $this->db->table('personnel')
                         ->where('personnel_id', $pid)
@@ -460,30 +445,20 @@ class UnitModel extends Model
         return $this->db->transStatus();
     }
 
-    public function syncEquipmentAssignments(int $unitId, array $equipmentIds, ?string $effectiveDate = null): bool
+    public function syncEquipmentAssignments(int $unitId, array $equipmentIds, string $effectiveDate): bool
     {
-        // Get game date if not provided
-        if ($effectiveDate === null) {
-            $gs = new \App\Models\GameStateModel();
-            $effectiveDate = $gs->getProperty('current_date') ?? '3025-01-01';
-        }
-
         $this->db->transStart();
 
-        // Fetch current assigned equipment for this unit
-        $current = $this->db->table('equipment')
+        $current    = $this->db->table('equipment')
             ->select('equipment_id')
             ->where('assigned_unit_id', $unitId)
             ->get()->getResultArray();
+        $currentIds = array_map(static fn($r) => (int)$r['equipment_id'], $current);
+        $newIds     = array_values(array_unique(array_map('intval', $equipmentIds)));
 
-        $currentIds = array_map(static fn($r) => (int) $r['equipment_id'], $current);
-        $newIds = array_values(array_unique(array_map('intval', $equipmentIds)));
-
-        // Diff
         $toUnassign = array_diff($currentIds, $newIds);
         $toAssign   = array_diff($newIds, $currentIds);
 
-        // Unassign equipment
         if (!empty($toUnassign)) {
             $this->db->table('equipment')
                 ->whereIn('equipment_id', $toUnassign)
@@ -491,14 +466,10 @@ class UnitModel extends Model
                 ->update();
         }
 
-        // Assign new ones
         foreach ($toAssign as $eid) {
             $this->db->table('equipment')
                 ->where('equipment_id', $eid)
-                ->update([
-                    'assigned_unit_id' => $unitId,
-                    'last_assigned'    => $effectiveDate, // optional if you track it
-                ]);
+                ->update(['assigned_unit_id' => $unitId]);
         }
 
         $this->db->transComplete();

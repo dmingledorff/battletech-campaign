@@ -59,31 +59,26 @@ class Units extends BaseController
         ]);
     }
 
-    public function managePersonnel($unitId)
+    public function managePersonnel(int $unitId)
     {
         $payload = $this->request->getJSON(true) ?? [];
         $ids     = $payload['personnel_ids'] ?? [];
-
-        // use the current game date
-        $gs   = new \App\Models\GameStateModel();
-        $date = $gs->getProperty('current_date') ?? '3025-01-01';
+        $date    = $this->gameState['current_date'] ?? '3025-01-01';
 
         $unitModel = new \App\Models\UnitModel();
-        $ok = $unitModel->syncPersonnelAssignments((int)$unitId, $ids, $date);
+        $ok        = $unitModel->syncPersonnelAssignments((int)$unitId, $ids, $date);
 
         return $this->response->setJSON(['success' => $ok]);
     }
 
-    public function manageEquipment($unitId)
+    public function manageEquipment(int $unitId)
     {
         $payload = $this->request->getJSON(true) ?? [];
         $ids     = $payload['equipment_ids'] ?? [];
-
-        $gs   = new \App\Models\GameStateModel();
-        $date = $gs->getProperty('current_date') ?? '3025-01-01';
+        $date    = $this->gameState['current_date'] ?? '3025-01-01';
 
         $unitModel = new \App\Models\UnitModel();
-        $ok = $unitModel->syncEquipmentAssignments((int)$unitId, $ids, $date);
+        $ok        = $unitModel->syncEquipmentAssignments((int)$unitId, $ids, $date);
 
         return $this->response->setJSON(['success' => $ok]);
     }

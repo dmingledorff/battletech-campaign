@@ -3,7 +3,6 @@
 use App\Models\MissionModel;
 use App\Models\LocationModel;
 use App\Models\UnitModel;
-use App\Models\GameStateModel;
 use App\Models\PlanetModel;
 
 class Missions extends BaseController
@@ -13,9 +12,9 @@ class Missions extends BaseController
         $missionModel = new MissionModel();
         $factionId    = $this->currentFaction['faction_id'] ?? null;
 
-        $planning   = $missionModel->getMissionsByStatus($factionId, 'Planning');
-        $inTransit  = $missionModel->getMissionsByStatus($factionId, 'In Transit');
-        $arrived    = $missionModel->getMissionsByStatus($factionId, 'Arrived');
+        $planning  = $missionModel->getMissionsByStatus($factionId, 'Planning');
+        $inTransit = $missionModel->getMissionsByStatus($factionId, 'In Transit');
+        $arrived   = $missionModel->getMissionsByStatus($factionId, 'Arrived');
 
         return $this->render('missions/index', [
             'planning'  => $planning,
@@ -26,11 +25,10 @@ class Missions extends BaseController
 
     public function create()
     {
-        $locationModel = new LocationModel();
-        $planetModel   = new PlanetModel();
-        $factionId     = $this->currentFaction['faction_id'] ?? null;
-
-        $planets          = $planetModel->findAll();
+        $locationModel     = new LocationModel();
+        $planetModel       = new PlanetModel();
+        $factionId         = $this->currentFaction['faction_id'] ?? null;
+        $planets           = $planetModel->findAll();
         $friendlyLocations = $locationModel->getFriendlyLocations($factionId);
         $allLocations      = $locationModel->getAllLocationsWithFactionInfo();
 
@@ -43,10 +41,7 @@ class Missions extends BaseController
 
     public function store()
     {
-        $factionId = $this->currentFaction['faction_id'] ?? null;
-        $gameState = new GameStateModel();
-        $gameDate  = $gameState->getProperty('current_date');
-
+        $factionId     = $this->currentFaction['faction_id'] ?? null;
         $originId      = (int)$this->request->getPost('origin_location_id');
         $destinationId = (int)$this->request->getPost('destination_location_id');
         $name          = $this->request->getPost('name');
@@ -55,8 +50,7 @@ class Missions extends BaseController
         $unitIds       = $this->request->getPost('unit_ids') ?? [];
 
         $missionModel = new MissionModel();
-
-        $missionId = $missionModel->createMission([
+        $missionId    = $missionModel->createMission([
             'name'                    => $name,
             'mission_type'            => $type,
             'status'                  => 'Planning',
@@ -78,8 +72,8 @@ class Missions extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound("Mission $id not found.");
         }
 
-        $units    = $missionModel->getMissionUnits($id);
-        $log      = $missionModel->getLog($id);
+        $units = $missionModel->getMissionUnits($id);
+        $log   = $missionModel->getLog($id);
 
         // Get strength for each unit
         $unitModel   = new UnitModel();
@@ -93,7 +87,6 @@ class Missions extends BaseController
         }
         unset($unit);
 
-        // For planning missions — get available units and locations for editing
         $availableUnits    = [];
         $friendlyLocations = [];
         $allLocations      = [];
@@ -101,9 +94,7 @@ class Missions extends BaseController
         if ($mission['status'] === 'Planning') {
             $locationModel     = new LocationModel();
             $factionId         = $this->currentFaction['faction_id'] ?? null;
-            $availableUnits    = $missionModel->getAvailableUnits(
-                $mission['origin_location_id'], $id
-            );
+            $availableUnits    = $missionModel->getAvailableUnits($mission['origin_location_id'], $id);
             $friendlyLocations = $locationModel->getFriendlyLocations($factionId);
             $allLocations      = $locationModel->getAllLocationsWithFactionInfo();
         }
@@ -127,17 +118,13 @@ class Missions extends BaseController
             return redirect()->to("/missions/{$id}");
         }
 
-        $originId      = (int)$this->request->getPost('origin_location_id');
-        $destinationId = (int)$this->request->getPost('destination_location_id');
-        $unitIds       = $this->request->getPost('unit_ids') ?? [];
-
         $missionModel->updateMission($id, [
             'name'                    => $this->request->getPost('name'),
             'mission_type'            => $this->request->getPost('mission_type'),
-            'origin_location_id'      => $originId,
-            'destination_location_id' => $destinationId,
+            'origin_location_id'      => (int)$this->request->getPost('origin_location_id'),
+            'destination_location_id' => (int)$this->request->getPost('destination_location_id'),
             'notes'                   => $this->request->getPost('notes'),
-        ], $unitIds);
+        ], $this->request->getPost('unit_ids') ?? []);
 
         return redirect()->to("/missions/{$id}");
     }
@@ -151,36 +138,24 @@ class Missions extends BaseController
             return redirect()->to("/missions/{$id}");
         }
 
-        $gameState = new GameStateModel();
-        $gameDate  = $gameState->getProperty('current_date');
-
-        // Get unit IDs
         $unitIds = array_column($missionModel->getMissionUnits($id), 'unit_id');
 
         if (empty($unitIds)) {
-            // Can't launch without units
             return redirect()->to("/missions/{$id}")->with('error', 'Cannot launch a mission with no units.');
         }
 
-        // Calculate slowest speed
+        $gameDate     = $this->gameState['current_date'] ?? '3025-01-01';
         $slowestSpeed = $missionModel->getSlowestSpeed($unitIds);
-
-        // Calculate distance
-        $distance = $missionModel->calculateDistance(
+        $distance     = $missionModel->calculateDistance(
             (float)$mission['origin_x'],
             (float)$mission['origin_y'],
             (float)$mission['dest_x'],
             (float)$mission['dest_y']
         );
-
-        // Calculate transit days
         $transitDays = $missionModel->calculateTransitDays($distance, $slowestSpeed);
-
-        // Calculate ETA
-        $etaDate = new \DateTime($gameDate);
+        $etaDate     = new \DateTime($gameDate);
         $etaDate->modify("+{$transitDays} days");
 
-        // Update mission to In Transit
         $missionModel->update($id, [
             'status'          => 'In Transit',
             'launched_date'   => $gameDate,
@@ -193,7 +168,6 @@ class Missions extends BaseController
             'current_coord_y' => $mission['origin_y'],
         ]);
 
-        // Log launch
         $missionModel->logEvent(
             $id, $gameDate, 'Launched',
             "Mission launched from {$mission['origin_name']} to {$mission['destination_name']}. " .
@@ -214,28 +188,22 @@ class Missions extends BaseController
             return redirect()->to('/missions');
         }
 
-        $gameState = new GameStateModel();
-        $gameDate  = $gameState->getProperty('current_date');
+        $gameDate = $this->gameState['current_date'] ?? '3025-01-01';
 
         if ($mission['status'] === 'Planning') {
             $missionModel->update($id, ['status' => 'Aborted']);
             $missionModel->logEvent($id, $gameDate, 'Aborted', 'Mission aborted during planning.');
 
         } elseif ($mission['status'] === 'In Transit') {
-            // Reverse course — current position becomes new origin
-            // Original origin becomes new destination
-            $currentX    = (float)$mission['current_coord_x'];
-            $currentY    = (float)$mission['current_coord_y'];
-            $returnDestX = (float)$mission['origin_x'];
-            $returnDestY = (float)$mission['origin_y'];
-
             $remainingDistance = $missionModel->calculateDistance(
-                $currentX, $currentY, $returnDestX, $returnDestY
+                (float)$mission['current_coord_x'],
+                (float)$mission['current_coord_y'],
+                (float)$mission['origin_x'],
+                (float)$mission['origin_y']
             );
             $returnDays = $missionModel->calculateTransitDays(
                 $remainingDistance, (float)$mission['slowest_speed']
             );
-
             $etaDate = new \DateTime($gameDate);
             $etaDate->modify("+{$returnDays} days");
 
@@ -270,7 +238,6 @@ class Missions extends BaseController
     public function getLocations()
     {
         $locationModel = new LocationModel();
-        $factionId     = $this->currentFaction['faction_id'] ?? null;
         $locations     = $locationModel->getAllLocationsWithFactionInfo();
         return $this->response->setJSON($locations);
     }
