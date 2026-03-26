@@ -10,15 +10,10 @@ class UnitModel extends Model
     protected $table = 'units';
     protected $primaryKey = 'unit_id';
     protected $allowedFields = [
-        'name',
-        'nickname',
-        'unit_type',
-        'role',
-        'parent_unit_id',
-        'commander_id',
-        'location_id',
-        'template_id',
-        'current_supply'
+        'name', 'nickname', 'unit_type', 'role',
+        'parent_unit_id', 'commander_id', 'location_id',
+        'template_id', 'current_supply', 'faction_id',
+        'status', 'mission_id'
     ];
 
     protected function getGameDate(): string

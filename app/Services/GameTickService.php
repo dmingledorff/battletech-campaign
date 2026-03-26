@@ -112,7 +112,11 @@ class GameTickService
             if (!empty($unitIds)) {
                 $this->db->table('units')
                     ->whereIn('unit_id', $unitIds)
-                    ->update(['location_id' => $destLocationId]);
+                            ->update([
+                                'status'     => 'Garrisoned',
+                                'mission_id' => null,
+                                'location_id' => $destLocationId,
+                            ]);
 
                 foreach ($unitIds as $unitId) {
                     $personnelIds = array_column(

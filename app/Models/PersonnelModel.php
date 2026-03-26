@@ -241,4 +241,26 @@ class PersonnelModel extends Model
 
         return $ids;
     }
+
+    public function getUnitRosterForMission(int $unitId): array
+    {
+        return $this->db->table('personnel p')
+            ->select('
+                p.last_name,
+                r.abbreviation AS rank_abbr,
+                p.mos,
+                c.variant
+            ')
+            ->join('ranks r', 'r.id = p.rank_id', 'left')
+            ->join('personnel_assignments pa',
+                'pa.personnel_id = p.personnel_id AND pa.date_released IS NULL', 'left')
+            ->join('personnel_equipment pe',
+                'pe.personnel_id = p.personnel_id AND pe.is_active = 1', 'left')
+            ->join('equipment e', 'e.equipment_id = pe.equipment_id', 'left')
+            ->join('chassis c', 'c.chassis_id = e.chassis_id', 'left')
+            ->where('pa.unit_id', $unitId)
+            ->orderBy('r.grade', 'DESC')
+            ->get()
+            ->getResultArray();
+    }
 }

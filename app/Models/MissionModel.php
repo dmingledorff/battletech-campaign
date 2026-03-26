@@ -119,18 +119,11 @@ class MissionModel extends Model
         $builder = $this->db->table('units u')
             ->select('u.unit_id, u.name, u.unit_type, u.role')
             ->where('u.location_id', $locationId)
+            ->where('u.status', 'Garrisoned')
             ->where('u.unit_id NOT IN (
                 SELECT DISTINCT parent_unit_id FROM units
                 WHERE parent_unit_id IS NOT NULL
             )', null, false);
-
-        // Exclude units already on another active mission
-        $builder->where('u.unit_id NOT IN (
-            SELECT mu.unit_id FROM mission_units mu
-            JOIN missions m ON m.mission_id = mu.mission_id
-            WHERE m.status IN (\'Planning\', \'In Transit\')
-            AND m.mission_id != ' . (int)$excludeMissionId . '
-        )', null, false);
 
         return $builder->orderBy('u.unit_type')->orderBy('u.name')->get()->getResultArray();
     }
@@ -185,5 +178,17 @@ class MissionModel extends Model
             ->orderBy('game_date', 'DESC')
             ->get()
             ->getResultArray();
+    }
+
+    public function setMissionStatus(array $unitIds, string $status, ?int $missionId): void
+    {
+        if (empty($unitIds)) return;
+
+        $this->whereIn('unit_id', $unitIds)
+            ->set([
+                'status'     => $status,
+                'mission_id' => $missionId,
+            ])
+            ->update();
     }
 }

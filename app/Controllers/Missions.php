@@ -4,6 +4,7 @@ use App\Models\MissionModel;
 use App\Models\LocationModel;
 use App\Models\UnitModel;
 use App\Models\PlanetModel;
+use App\Models\PersonnelModel;
 
 class Missions extends BaseController
 {
@@ -81,9 +82,16 @@ class Missions extends BaseController
         $strengthMap = $unitModel->getStrengthAll();
 
         foreach ($units as &$unit) {
+            $unit['unit_chain'] = $unitModel->getUnitChain($unit['unit_id']);
             $strength              = $unitModel->rollupStrength($unit['unit_id'], $allChildren, $strengthMap);
             $unit['pct_personnel'] = $strength['pct_personnel'];
             $unit['pct_equipment'] = $strength['pct_equipment'];
+
+            $personnel = $unitModel->getAllPersonnelRecursive($unit['unit_id'], $allChildren);
+            $moraleValues = array_filter(array_column($personnel, 'morale'), fn($m) => $m !== null);
+            $unit['avg_morale'] = count($moraleValues) > 0
+                ? round(array_sum($moraleValues) / count($moraleValues), 1)
+                : null;
         }
         unset($unit);
 
@@ -168,6 +176,9 @@ class Missions extends BaseController
             'current_coord_y' => $mission['origin_y'],
         ]);
 
+        $unitModel = new UnitModel();
+        $unitModel->setMissionStatus($unitIds, 'In Transit', $id);
+
         $missionModel->logEvent(
             $id, $gameDate, 'Launched',
             "Mission launched from {$mission['origin_name']} to {$mission['destination_name']}. " .
@@ -231,7 +242,14 @@ class Missions extends BaseController
     {
         $missionId    = (int)($this->request->getGet('mission_id') ?? 0);
         $missionModel = new MissionModel();
+        $unitModel    = new UnitModel();
         $units        = $missionModel->getAvailableUnits($locationId, $missionId);
+
+        foreach ($units as &$unit) {
+            $unit['unit_chain'] = $unitModel->getUnitChain($unit['unit_id']);
+        }
+        unset($unit);
+
         return $this->response->setJSON($units);
     }
 
@@ -240,5 +258,13 @@ class Missions extends BaseController
         $locationModel = new LocationModel();
         $locations     = $locationModel->getAllLocationsWithFactionInfo();
         return $this->response->setJSON($locations);
+    }
+
+    public function getUnitRoster(int $unitId)
+    {
+        $personnelModel = new PersonnelModel();
+        return $this->response->setJSON(
+            $personnelModel->getUnitRosterForMission($unitId)
+        );
     }
 }

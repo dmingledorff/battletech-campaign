@@ -72,6 +72,7 @@ $routes->post('missions/store', 'Missions::store');
 $routes->post('missions/update/(:num)', 'Missions::update/$1');
 $routes->post('missions/launch/(:num)', 'Missions::launch/$1');
 $routes->post('missions/abort/(:num)', 'Missions::abort/$1');
+$routes->get('missions/getUnitRoster/(:num)', 'Missions::getUnitRoster/$1');
 
 // ================================
 // Dev / Testing

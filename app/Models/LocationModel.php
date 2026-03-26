@@ -47,6 +47,7 @@ class LocationModel extends Model
                       f.color AS faction_color')
             ->join('factions f', 'f.faction_id = u.faction_id', 'left')
             ->where('u.location_id', $locationId)
+            ->where('u.status', 'Garrisoned')
             ->where('u.unit_id NOT IN (
                 SELECT DISTINCT parent_unit_id FROM units
                 WHERE parent_unit_id IS NOT NULL
