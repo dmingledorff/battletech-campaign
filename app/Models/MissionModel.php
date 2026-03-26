@@ -179,16 +179,4 @@ class MissionModel extends Model
             ->get()
             ->getResultArray();
     }
-
-    public function setMissionStatus(array $unitIds, string $status, ?int $missionId): void
-    {
-        if (empty($unitIds)) return;
-
-        $this->whereIn('unit_id', $unitIds)
-            ->set([
-                'status'     => $status,
-                'mission_id' => $missionId,
-            ])
-            ->update();
-    }
 }
