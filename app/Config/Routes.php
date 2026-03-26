@@ -5,52 +5,67 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
+
+// ================================
+// General
+// ================================
 $routes->get('/', 'Home::index');
 $routes->get('/dashboard', 'Dashboard::index');
-$routes->get('/units/(:num)', 'Units::show/$1');
-$routes->get('/personnel/(:num)', 'Personnel::show/$1');
-$routes->get('/equipment/(:num)', 'Equipment::show/$1');
-$routes->get('/testgen', 'TestGen');
-$routes->get('/planets', 'Planets::index');
-$routes->get('/planets/show/(:num)', 'Planets::show/$1');
-$routes->get('starsystems', 'StarSystems::index'); 
-$routes->get('starsystems/index', 'StarSystems::index');
-$routes->get('starsystems/index/(:num)', 'StarSystems::index/$1'); // system_id
-$routes->get('starsystems/index/(:num)/(:num)', 'StarSystems::index/$1/$2'); // system_id + planet_id
 
+// ================================
+// Faction
+// ================================
 $routes->get('faction/select', 'Faction::select');
 $routes->post('faction/save', 'Faction::save');
 
+// ================================
+// Star Systems & Planets
+// ================================
+$routes->get('starsystems', 'StarSystems::index');
+$routes->get('starsystems/(:num)', 'StarSystems::index/$1');
+$routes->get('starsystems/(:num)/(:num)', 'StarSystems::index/$1/$2');
+
+$routes->get('planets', 'Planets::index');
+$routes->get('planets/(:num)', 'Planets::show/$1');
+
+// ================================
+// Locations
+// ================================
+$routes->get('location/(:num)', 'Locations::show/$1');
+
+// ================================
+// Units
+// ================================
+$routes->get('units/(:num)', 'Units::show/$1');
+$routes->get('units/byParent/(:num)', 'Units::byParent/$1');
+
+$routes->post('units/managePersonnel/(:num)', 'Units::managePersonnel/$1');
+$routes->post('units/manageEquipment/(:num)', 'Units::manageEquipment/$1');
+$routes->post('units/assignCommander/(:num)', 'Units::assignCommander/$1');
+$routes->post('units/dismissCommander/(:num)', 'Units::dismissCommander/$1');
+$routes->post('units/setCommander/(:num)', 'Units::setCommander/$1');
+
+// ================================
+// Personnel
+// ================================
+$routes->get('personnel/roster', 'Personnel::roster');
+$routes->get('personnel/(:num)', 'Personnel::show/$1');
+
+// ================================
+// Equipment
+// ================================
+$routes->get('equipment/(:num)', 'Equipment::show/$1');
 $routes->get('equipment/getCrew/(:num)', 'Equipment::getCrew/$1');
 $routes->get('equipment/getAvailableCrew/(:num)/(:num)', 'Equipment::getAvailableCrew/$1/$2');
 $routes->post('equipment/assignCrew/(:num)', 'Equipment::assignCrew/$1');
 $routes->post('equipment/removeCrew/(:num)', 'Equipment::removeCrew/$1');
 
-$routes->post('units/assignCommander/(:num)', 'Units::assignCommander/$1');
-$routes->post('units/dismissCommander/(:num)', 'Units::dismissCommander/$1');
+// ================================
+// Dev / Testing
+// ================================
+$routes->get('/testgen', 'TestGen');
 
-$routes->get('personnel/roster', 'Personnel::roster');
-$routes->get('units/byParent/(:num)', 'Units::byParent/$1');
-
-$routes->get('location/(:num)', 'Locations::show/$1');
-
-// Unit Management Routes
-$routes->group('units', ['filter' => 'session'], static function($routes) {
-    $routes->get('show/(:num)', 'Units::show/$1');
-    $routes->post('assignPersonnel/(:num)', 'Units::assignPersonnel/$1');
-    $routes->post('unassignPersonnel/(:num)', 'Units::unassignPersonnel/$1');
-    $routes->post('assignEquipment/(:num)', 'Units::assignEquipment/$1');
-    $routes->post('unassignEquipment/(:num)', 'Units::unassignEquipment/$1');
-
-    // combined slushbucket management endpoints
-    $routes->post('managePersonnel/(:num)', 'Units::managePersonnel/$1');
-    $routes->post('manageEquipment/(:num)', 'Units::manageEquipment/$1');
-
-    // commander assignment
-    $routes->post('setCommander/(:num)', 'Units::setCommander/$1');
-});
-
-
-
+// ================================
+// Auth (CodeIgniter Shield)
+// ================================
 service('auth')->routes($routes);
-

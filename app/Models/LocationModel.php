@@ -96,4 +96,16 @@ class LocationModel extends Model
             ->get()
             ->getResultArray();
     }
+
+    public function getLocationsWithFactions(int $planetId): array
+    {
+        return $this->db->table('locations l')
+            ->select('l.*, f.name AS faction_name, f.emblem_path AS faction_emblem,
+                    f.color AS faction_color, f.faction_id AS controlling_faction_id')
+            ->join('factions f', 'f.faction_id = l.controlled_by', 'left')
+            ->where('l.planet_id', $planetId)
+            ->orderBy('l.display_order')
+            ->get()
+            ->getResultArray();
+    }
 }
