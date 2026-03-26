@@ -3,14 +3,12 @@
 use App\Models\ToeTemplateModel;
 use App\Models\RankModel;
 use App\Models\FactionModel;
-use App\Models\ChassisModel;
 
 class TemplateGenerator
 {
     protected $generator;
     protected $unitGenerator;
     protected $toeModel;
-    protected $chassisModel;
     protected $alphabet;
     protected $rankCache = [];
 
@@ -22,7 +20,6 @@ class TemplateGenerator
         $this->generator     = new Generator(db_connect());
         $this->unitGenerator = new UnitGenerator(db_connect());
         $this->toeModel      = new ToeTemplateModel();
-        $this->chassisModel  = new ChassisModel();
         $this->alphabet      = $this->toeModel->getAlphabet();
 
         // Preload ranks for all factions
@@ -95,7 +92,7 @@ class TemplateGenerator
             $num
         );
 
-        // Pass B: equipment slots + crew
+        // Pass B: equipment slots + crew from TOE
         foreach ($template['slots'] as $slot) {
             if ($slot['slot_type'] !== 'Equipment') continue;
 
@@ -110,24 +107,31 @@ class TemplateGenerator
                 'Active'
             );
 
-            $chassisId        = $this->chassisModel->getChassisIdForEquipment($eid);
-            $crewRequirements = $this->chassisModel->getCrewRequirements($chassisId);
+            // Use TOE crew mapping, not chassis_crew_requirements
+            $crews = $this->toeModel->getCrewForSlot($slot['slot_id']);
+            foreach ($crews as $crew) {
+                $personnelSlotId = (int)($crew['personnel_slot_id'] ?? 0);
 
-            foreach ($crewRequirements as $req) {
-                $crewId = $this->unitGenerator->findUnassignedPersonnelByMos($unitId, $req['required_mos']);
-
-                if (!$crewId) {
-                    $rankId = $this->getRankIdByName(
-                        $req['crew_role'] === 'Commander' ? 'Sergeant' : 'Private'
-                    );
+                if ($personnelSlotId && isset($personBySlotId[$personnelSlotId])) {
+                    // Use already-generated person from Pass A
+                    $crewId = $personBySlotId[$personnelSlotId];
+                } else {
+                    // Generate extra person if not in TOE (shouldn't happen normally)
+                    $rankId = (int)($crew['min_rank_id'] ?? 1);
                     $crewId = $this->generator->generatePersonnel(
-                        $allegiance, $req['required_mos'], $rankId, 'Regular'
+                        $allegiance,
+                        $crew['mos'] ?? 'Infantry',
+                        $rankId,
+                        'Regular'
                     );
                     $this->generator->assignPersonnelToUnit($crewId, $unitId, '3025-01-01');
                 }
 
                 $this->generator->assignEquipmentToPersonnel(
-                    $crewId, $eid, $req['crew_role'], '3025-01-01'
+                    $crewId,
+                    $eid,
+                    $crew['crew_role'],
+                    '3025-01-01'
                 );
             }
         }

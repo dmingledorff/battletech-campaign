@@ -100,10 +100,6 @@ SELECT chassis_id, 'Gunner', TRUE, 'Tanker' FROM chassis WHERE type = 'Vehicle';
 INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
 SELECT chassis_id, 'Commander', FALSE, 'Tanker' FROM chassis WHERE type = 'Vehicle';
 
--- Manticore only: Loader optional
-INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
-SELECT chassis_id, 'Loader', FALSE, 'Tanker' FROM chassis WHERE name = 'Manticore';
-
 -- APCs: Driver and Gunner required - Infantry MOS
 INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
 SELECT chassis_id, 'Driver', TRUE, 'Infantry' FROM chassis WHERE type = 'APC';
@@ -111,11 +107,8 @@ SELECT chassis_id, 'Driver', TRUE, 'Infantry' FROM chassis WHERE type = 'APC';
 INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
 SELECT chassis_id, 'Gunner', TRUE, 'Infantry' FROM chassis WHERE type = 'APC';
 
--- APCs: Commander optional - Infantry MOS
-INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
-SELECT chassis_id, 'Commander', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
-
--- APCs: Dismounts optional - Infantry MOS
+-- APCs: 5 Dismounts optional - Infantry MOS
+-- (Sergeant + 2 Corporals + 2 Privates ride as dismounts; 2 privates are Driver/Gunner)
 INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
 SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
 

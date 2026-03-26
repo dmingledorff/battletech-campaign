@@ -11,6 +11,7 @@ TRUNCATE TABLE toe_templates;
 TRUNCATE TABLE toe_slots;
 TRUNCATE TABLE toe_subunits;
 TRUNCATE TABLE toe_slot_roles;
+TRUNCATE TABLE toe_slot_crews;
 SET FOREIGN_KEY_CHECKS=1;
 
 SET FOREIGN_KEY_CHECKS=0;
