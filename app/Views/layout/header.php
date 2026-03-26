@@ -49,7 +49,7 @@
             <?php if (!empty($allPlanets)): ?>
               <?php foreach ($allPlanets as $planet): ?>
                 <li>
-                  <a class="dropdown-item" href="<?= base_url('/planets/show/'.$planet['planet_id']) ?>">
+                  <a class="dropdown-item" href="<?= base_url('/planets/'.$planet['planet_id']) ?>">
                     <?= esc($planet['name']) ?>
                   </a>
                 </li>
