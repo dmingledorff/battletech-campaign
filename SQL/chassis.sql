@@ -9,6 +9,7 @@ INSERT INTO chassis
 ('Locust','LCT-1V','BattleMech','Light','Scout',40,10,60,0.20,7.0,20,129.6),
 ('Javelin','JVN-10N','BattleMech','Light','Striker',46,13,70,0.40,7.8,30,97.2),
 ('Panther','PNT-9R','BattleMech','Light','Brawler',48,14,80,0.30,8.0,35,64.8),
+('Panther', 'PNT-9ALAG', 'BattleMech', 'Light', 'Striker', 42, 13, 175, 0.50, 7.5, 35, 86.4),
 ('Stinger','STG-3R','BattleMech','Light','Scout',48,14,80,0.30,8.0,35,91.6),
 ('Valkyrie','VLK-QA','BattleMech','Light','Missile Boat',48,14,80,0.30,8.0,30,86.4),
 ('Raven','RVN-1X','BattleMech','Light','Scout',48,14,80,0.30,8.0,35,86.4),
@@ -17,7 +18,7 @@ INSERT INTO chassis
 ('Wasp','WSP-1L','BattleMech','Light','Scout',35,10,55,0.15,6.5,20,97.2),
 ('Commando','COM-2D','BattleMech','Light','Striker',42,12,65,0.30,7.0,25,97.2),
 ('Mongoose','MON-66','BattleMech','Light','Scout',45,12,60,0.20,7.0,25,129.6),
-('UrbanMech','UM-R60','BattleMech','Light','Brawler',38,8,100,0.40,7.5,30,43.2),
+('UrbanMech','UM-R60','BattleMech','Light','Ambusher',38,8,100,0.40,7.5,30,43.2),
 ('Ostscout','OTT-7J','BattleMech','Light','Scout',30,8,50,0.10,6.0,35,129.6),
 ('Flea','FLE-4','BattleMech','Light','Scout',28,8,45,0.15,5.5,20,129.6),
 
@@ -97,7 +98,7 @@ INSERT INTO chassis
 ('Goblin','GBL-STD','Vehicle','Medium','Brawler',35,10,90,0.45,6.5,45,64.8),
 ('Vedette Medium Tank','VMT-STD','Vehicle','Medium','Brawler',48,15,115,0.55,7.8,50,86.0),
 ('Hetzer','HTZ-STD','Vehicle','Medium','Brawler',40,12,95,0.40,7.0,40,43.2),
-('Maxim','MXM-STD','Vehicle','Medium','Support',25,8,80,0.30,6.0,50,97.2),
+('Maxim','MXM-STD','Vehicle','Medium','Striker',25,8,80,0.30,6.0,50,129.6),
 
 -- Heavy Vehicles
 ('Von Luckner Heavy Tank','VNL-K100','Vehicle','Heavy','Juggernaut',70,25,160,0.70,11.0,75,54.0),

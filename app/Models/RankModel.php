@@ -81,4 +81,18 @@ class RankModel extends Model
 
         return $prev['id'] ?? null;
     }
+
+    public function getRankByGrade(int $grade, string $faction): ?array
+    {
+        return $this->where('faction', $faction)
+            ->where('grade', $grade)
+            ->first();
+    }
+
+    public function getRanksByFaction(string $faction): array
+    {
+        return $this->where('faction', $faction)
+            ->orderBy('grade', 'ASC')
+            ->findAll();
+    }
 }

@@ -10,7 +10,7 @@ class Generator
     /** @var \CodeIgniter\Database\BaseConnection $db */
     protected $db;
 
-    public function __construct(ConnectionInterface $db = null)
+    public function __construct(?ConnectionInterface $db = null)
     {
         $this->db = $db ?? db_connect();
     }
@@ -36,28 +36,25 @@ class Generator
         string $status = 'Active',
         ?string $gender = null,
         ?string $first = null,
-        ?string $last = null
+        ?string $last = null,
+        ?string $currentDate = null
     ) {
-        // Decide gender if not provided (weighted male)
         if ($gender === null) {
-            $gender = (mt_rand(0,100) <= 65) ? 'Male' : 'Female';
+            $gender = (mt_rand(0, 100) <= 65) ? 'Male' : 'Female';
         }
 
         $factionModel = new FactionModel();
-        $faction = $factionModel->where('house', $house)->first();
-        
-        // Map to name_pool type
+        $faction      = $factionModel->where('house', $house)->first();
+
         $firstType = ($gender === 'Female') ? 'first_female' : 'first_male';
 
-        // Pick first + last names with faction fallback
-        if ($first == null) $first = $this->pickRandomNameRow($faction['house'], $firstType)->value;
-        if ($last == null)  $last  = $this->pickRandomNameRow($faction['house'], 'last')->value;
+        if ($first === null) $first = $this->pickRandomNameRow($faction['house'], $firstType)->value;
+        if ($last === null)  $last  = $this->pickRandomNameRow($faction['house'], 'last')->value;
 
         if (!$first || !$last) {
             throw new \RuntimeException("No names available for faction: {$faction['house']}");
         }
 
-        // Random callsign only for MechWarriors
         $callsign = null;
         if ($role === 'MechWarrior') {
             $callsign = $this->db->table('callsign_pool')
@@ -67,30 +64,35 @@ class Generator
                 ->getRow();
         }
 
-        $gameState = new \App\Models\GameStateModel();
-        $currentDate = new \DateTime($gameState->getProperty('current_date'));
+        // Use passed date or fall back to GameStateModel only if needed
+        if (!$currentDate) {
+            $gameState   = new \App\Models\GameStateModel();
+            $currentDate = $gameState->getProperty('current_date') ?? '3025-01-01';
+        }
 
         $profileService = new PersonnelProfileService();
-        $rankModel = new RankModel();
-        $rank     = $rankModel->find($rankId);
-        $profile = $profileService->generateProfileForRank($rank['full_name']);
+        $rankModel      = new RankModel();
+        $rank           = $rankModel->find($rankId);
+
+        // Use grade-based profile generation
+        $profile = $profileService->generateProfileForGrade($rank['grade'] ?? 1);
 
         $personnel = [
-            'first_name'   => $first,
-            'last_name'    => $last,
-            'rank_id'      => $rankId,
-            'gender'       => $gender,
-            'callsign'     => $callsign->value ?? null,
-            'mos'          => $role,
-            'experience'   => $experience ?? $profile['experience'],
-            'status'       => $status,
-            'date_of_birth'=> $profile['dob'],
-            'faction_id'   => $faction['faction_id'] ?? null
+            'first_name'    => $first,
+            'last_name'     => $last,
+            'rank_id'       => $rankId,
+            'gender'        => $gender,
+            'callsign'      => $callsign->value ?? null,
+            'mos'           => $role,
+            'experience'    => $experience ?? $profile['experience'],
+            'status'        => $status,
+            'date_of_birth' => $profile['dob'],
+            'faction_id'    => $faction['faction_id'] ?? null,
         ];
+
         $this->db->table('personnel')->insert($personnel);
         $id = $this->db->insertID();
 
-        // Mark callsign as used
         if ($callsign) {
             $this->db->table('callsign_pool')
                 ->where('id', $callsign->id)
@@ -99,7 +101,6 @@ class Generator
 
         return $id;
     }
-
 
     private function pickRandomNameRow(string $faction, string $nameType): ?object {
         // Try specific faction + Generic as fallback in one query

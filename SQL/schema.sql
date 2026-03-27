@@ -334,6 +334,8 @@ CREATE TABLE toe_slots (
     mos VARCHAR(50), -- e.g. MechWarrior, Tanker, Infantry
     min_rank_id INT,
     max_rank_id INT,
+    min_grade INT NULL,
+    max_grade INT NULL,
     -- Equipment slots
     equipment_type ENUM('BattleMech','Vehicle','APC','Aerospace','Infantry') NULL,
     weight_class SET('Light','Medium','Heavy','Assault') NULL,

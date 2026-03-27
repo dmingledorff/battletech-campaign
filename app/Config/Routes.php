@@ -75,6 +75,27 @@ $routes->post('missions/abort/(:num)', 'Missions::abort/$1');
 $routes->get('missions/getUnitRoster/(:num)', 'Missions::getUnitRoster/$1');
 $routes->get('missions/getUnitsForMap/(:num)', 'Missions::getUnitsForMap/$1');
 
+$routes->get('toe', 'ToeBuilder::index');
+$routes->get('toe/create', 'ToeBuilder::create');
+$routes->post('toe/store', 'ToeBuilder::store');
+$routes->get('toe/(:num)', 'ToeBuilder::show/$1');
+$routes->get('toe/(:num)/edit', 'ToeBuilder::edit/$1');
+$routes->post('toe/(:num)/update', 'ToeBuilder::update/$1');
+$routes->post('toe/(:num)/delete', 'ToeBuilder::delete/$1');
+
+// ================================
+// TOE
+// ================================
+// Slot management (AJAX)
+$routes->post('toe/(:num)/slots/add', 'ToeBuilder::addSlot/$1');
+$routes->post('toe/slots/(:num)/delete', 'ToeBuilder::deleteSlot/$1');
+$routes->post('toe/slots/(:num)/crew/add', 'ToeBuilder::addCrew/$1');
+$routes->post('toe/crews/(:num)/delete', 'ToeBuilder::deleteCrew/$1');
+
+// Subunit management (AJAX)
+$routes->post('toe/(:num)/subunits/add', 'ToeBuilder::addSubunit/$1');
+$routes->post('toe/subunits/(:num)/delete', 'ToeBuilder::deleteSubunit/$1');
+
 // ================================
 // Dev / Testing
 // ================================

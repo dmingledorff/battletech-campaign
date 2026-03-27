@@ -46,12 +46,13 @@
           </li>
           <li class="nav-item">
             <a class="nav-link <?= (service('uri')->getSegment(1) === 'starsystems' ? 'active' : '') ?>"
-              href="<?= base_url('/starsystems') ?>">Star Systems</a>
+              href="<?= base_url('/starsystems') ?>">
+              <i class="bi bi-stars me-1"></i>Star Systems</a>
           </li>
 
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="navbarPlanets" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Planets
+              <i class="bi bi-globe me-1"></i>Planets
             </a>
             <ul class="dropdown-menu" aria-labelledby="navbarPlanets">
               <?php if (!empty($allPlanets)): ?>
@@ -66,6 +67,12 @@
                 <li><span class="dropdown-item text-muted">No planets</span></li>
               <?php endif; ?>
             </ul>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link <?= (service('uri')->getSegment(1) === 'toe' ? 'active' : '') ?>"
+              href="<?= base_url('/toe') ?>">
+              <i class="bi bi-diagram-3 me-1"></i>TOE Builder
+            </a>
           </li>
         </ul>
 
