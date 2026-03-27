@@ -10,10 +10,18 @@ class UnitModel extends Model
     protected $table = 'units';
     protected $primaryKey = 'unit_id';
     protected $allowedFields = [
-        'name', 'nickname', 'unit_type', 'role',
-        'parent_unit_id', 'commander_id', 'location_id',
-        'template_id', 'current_supply', 'faction_id',
-        'status', 'mission_id'
+        'name',
+        'nickname',
+        'unit_type',
+        'role',
+        'parent_unit_id',
+        'commander_id',
+        'location_id',
+        'template_id',
+        'current_supply',
+        'faction_id',
+        'status',
+        'mission_id'
     ];
 
     protected function getGameDate(): string
@@ -57,7 +65,8 @@ class UnitModel extends Model
         return $children;
     }
 
-    public function getUnit($unit_id) {
+    public function getUnit($unit_id)
+    {
         return $this->db->table('units u')
             ->select('u.*, 
                     p.first_name, p.last_name, 
@@ -526,8 +535,11 @@ class UnitModel extends Model
                 COALESCE(SUM(DISTINCT ch.supply_consumption), 0) AS required_supply,
                 u.current_supply
             ')
-            ->join('personnel_assignments pa',
-                'pa.unit_id = u.unit_id AND pa.date_released IS NULL', 'left')
+            ->join(
+                'personnel_assignments pa',
+                'pa.unit_id = u.unit_id AND pa.date_released IS NULL',
+                'left'
+            )
             ->join('equipment e', 'e.assigned_unit_id = u.unit_id', 'left')
             ->join('chassis ch', 'ch.chassis_id = e.chassis_id', 'left')
             ->where('u.faction_id', $factionId)
@@ -543,5 +555,138 @@ class UnitModel extends Model
             $map[$u['parent_unit_id']][] = $u;
         }
         return $map;
+    }
+
+    public function getMaxSpeed(int $unitId): ?float
+    {
+        // Find slowest equipment directly assigned to this unit
+        $row = $this->db->table('equipment e')
+            ->select('MIN(ch.speed) AS min_speed')
+            ->join('chassis ch', 'ch.chassis_id = e.chassis_id')
+            ->where('e.assigned_unit_id', $unitId)
+            ->get()->getRowArray();
+
+        return isset($row['min_speed']) ? (float)$row['min_speed'] : null;
+    }
+
+    public function getMaxSpeedBatch(array $unitIds): array
+    {
+        if (empty($unitIds)) return [];
+
+        $rows = $this->db->table('equipment e')
+            ->select('e.assigned_unit_id, MIN(ch.speed) AS min_speed')
+            ->join('chassis ch', 'ch.chassis_id = e.chassis_id')
+            ->whereIn('e.assigned_unit_id', $unitIds)
+            ->groupBy('e.assigned_unit_id')
+            ->get()->getResultArray();
+
+        return array_column($rows, 'min_speed', 'assigned_unit_id');
+    }
+
+    public function getMinSpeedRecursive(int $unitId): ?float
+    {
+        // Get all descendant unit IDs including self
+        $allIds = $this->getAllDescendantIds($unitId);
+        $allIds[] = $unitId;
+
+        if (empty($allIds)) return null;
+
+        $row = $this->db->table('equipment e')
+            ->select('MIN(ch.speed) AS min_speed')
+            ->join('chassis ch', 'ch.chassis_id = e.chassis_id')
+            ->whereIn('e.assigned_unit_id', $allIds)
+            ->get()->getRowArray();
+
+        return isset($row['min_speed']) && $row['min_speed'] !== null
+            ? (float)$row['min_speed']
+            : null;
+    }
+
+    private function getAllDescendantIds(int $unitId): array
+    {
+        $ids      = [];
+        $children = $this->db->table('units')
+            ->select('unit_id')
+            ->where('parent_unit_id', $unitId)
+            ->get()->getResultArray();
+
+        foreach ($children as $child) {
+            $ids[] = (int)$child['unit_id'];
+            $ids   = array_merge($ids, $this->getAllDescendantIds($child['unit_id']));
+        }
+
+        return $ids;
+    }
+
+    public function getMinSpeedBatch(array $unitIds): array
+    {
+        if (empty($unitIds)) return [];
+
+        $result = [];
+        foreach ($unitIds as $unitId) {
+            $result[$unitId] = $this->getMinSpeedRecursive($unitId);
+        }
+        return $result;
+    }
+
+    public function deactivateUnit(int $unitId, string $date): void
+    {
+        $unit = $this->find($unitId);
+        if (!$unit) return;
+
+        $parentId = $unit['parent_unit_id'];
+
+        $this->db->transStart();
+
+        // Re-parent all children to this unit's parent
+        $this->db->table('units')
+            ->where('parent_unit_id', $unitId)
+            ->update(['parent_unit_id' => $parentId]);
+
+        // Release all personnel assignments
+        $this->db->table('personnel_assignments')
+            ->where('unit_id', $unitId)
+            ->where('date_released IS NULL', null, false)
+            ->update(['date_released' => $date]);
+
+        // Unassign all equipment
+        $this->db->table('equipment')
+            ->where('assigned_unit_id', $unitId)
+            ->update(['assigned_unit_id' => null]);
+
+        // Deactivate the unit
+        $this->db->table('units')
+            ->where('unit_id', $unitId)
+            ->update([
+                'status'       => 'Deactivated',
+                'commander_id' => null,
+            ]);
+
+        $this->db->transComplete();
+    }
+
+    public function updateNameNickname(int $unitId, string $name, ?string $nickname): void
+    {
+        $this->db->table('units')
+            ->where('unit_id', $unitId)
+            ->update([
+                'name'     => $name,
+                'nickname' => $nickname ?: null,
+            ]);
+    }
+
+    public function getUnitsByFaction(int $factionId, bool $includeDeactivated = false): array
+    {
+        $builder = $this->db->table('units u')
+            ->select('u.*, p.last_name, r.abbreviation AS rank_abbr')
+            ->join('personnel p', 'p.personnel_id = u.commander_id', 'left')
+            ->join('ranks r', 'r.id = p.rank_id', 'left')
+            ->where('u.faction_id', $factionId);
+
+        if (!$includeDeactivated) {
+            $builder->where('u.status !=', 'Deactivated');
+        }
+
+        return $builder->orderBy('u.parent_unit_id')->get()->getResultArray();
     }
 }

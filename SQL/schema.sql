@@ -168,7 +168,7 @@ CREATE TABLE units (
         'Command','Battle','Striker','Pursuit',
         'Fire','Security','Support','Assault', 'Recon', 'Urban Combat'
     ) NULL,
-    status ENUM('Garrisoned', 'In Transit', 'Combat') DEFAULT 'Garrisoned',
+    status ENUM('Garrisoned', 'In Transit', 'Combat','Deactivated') DEFAULT 'Garrisoned',
     mission_id INT NULL,
     parent_unit_id INT,
     commander_id INT,
@@ -237,7 +237,10 @@ CREATE TABLE chassis (
         'Scout','Sniper',
         'Skirmisher',
         'Striker',
-        'Command'
+        'Command',
+        'MASH',
+        'Repair',
+        'Supply'
     ) DEFAULT 'Brawler',
     hard_attack INT,
     soft_attack INT,
@@ -251,7 +254,7 @@ CREATE TABLE chassis (
 CREATE TABLE chassis_crew_requirements (
     id INT AUTO_INCREMENT PRIMARY KEY,
     chassis_id INT NOT NULL,
-    crew_role ENUM('Commander','Driver','Gunner','Loader','Pilot','Dismount') NOT NULL,
+    crew_role ENUM('Commander','Driver','Gunner','Loader','Pilot','Dismount', 'Crew') NOT NULL,
     is_required BOOLEAN DEFAULT TRUE,
     required_mos VARCHAR(50) NOT NULL DEFAULT 'Infantry',
     FOREIGN KEY (chassis_id) REFERENCES chassis(chassis_id) ON DELETE CASCADE

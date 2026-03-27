@@ -46,6 +46,11 @@ $routes->post('units/assignCommander/(:num)', 'Units::assignCommander/$1');
 $routes->post('units/dismissCommander/(:num)', 'Units::dismissCommander/$1');
 $routes->post('units/setCommander/(:num)', 'Units::setCommander/$1');
 
+$routes->get('units',                        'Units::index');
+$routes->post('units/store',                 'Units::store');
+$routes->post('units/(:num)/updateName',     'Units::updateName/$1');
+$routes->post('units/(:num)/deactivate',     'Units::deactivate/$1');
+
 // ================================
 // Personnel
 // ================================

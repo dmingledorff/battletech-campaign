@@ -39,6 +39,12 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
           <li class="nav-item">
+            <a class="nav-link <?= (service('uri')->getSegment(1) === 'units' ? 'active' : '') ?>"
+              href="<?= base_url('/units') ?>">
+              <i class="bi bi-shield me-1"></i>Units
+            </a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link <?= (service('uri')->getSegment(1) === 'missions' ? 'active' : '') ?>"
               href="<?= base_url('/missions') ?>">
               <i class="bi bi-crosshair me-1"></i>Mission Control

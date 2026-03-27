@@ -45,6 +45,25 @@ class Units extends BaseController
             $unit['required_supply'] += $e['supply_consumption'] ?? 0;
         }
 
+        $childIds = [];
+        if (!empty($children[$unit['unit_id']])) {
+            $childIds = array_column($children[$unit['unit_id']], 'unit_id');
+        }
+
+        $speedMap        = $unitModel->getMinSpeedBatch($childIds);
+        $unit['speed']   = $unitModel->getMinSpeedRecursive($unit['unit_id']);
+
+        $subStrengths = [];
+        if (!empty($children[$unit['unit_id']])) {
+            foreach ($children[$unit['unit_id']] as $sub) {
+                $subStrengths[$sub['unit_id']] = $unitModel->rollupStrength(
+                    $sub['unit_id'],
+                    $children,
+                    $strengthMap
+                );
+            }
+        }
+
         return $this->render('units/show', [
             'unit'                    => $unit,
             'personnel'               => $personnel,               // recursive for the table
@@ -56,6 +75,34 @@ class Units extends BaseController
             'availableEquipment'      => $availableEquipment,
             'assignedDirectPersonnel' => $assignedDirectPersonnel,
             'directEquipment'         => $directEquipment,
+            'speedMap'                => $speedMap,
+            'subStrengths' => $subStrengths,
+        ]);
+    }
+
+    public function index()
+    {
+        $unitModel  = new UnitModel();
+        $factionId  = $this->currentFaction['faction_id'] ?? null;
+        $showDeactivated = (bool)$this->request->getGet('deactivated');
+
+        $units = $unitModel->getUnitsByFaction($factionId, $showDeactivated);
+
+        // Build parent map
+        $byParent = [];
+        foreach ($units as $u) {
+            $byParent[$u['parent_unit_id']][] = $u;
+        }
+
+        // Batch speed lookup
+        $unitIds   = array_column($units, 'unit_id');
+        $speedMap  = $unitModel->getMaxSpeedBatch($unitIds);
+
+        return $this->render('units/index', [
+            'byParent'        => $byParent,
+            'speedMap'        => $speedMap,
+            'showDeactivated' => $showDeactivated,
+            'factionId'       => $factionId,
         ]);
     }
 
@@ -180,5 +227,65 @@ class Units extends BaseController
             ->findAll();
 
         return $this->response->setJSON($units);
+    }
+
+    public function updateName(int $unitId)
+    {
+        $data     = $this->request->getJSON(true);
+        $name     = trim($data['name'] ?? '');
+        $nickname = trim($data['nickname'] ?? '') ?: null;
+
+        if (!$name) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Name is required.']);
+        }
+
+        $unitModel = new UnitModel();
+        $unitModel->updateNameNickname($unitId, $name, $nickname);
+
+        return $this->response->setJSON(['success' => true, 'name' => $name, 'nickname' => $nickname]);
+    }
+
+    public function deactivate(int $unitId)
+    {
+        $unitModel = new UnitModel();
+        $unit      = $unitModel->find($unitId);
+
+        if (!$unit) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unit not found.']);
+        }
+
+        $date = $this->gameState['current_date'] ?? date('Y-m-d');
+        $unitModel->deactivateUnit($unitId, $date);
+
+        return $this->response->setJSON(['success' => true, 'parent_id' => $unit['parent_unit_id']]);
+    }
+
+    public function store()
+    {
+        $unitModel = new UnitModel();
+        $factionId = $this->currentFaction['faction_id'] ?? null;
+
+        $parentId  = (int)$this->request->getPost('parent_unit_id') ?: null;
+        $name      = trim($this->request->getPost('name'));
+        $nickname  = trim($this->request->getPost('nickname')) ?: null;
+        $unitType  = $this->request->getPost('unit_type');
+        $role      = $this->request->getPost('role') ?: null;
+
+        if (!$name || !$unitType) {
+            return redirect()->back()->with('error', 'Name and type are required.');
+        }
+
+        $unitId = $unitModel->insert([
+            'name'           => $name,
+            'nickname'       => $nickname,
+            'unit_type'      => $unitType,
+            'role'           => $role,
+            'faction_id'     => $factionId,
+            'parent_unit_id' => $parentId,
+            'status'         => 'Garrisoned',
+            'location_id'    => 1,
+        ]);
+
+        return redirect()->to("/units/{$unitId}");
     }
 }

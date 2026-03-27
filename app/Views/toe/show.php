@@ -75,7 +75,7 @@
                 <div class="row g-1 align-items-center">
                     <div class="col-4">
                         <select id="newMos" class="form-select form-select-sm bg-dark text-light border-secondary">
-                            <?php foreach (['MechWarrior','Tanker','Infantry','Officer'] as $mos): ?>
+                            <?php foreach (['MechWarrior','Tanker','Infantry','Officer', 'Medic', 'Tech'] as $mos): ?>
                                 <option><?= $mos ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -223,7 +223,7 @@
             <div class="col-3">
                 <label class="form-label small text-muted mb-1">Type</label>
                 <select id="newEqType" class="form-select form-select-sm bg-dark text-light border-secondary">
-                    <?php foreach (['BattleMech','Vehicle','APC','Aerospace','Infantry'] as $t): ?>
+                    <?php foreach (['BattleMech','Vehicle','APC','Infantry'] as $t): ?>
                         <option><?= $t ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -242,7 +242,7 @@
                     Battlefield Roles <span class="text-muted" style="font-size:0.7rem;">(Ctrl/Cmd for multiple, optional)</span>
                 </label>
                 <select id="newEqRoles" class="form-select form-select-sm bg-dark text-light border-secondary" multiple size="4">
-                    <?php foreach (['Ambusher','Brawler','Missile Boat','Juggernaut','Scout','Sniper','Skirmisher','Striker'] as $role): ?>
+                    <?php foreach (['Ambusher','Brawler','Missile Boat','Juggernaut','Scout','Sniper','Skirmisher','Striker', 'MASH', 'Repair', 'Supply'] as $role): ?>
                         <option><?= $role ?></option>
                     <?php endforeach; ?>
                 </select>

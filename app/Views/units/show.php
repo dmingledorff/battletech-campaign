@@ -20,8 +20,34 @@
     <div class="card shadow mb-3">
       <div class="card-header">Unit Information</div>
       <div class="card-body">
-        <p><strong>Name:</strong> <?= esc($unit['name']) ?></p>
-        <p><strong>Nickname:</strong> <?= esc($unit['nickname']) ?></p>
+        <div class="d-flex align-items-center gap-2 mb-1" id="unitNameDisplay">
+          <h4 class="mb-0" id="unitNameText"><?= esc($unit['name']) ?></h4>
+          <?php if ($unit['nickname']): ?>
+            <span class="badge bg-info-subtle text-info-emphasis" id="unitNicknameText">
+              <?= esc($unit['nickname']) ?>
+            </span>
+          <?php endif; ?>
+          <?php if (!$onMission): ?>
+            <button class="btn btn-xs btn-outline-secondary" onclick="editNameToggle(true)">
+              <i class="bi bi-pencil"></i>
+            </button>
+          <?php endif; ?>
+        </div>
+
+        <!-- Inline edit form (hidden by default) -->
+        <div id="unitNameEdit" class="d-none mb-2">
+          <div class="d-flex gap-2 align-items-center">
+            <input type="text" id="editName" value="<?= esc($unit['name']) ?>"
+              class="form-control form-control-sm bg-dark text-light border-secondary"
+              style="max-width:250px;">
+            <input type="text" id="editNickname" value="<?= esc($unit['nickname'] ?? '') ?>"
+              placeholder="Nickname (optional)"
+              class="form-control form-control-sm bg-dark text-light border-secondary"
+              style="max-width:200px;">
+            <button class="btn btn-sm btn-outline-success" onclick="saveName()">Save</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="editNameToggle(false)">Cancel</button>
+          </div>
+        </div>
         <p><strong>Type:</strong> <?= esc($unit['unit_type']) ?></p>
         <p><strong>Role:</strong> <?= esc($unit['role']) ?></p>
         <p><strong>Status:</strong>
@@ -80,6 +106,12 @@
             <?php endif; ?>
           <?php endif; ?>
         </p>
+        <?php if (!$onMission && $unit['status'] !== 'Deactivated'): ?>
+          <button class="btn btn-sm btn-outline-danger mt-2"
+            onclick="deactivateUnit(<?= $unit['unit_id'] ?>)">
+            <i class="bi bi-slash-circle me-1"></i>Deactivate Unit
+          </button>
+        <?php endif; ?>
       </div>
     </div>
   </div>
@@ -114,6 +146,13 @@
         <p><strong>Current Supply:</strong> <?= esc($unit['current_supply']) ?></p>
         <p><strong>Daily Supply Use:</strong> </p>
         <p><strong>Combat Supply Use:</strong> </p>
+        <p><strong>Max Speed:</strong>
+          <?php if ($unit['speed']): ?>
+            <?= number_format($unit['speed'], 1) ?> kph
+          <?php else: ?>
+            <span class="text-muted">—</span>
+          <?php endif; ?>
+        </p>
       </div>
     </div>
   </div>
@@ -126,23 +165,57 @@
       <table class="table table-dark table-sm mb-0">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>Unit</th>
             <th>Type</th>
-            <th>Nickname</th>
+            <th>Role</th>
+            <th>Speed</th>
+            <th>Per%</th>
+            <th>Eqp%</th>
           </tr>
         </thead>
         <tbody>
-          <?php foreach ($children[$unit['unit_id']] as $child): ?>
+          <?php foreach ($children[$unit['unit_id']] as $sub):
+            $speed    = $speedMap[$sub['unit_id']] ?? null;
+            $strength = $subStrengths[$sub['unit_id']] ?? ['pct_personnel' => 0, 'pct_equipment' => 0];
+            $persColor = $strength['pct_personnel'] >= 75 ? 'success'
+              : ($strength['pct_personnel'] >= 50 ? 'warning' : 'danger');
+            $eqpColor  = $strength['pct_equipment'] >= 75 ? 'success'
+              : ($strength['pct_equipment'] >= 50 ? 'warning' : 'danger');
+          ?>
             <tr>
-              <td><a class="link-info" href="/units/<?= esc($child['unit_id']) ?>"><?= esc($child['name']) ?></a></td>
-              <td><?= esc($child['unit_type']) ?></td>
-              <td><?= esc($child['nickname'] ?? '-') ?></td>
+              <td>
+                <a class="link-info" href="/units/<?= esc($sub['unit_id']) ?>">
+                  <?= esc($sub['name']) ?>
+                </a>
+                <?php if (!empty($sub['nickname'])): ?>
+                  <span class="badge bg-info-subtle text-info-emphasis ms-1">
+                    <?= esc($sub['nickname']) ?>
+                  </span>
+                <?php endif; ?>
+              </td>
+              <td class="small"><?= esc($sub['unit_type']) ?></td>
+              <td class="small"><?= esc($sub['role'] ?? '—') ?></td>
+              <td class="small">
+                <?= $speed !== null
+                  ? number_format($speed, 1) . ' kph'
+                  : '<span class="text-muted">—</span>' ?>
+              </td>
+              <td>
+                <span class="text-<?= $persColor ?>">
+                  <?= number_format($strength['pct_personnel'], 1) ?>%
+                </span>
+              </td>
+              <td>
+                <span class="text-<?= $eqpColor ?>">
+                  <?= number_format($strength['pct_equipment'], 1) ?>%
+                </span>
+              </td>
             </tr>
           <?php endforeach; ?>
         </tbody>
       </table>
     <?php else: ?>
-      <p class="text-muted mb-0">No sub-units assigned.</p>
+      <p class="text-muted p-3 mb-0">No sub-units assigned.</p>
     <?php endif; ?>
   </div>
 </div>
@@ -662,4 +735,76 @@
       });
     }
   });
+
+  function editNameToggle(editing) {
+    document.getElementById('unitNameDisplay').classList.toggle('d-none', editing);
+    document.getElementById('unitNameEdit').classList.toggle('d-none', !editing);
+  }
+
+  function saveName() {
+    const name = document.getElementById('editName').value.trim();
+    const nickname = document.getElementById('editNickname').value.trim();
+
+    if (!name) {
+      alert('Name is required.');
+      return;
+    }
+
+    fetch(`/units/<?= $unit['unit_id'] ?>/updateName`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name,
+          nickname
+        })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (!d.success) {
+          alert(d.message ?? 'Error saving.');
+          return;
+        }
+        document.getElementById('unitNameText').textContent = d.name;
+        const badge = document.getElementById('unitNicknameText');
+        if (d.nickname) {
+          if (badge) badge.textContent = d.nickname;
+          else {
+            const newBadge = document.createElement('span');
+            newBadge.id = 'unitNicknameText';
+            newBadge.className = 'badge bg-info-subtle text-info-emphasis';
+            newBadge.textContent = d.nickname;
+            document.getElementById('unitNameDisplay').insertBefore(
+              newBadge,
+              document.getElementById('unitNameDisplay').children[1]
+            );
+          }
+        } else if (badge) badge.remove();
+        editNameToggle(false);
+      });
+  }
+
+  function deactivateUnit(unitId) {
+    if (!confirm(
+        'Deactivate this unit? All personnel and equipment will be unassigned, ' +
+        'and subunits will be moved to the parent unit. This cannot be undone easily.'
+      )) return;
+
+    fetch(`/units/${unitId}/deactivate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (!d.success) {
+          alert(d.message ?? 'Error deactivating unit.');
+          return;
+        }
+        // Navigate to parent or units index
+        window.location.href = d.parent_id ? `/units/${d.parent_id}` : '/units';
+      });
+  }
 </script>

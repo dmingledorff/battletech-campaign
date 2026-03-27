@@ -97,7 +97,7 @@ INSERT INTO chassis
 -- Medium Vehicles
 ('Goblin','GBL-STD','Vehicle','Medium','Brawler',35,10,90,0.45,6.5,45,64.8),
 ('Vedette Medium Tank','VMT-STD','Vehicle','Medium','Brawler',48,15,115,0.55,7.8,50,86.0),
-('Hetzer','HTZ-STD','Vehicle','Medium','Brawler',40,12,95,0.40,7.0,40,43.2),
+('Hetzer','HTZ-STD','Vehicle','Medium','Brawler',40,12,95,0.40,7.0,40,64.8),
 ('Maxim','MXM-STD','Vehicle','Medium','Striker',25,8,80,0.30,6.0,50,129.6),
 
 -- Heavy Vehicles
@@ -107,8 +107,8 @@ INSERT INTO chassis
 ('Brutus','BTS-STD','Vehicle','Heavy','Juggernaut',50,15,160,0.60,10.5,75,54.0),
 ('Manticore','MHT-STD','Vehicle','Heavy','Brawler',60,20,150,0.65,10.0,60,54.0),
 ('Bulldog Medium Tank','BMT-STD','Vehicle','Heavy','Brawler',50,15,120,0.60,8.0,60,65.0),
-('SRM Carrier','SRM-STD','Vehicle','Heavy','Missile Boat',45,15,60,0.80,8.0,60,43.2),
-('LRM Carrier','LRM-STD','Vehicle','Heavy','Missile Boat',35,12,55,0.85,7.5,60,32.4),
+('SRM Carrier','SRM-STD','Vehicle','Heavy','Missile Boat',45,15,60,0.80,8.0,60,54.0),
+('LRM Carrier','LRM-STD','Vehicle','Heavy','Missile Boat',35,12,55,0.85,7.5,60,54.0),
 
 -- Assault Vehicles
 ('Schrek','SHK-STD','Vehicle','Assault','Sniper',55,20,170,0.65,11.5,80,54.0),
@@ -119,6 +119,11 @@ INSERT INTO chassis
 ('Devastator','DVS-STD','Vehicle','Heavy','Juggernaut',65,20,155,0.65,11.0,80,43.2),
 ('Fury','FUR-STD','Vehicle','Assault','Juggernaut',60,18,180,0.60,11.5,85,43.2),
 ('Marsden II','MRS-STD','Vehicle','Assault','Juggernaut',55,15,175,0.55,11.0,90,32.4),
+
+-- Support Vehicles
+('MASH Truck','MSH-STD','Vehicle','Light','MASH',0,0,15,0.0,0.0,20,86.4),
+('Flatbed Truck','FBD-STD','Vehicle','Light','Supply',0,0,10,0.0,0.0,10,86.4),
+('Repair Vehicle','RPR-STD','Vehicle','Heavy','Repair',0,0,80,0.0,0.0,60,86.4),
 
 -- APCs
 ('APC','Wheeled','APC','Light','Scout',10,8,60,0.40,4.0,10,97.2),
@@ -163,3 +168,42 @@ SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC'
 
 INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
 SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+-- Support
+-- Supply Trucks
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', TRUE, 'Tech' FROM chassis WHERE battlefield_role = 'Supply';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Supply';
+
+-- MASH Trucks
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', TRUE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+
+-- Supply Trucks
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', TRUE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
