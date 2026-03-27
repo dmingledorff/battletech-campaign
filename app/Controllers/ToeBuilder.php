@@ -24,8 +24,16 @@ class ToeBuilder extends BaseController
         $factionModel = new FactionModel();
 
         return $this->render('toe/create', [
-            'ranks'    => $rankModel->orderBy('faction')->orderBy('grade')->findAll(),
-            'factions' => $factionModel->findAll(),
+            'ranks'      => $rankModel->orderBy('faction')->orderBy('grade')->findAll(),
+            'factions'   => $factionModel->findAll(),
+            'unitTypes'  => $this->getEnumValues('toe_templates', 'unit_type'),
+            'roles'      => $this->getEnumValues('toe_templates', 'role'),
+            'mobilities' => $this->getEnumValues('toe_templates', 'mobility'),
+            'eqTypes'    => $this->getEnumValues('toe_slots', 'equipment_type'),
+            'weights'    => $this->getEnumValues('toe_slots', 'weight_class'),
+            'mosTypes'   => $this->getEnumValues('toe_slots', 'mos'),
+            'crewRoles'  => $this->getEnumValues('toe_slot_crews', 'crew_role'),
+            'slotRoles'  => $this->getEnumValues('toe_slot_roles', 'battlefield_role')
         ]);
     }
 
@@ -73,6 +81,14 @@ class ToeBuilder extends BaseController
             'ranks'        => $ranks,
             'factions'     => $factionModel->findAll(),
             'rankFaction'  => $rankFaction,
+            'unitTypes'  => $this->getEnumValues('toe_templates', 'unit_type'),
+            'roles'      => $this->getEnumValues('toe_templates', 'role'),
+            'mobilities' => $this->getEnumValues('toe_templates', 'mobility'),
+            'eqTypes'    => $this->getEnumValues('toe_slots', 'equipment_type'),
+            'weights'    => $this->getEnumValues('toe_slots', 'weight_class'),
+            'mosTypes'   => $this->getEnumValues('toe_slots', 'mos'),
+            'crewRoles'  => $this->getEnumValues('toe_slot_crews', 'crew_role'),
+            'slotRoles'  => $this->getEnumValues('toe_slot_roles', 'battlefield_role')
         ]);
     }
 

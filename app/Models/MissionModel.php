@@ -1,4 +1,6 @@
-<?php namespace App\Models;
+<?php
+
+namespace App\Models;
 
 use CodeIgniter\Model;
 
@@ -7,12 +9,22 @@ class MissionModel extends Model
     protected $table      = 'missions';
     protected $primaryKey = 'mission_id';
     protected $allowedFields = [
-        'name', 'mission_type', 'status',
-        'origin_location_id', 'destination_location_id',
-        'launched_date', 'eta_date', 'arrived_date',
-        'distance', 'transit_days', 'days_elapsed',
-        'slowest_speed', 'current_coord_x', 'current_coord_y',
-        'faction_id', 'notes'
+        'name',
+        'mission_type',
+        'status',
+        'origin_location_id',
+        'destination_location_id',
+        'launched_date',
+        'eta_date',
+        'arrived_date',
+        'distance',
+        'transit_days',
+        'days_elapsed',
+        'slowest_speed',
+        'current_coord_x',
+        'current_coord_y',
+        'faction_id',
+        'notes'
     ];
 
     public function getActiveMissions(int $factionId): array
@@ -114,18 +126,37 @@ class MissionModel extends Model
         $this->db->transComplete();
     }
 
-    public function getAvailableUnits(int $locationId, int $excludeMissionId = 0): array
+    public function getAvailableUnits(int $locationId, int $missionId = 0, bool $includeHQ = false, ?int $factionId = null): array
     {
         $builder = $this->db->table('units u')
-            ->select('u.unit_id, u.name, u.unit_type, u.role')
+            ->select('u.unit_id, u.name, u.unit_type, u.role, u.status')
             ->where('u.location_id', $locationId)
-            ->where('u.status', 'Garrisoned')
-            ->where('u.unit_id NOT IN (
-                SELECT DISTINCT parent_unit_id FROM units
-                WHERE parent_unit_id IS NOT NULL
-            )', null, false);
+            ->where('u.status', 'Garrisoned');
 
-        return $builder->orderBy('u.unit_type')->orderBy('u.name')->get()->getResultArray();
+        if ($factionId) {
+            $builder->where('u.faction_id', $factionId);
+        }
+
+        if ($includeHQ) {
+            $builder->whereIn('u.unit_type', ['Lance', 'Squad', 'Battalion', 'Regiment']);
+        } else {
+            $builder->whereIn('u.unit_type', ['Lance', 'Squad']);
+        }
+
+        // Exclude units already on active missions
+        $activeMissionsSub = "SELECT unit_id FROM mission_units 
+        WHERE mission_id IN (
+            SELECT mission_id FROM missions 
+            WHERE status IN ('Planning','In Transit','Combat')
+        )";
+
+        if ($missionId) {
+            $activeMissionsSub .= " AND mission_id != {$missionId}";
+        }
+
+        $builder->where("u.unit_id NOT IN ({$activeMissionsSub})", null, false);
+
+        return $builder->get()->getResultArray();
     }
 
     public function getSlowestSpeed(array $unitIds): float

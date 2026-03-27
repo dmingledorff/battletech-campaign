@@ -132,7 +132,7 @@ CREATE TABLE personnel (
     status ENUM('Active','KIA','Retired', 'Injured', 'MIA') DEFAULT 'Active',
     gender ENUM('Male','Female','Other'),
     callsign VARCHAR(50),
-    mos VARCHAR(50),  -- Military Occupational Specialty
+    mos ENUM('MechWarrior','Tanker','Infantry','Officer','Medic','Tech') NULL,
     experience ENUM('Green','Regular','Veteran','Elite') DEFAULT 'Green',
     date_of_birth DATE NULL,
     morale DECIMAL(5,2) NOT NULL DEFAULT 100.00,
@@ -168,7 +168,7 @@ CREATE TABLE units (
         'Command','Battle','Striker','Pursuit',
         'Fire','Security','Support','Assault', 'Recon', 'Urban Combat'
     ) NULL,
-    status ENUM('Garrisoned', 'In Transit', 'Combat','Deactivated') DEFAULT 'Garrisoned',
+    status ENUM('Garrisoned','In Transit','Combat','Deactivated','Dispersed') DEFAULT 'Garrisoned',
     mission_id INT NULL,
     parent_unit_id INT,
     commander_id INT,
@@ -186,7 +186,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE missions (
     mission_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100),
-    mission_type ENUM('Transfer','Resupply','Assault','Recon','Harass') NOT NULL,
+    mission_type ENUM('Transfer','Resupply','Assault','Recon','Harass','Withdrawal') NOT NULL,
     status ENUM('Planning','In Transit','Arrived','Complete','Aborted') DEFAULT 'Planning',
     origin_location_id INT NOT NULL,
     destination_location_id INT NOT NULL,
@@ -334,14 +334,14 @@ CREATE TABLE toe_slots (
     template_id INT NOT NULL,
     slot_type ENUM('Personnel','Equipment','SubUnit') NOT NULL,
     -- Personnel slots
-    mos VARCHAR(50), -- e.g. MechWarrior, Tanker, Infantry
+    mos ENUM('MechWarrior','Tanker','Infantry','Officer','Medic','Tech') NULL,
     min_rank_id INT,
     max_rank_id INT,
     min_grade INT NULL,
     max_grade INT NULL,
     -- Equipment slots
     equipment_type ENUM('BattleMech','Vehicle','APC','Aerospace','Infantry') NULL,
-    weight_class SET('Light','Medium','Heavy','Assault') NULL,
+    weight_class ENUM('Light','Medium','Heavy','Assault') NULL,
     crew_size INT DEFAULT 1, -- 1 = Mechs, >1 = Vehicles
     -- Subunits
     subunit_template_id INT NULL,
@@ -367,7 +367,8 @@ CREATE TABLE toe_slot_roles (
     slot_id INT NOT NULL,
     battlefield_role ENUM(
         'Ambusher','Brawler','Missile Boat','Juggernaut',
-        'Scout','Sniper','Skirmisher','Striker'
+        'Scout','Sniper','Skirmisher','Striker','MASH',
+        'Repair', 'Supply'
     ) NOT NULL,
     FOREIGN KEY (slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
 );

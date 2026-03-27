@@ -1,4 +1,5 @@
 <?php $onMission = in_array($unit['status'] ?? 'Garrisoned', ['In Transit', 'Combat']); ?>
+<?php $isDispersed = $unit['status'] === 'Dispersed'; ?>
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb bg-dark text-light p-2">
     <?php foreach ($breadcrumb as $b): ?>
@@ -227,10 +228,15 @@
     <div class="card shadow mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>Personnel — <?= esc($unit['name']) ?></span>
-        <?php if (!$onMission): ?>
+        <?php if (!$onMission && !$isDispersed): ?>
           <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#managePersonnelModal">
             Manage
           </button>
+        <?php elseif ($isDispersed): ?>
+          <p class="text-muted small fst-italic">
+            <i class="bi bi-diagram-3 me-1"></i>
+            Unit is dispersed — manage individual subunits.
+          </p>
         <?php else: ?>
           <span class="text-muted small fst-italic">Unit on mission</span>
         <?php endif; ?>
@@ -303,10 +309,15 @@
     <div class="card shadow mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>Equipment — <?= esc($unit['name']) ?></span>
-        <?php if (!$onMission): ?>
+        <?php if (!$onMission && !$isDispersed): ?>
           <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#manageEquipmentModal">
             Manage
           </button>
+        <?php elseif ($isDispersed): ?>
+          <p class="text-muted small fst-italic">
+            <i class="bi bi-diagram-3 me-1"></i>
+            Unit is dispersed — manage individual subunits.
+          </p>
         <?php else: ?>
           <span class="text-muted small fst-italic">Unit on mission</span>
         <?php endif; ?>

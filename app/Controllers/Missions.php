@@ -39,18 +39,31 @@ class Missions extends BaseController
             'planets'           => $planets,
             'friendlyLocations' => $friendlyLocations,
             'allLocations'      => $allLocations,
+            'missionTypes'      => $this->getEnumValues('missions', 'mission_type')
         ]);
     }
 
     public function store()
     {
-        $locationModel     = new LocationModel();
+        $locationModel = new LocationModel();
         $factionId     = $this->currentFaction['faction_id'] ?? null;
         $originId      = (int)$this->request->getPost('origin_location_id');
         $destinationId = (int)$this->request->getPost('destination_location_id');
         $type          = $this->request->getPost('mission_type');
         $notes         = $this->request->getPost('notes');
         $unitIds       = $this->request->getPost('unit_ids') ?? [];
+
+        // After getting $unitIds
+        $unitModel = new UnitModel();
+        foreach ($unitIds as $uid) {
+            $u = $unitModel->find($uid);
+            if (in_array($u['unit_type'], ['Company', 'Platoon'])) {
+                if ($u['status'] === 'Dispersed') {
+                    return redirect()->back()
+                        ->with('error', "Cannot assign dispersed unit {$u['name']} to a mission — assign individual lances instead.");
+                }
+            }
+        }
 
         $destLocation = $locationModel->find($destinationId);
         $name = $this->request->getPost('name') ?: $type . ' ' . ($destLocation['name'] ?? 'Unknown');
@@ -292,10 +305,13 @@ class Missions extends BaseController
 
     public function getUnitsAtLocation(int $locationId)
     {
-        $missionId    = (int)($this->request->getGet('mission_id') ?? 0);
+        $missionId = (int)($this->request->getGet('mission_id') ?? 0);
+        $includeHQ = (bool)($this->request->getGet('include_hq') ?? false);
+        $factionId = $this->currentFaction['faction_id'] ?? null;
+
         $missionModel = new MissionModel();
         $unitModel    = new UnitModel();
-        $units        = $missionModel->getAvailableUnits($locationId, $missionId);
+        $units        = $missionModel->getAvailableUnits($locationId, $missionId, $includeHQ, $factionId);
 
         foreach ($units as &$unit) {
             $unit['unit_chain'] = $unitModel->getUnitChain($unit['unit_id']);

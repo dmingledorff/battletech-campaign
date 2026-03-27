@@ -1,4 +1,6 @@
-<?php namespace App\Services;
+<?php
+
+namespace App\Services;
 
 use CodeIgniter\Database\BaseConnection;
 use App\Models\GameStateModel;
@@ -21,11 +23,11 @@ class GameTickService
     public function processTick(int $days = 1): void
     {
         $this->advanceDate($days);
-        // Refresh game date after advancing
         $this->gameDate = $this->gameStateModel->getProperty('current_date') ?? '3025-01-01';
 
         $this->processMorale();
         $this->processMissions();
+        $this->processDispersedUnits(); // add this
         $this->updateTick();
     }
 
@@ -112,6 +114,13 @@ class GameTickService
             'unit_id'
         );
 
+        // Determine if this is an HQ move (Battalion/Regiment)
+        $isHQMove = !empty(array_filter($unitIds, function ($uid) {
+            $u = $this->db->table('units')
+                ->where('unit_id', $uid)->get()->getRowArray();
+            return in_array($u['unit_type'] ?? '', ['Battalion', 'Regiment']);
+        }));
+
         // Check if enemy has units garrisoned at destination
         $enemyPresent = false;
         if ($destFactionId !== 0 && $destFactionId !== $missionFactionId) {
@@ -122,41 +131,141 @@ class GameTickService
                 ->countAllResults() > 0;
         }
 
-        $isFriendly     = $destFactionId === $missionFactionId;
+        $isFriendlyNow  = $destFactionId === $missionFactionId;
         $isUncontrolled = $destFactionId === 0;
-        $isEnemy        = !$isFriendly && !$isUncontrolled;
+        $isEnemy        = !$isFriendlyNow && !$isUncontrolled;
 
         // ================================
-        // Friendly destination — transfer
+        // Transfer / Resupply / HQ Move
+        // Intended for friendly destination — handle if captured during transit
         // ================================
-        if ($isFriendly) {
-            $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
-            $missionModel->logEvent(
-                $mission['mission_id'], $this->gameDate, 'Arrived',
-                "Mission arrived at {$dest['name']}. " . count($unitIds) . " units transferred."
-            );
+        if (in_array($missionType, ['Transfer', 'Resupply'])) {
+            if ($isFriendlyNow) {
+                // Destination still friendly — normal arrival
+                if ($isHQMove) {
+                    $this->arriveHQ($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
+                        "HQ relocated to {$dest['name']}. Subunits unaffected."
+                    );
+                } else {
+                    $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
+                        "Mission arrived at {$dest['name']}. " . count($unitIds) . " units transferred."
+                    );
+                }
+            } elseif ($isUncontrolled) {
+                // Captured and abandoned during transit — take it, arrive
+                $this->takeControl($destLocationId, $missionFactionId);
+                if ($isHQMove) {
+                    $this->arriveHQ($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
+                } else {
+                    $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
+                }
+                $missionModel->logEvent(
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
+                    "Transfer arrived at {$dest['name']} — location became uncontrolled during transit. Units secured it."
+                );
+            } else {
+                // Enemy took it during transit
+                if ($enemyPresent) {
+                    // Enemy garrison present — return to origin
+                    $this->returnToOrigin($unitIds, $originLocationId, $mission, $missionModel, $unitModel);
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Aborted',
+                        "Transfer to {$dest['name']} aborted — location captured by enemy during transit with active garrison. Units returning to origin."
+                    );
+                } else {
+                    // Enemy claimed it on paper but no garrison — take it back
+                    $this->takeControl($destLocationId, $missionFactionId);
+                    if ($isHQMove) {
+                        $this->arriveHQ($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
+                    } else {
+                        $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
+                    }
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
+                        "Transfer arrived at {$dest['name']} — location claimed by enemy during transit but no garrison present. Units secured it."
+                    );
+                }
+            }
             return;
         }
 
+        if ($missionType === 'Withdrawal') {
+            if ($isFriendlyNow) {
+                $this->arriveHQ($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
+                $missionModel->logEvent(
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
+                    "Units withdrew to {$dest['name']}."
+                );
+            } elseif ($isUncontrolled) {
+                // Withdrew to uncontrolled territory — take it and dig in
+                $this->takeControl($destLocationId, $missionFactionId);
+                $this->arriveHQ($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
+                $missionModel->logEvent(
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
+                    "Units withdrew to {$dest['name']} — location was uncontrolled, now secured."
+                );
+            } else {
+                // Destination captured during withdrawal — find nearest friendly and reroute
+                $nearest = $this->findNearestFriendlyLocation($destLocationId, $missionFactionId);
+                if ($nearest) {
+                    $this->returnToOrigin($unitIds, $nearest['location_id'], $mission, $missionModel, $unitModel);
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Aborted',
+                        "Withdrawal destination {$dest['name']} captured during transit — rerouting to {$nearest['name']}."
+                    );
+                } else {
+                    // No friendly locations left on planet — units are trapped
+                    $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
+                        "Withdrawal to {$dest['name']} failed — destination captured and no friendly locations available. Units trapped. [COMBAT TODO]"
+                    );
+                }
+            }
+            return;
+        }
         // ================================
         // Uncontrolled destination
         // ================================
         if ($isUncontrolled) {
             if ($missionType === 'Recon') {
-                // Take control, return units to origin
                 $this->takeControl($destLocationId, $missionFactionId);
                 $this->returnToOrigin($unitIds, $originLocationId, $mission, $missionModel, $unitModel);
                 $missionModel->logEvent(
-                    $mission['mission_id'], $this->gameDate, 'Arrived',
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
                     "Recon mission completed. {$dest['name']} is uncontrolled — player takes control. Units returning to origin."
                 );
-
             } elseif ($missionType === 'Assault') {
-                // Take control, garrison destination
                 $this->takeControl($destLocationId, $missionFactionId);
                 $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
                 $missionModel->logEvent(
-                    $mission['mission_id'], $this->gameDate, 'Arrived',
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
                     "Assault on uncontrolled {$dest['name']} successful. Units now garrisoning location."
                 );
             }
@@ -169,25 +278,25 @@ class GameTickService
         if ($isEnemy) {
             if ($missionType === 'Recon') {
                 if ($enemyPresent) {
-                    // TODO: possible combat — for now units return with log entry
                     $this->returnToOrigin($unitIds, $originLocationId, $mission, $missionModel, $unitModel);
                     $missionModel->logEvent(
-                        $mission['mission_id'], $this->gameDate, 'Arrived',
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
                         "Recon mission reached {$dest['name']}. Enemy forces present — intel gathered. Units returning to origin. [COMBAT TODO]"
                     );
                 } else {
-                    // Ungarrisoned enemy location — take control, return units
                     $this->takeControl($destLocationId, $missionFactionId);
                     $this->returnToOrigin($unitIds, $originLocationId, $mission, $missionModel, $unitModel);
                     $missionModel->logEvent(
-                        $mission['mission_id'], $this->gameDate, 'Arrived',
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
                         "Recon mission reached {$dest['name']}. No enemy forces present — player takes control. Units returning to origin."
                     );
                 }
-
             } elseif ($missionType === 'Assault') {
                 if ($enemyPresent) {
-                    // TODO: combat logic — stub for now, mark as Combat status
                     $this->db->table('missions')
                         ->where('mission_id', $mission['mission_id'])
                         ->update([
@@ -197,29 +306,30 @@ class GameTickService
                             'current_coord_y' => $dest['coord_y'],
                             'days_elapsed'    => $mission['transit_days'],
                         ]);
-                    // Units arrive at location for combat staging
                     $unitModel->setMissionStatus($unitIds, 'Combat', $mission['mission_id'], $destLocationId);
                     $missionModel->logEvent(
-                        $mission['mission_id'], $this->gameDate, 'Combat',
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Combat',
                         "Assault force arrived at {$dest['name']}. Enemy forces present — combat initiated. [COMBAT TODO]"
                     );
-                    return; // Don't fall through to standard arrival
-
+                    return;
                 } else {
-                    // Ungarrisoned — take control and garrison
                     $this->takeControl($destLocationId, $missionFactionId);
                     $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
                     $missionModel->logEvent(
-                        $mission['mission_id'], $this->gameDate, 'Arrived',
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
                         "Assault on {$dest['name']} successful — no enemy forces present. Player takes control. Units garrisoning location."
                     );
                 }
-
             } elseif ($missionType === 'Harass') {
-                // TODO: harass logic — units return after harassment
                 $this->returnToOrigin($unitIds, $originLocationId, $mission, $missionModel, $unitModel);
                 $missionModel->logEvent(
-                    $mission['mission_id'], $this->gameDate, 'Arrived',
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
                     "Harassment mission completed at {$dest['name']}. Units returning to origin. [HARASS TODO]"
                 );
             }
@@ -297,11 +407,14 @@ class GameTickService
             ->get()->getRowArray();
 
         $returnDistance = $missionModel->calculateDistance(
-            $currentX, $currentY,
-            (float)$origin['coord_x'], (float)$origin['coord_y']
+            $currentX,
+            $currentY,
+            (float)$origin['coord_x'],
+            (float)$origin['coord_y']
         );
         $returnDays = $missionModel->calculateTransitDays(
-            $returnDistance, (float)$mission['slowest_speed']
+            $returnDistance,
+            (float)$mission['slowest_speed']
         );
 
         $etaDate = new \DateTime($this->gameDate);
@@ -322,5 +435,201 @@ class GameTickService
 
         // Units stay In Transit with mission
         $unitModel->setMissionStatus($unitIds, 'In Transit', $mission['mission_id']);
+    }
+
+    // In completeMission() after takeControl()
+    protected function checkForForcedWithdrawals(int $locationId, int $capturingFactionId): void
+    {
+        $hqUnits = $this->db->table('units')
+            ->whereIn('unit_type', ['Battalion', 'Regiment'])
+            ->where('location_id', $locationId)
+            ->where('status', 'Garrisoned')
+            ->where('faction_id !=', $capturingFactionId)
+            ->get()->getResultArray();
+
+        if (empty($hqUnits)) return;
+
+        $missionModel = new MissionModel();
+        $from         = $this->db->table('locations')
+            ->where('location_id', $locationId)
+            ->get()->getRowArray();
+
+        foreach ($hqUnits as $hq) {
+            $nearest = $this->findNearestFriendlyLocation($locationId, $hq['faction_id']);
+
+            if (!$nearest) {
+                // Log trapped HQ — no friendly locations available
+                // Could create a combat mission here in future
+                continue;
+            }
+
+            // Calculate transit
+            $distance    = $missionModel->calculateDistance(
+                (float)$from['coord_x'],
+                (float)$from['coord_y'],
+                (float)$nearest['coord_x'],
+                (float)$nearest['coord_y']
+            );
+
+            // Use slowest equipment on HQ unit, default 64kph if no equipment
+            $speedRow     = $this->db->table('equipment e')
+                ->select('MIN(ch.speed) AS min_speed')
+                ->join('chassis ch', 'ch.chassis_id = e.chassis_id')
+                ->where('e.assigned_unit_id', $hq['unit_id'])
+                ->get()->getRowArray();
+            $slowestSpeed = (float)($speedRow['min_speed'] ?? 64.0);
+            $transitDays  = $missionModel->calculateTransitDays($distance, $slowestSpeed);
+
+            $etaDate = new \DateTime($this->gameDate);
+            $etaDate->modify("+{$transitDays} days");
+
+            $missionId = $missionModel->createMission([
+                'name'                    => "Withdrawal — {$hq['name']}",
+                'mission_type'            => 'Withdrawal',
+                'status'                  => 'In Transit',
+                'origin_location_id'      => $locationId,
+                'destination_location_id' => $nearest['location_id'],
+                'faction_id'              => $hq['faction_id'],
+                'notes'                   => 'Forced withdrawal — HQ location captured.',
+                'launched_date'           => $this->gameDate,
+                'eta_date'                => $etaDate->format('Y-m-d'),
+                'distance'                => $distance,
+                'transit_days'            => $transitDays,
+                'days_elapsed'            => 0,
+                'slowest_speed'           => $slowestSpeed,
+                'current_coord_x'         => $from['coord_x'],
+                'current_coord_y'         => $from['coord_y'],
+            ], [$hq['unit_id']]);
+
+            // Set HQ to In Transit
+            $unitModel = new UnitModel();
+            $unitModel->setMissionStatus([$hq['unit_id']], 'In Transit', $missionId);
+
+            $missionModel->logEvent(
+                $missionId,
+                $this->gameDate,
+                'Withdrawal',
+                "{$hq['name']} HQ forced to withdraw from {$from['name']} — location captured. Routing to {$nearest['name']} ({$transitDays} days)."
+            );
+        }
+    }
+
+    protected function findNearestFriendlyLocation(int $fromLocationId, int $factionId): ?array
+    {
+        $from = $this->db->table('locations')
+            ->where('location_id', $fromLocationId)
+            ->get()->getRowArray();
+
+        if (!$from) return null;
+
+        // Find closest location controlled by this faction on same planet
+        $candidates = $this->db->table('locations')
+            ->where('controlled_by', $factionId)
+            ->where('planet_id', $from['planet_id'])
+            ->where('location_id !=', $fromLocationId)
+            ->get()->getResultArray();
+
+        if (empty($candidates)) return null;
+
+        // Sort by distance
+        usort($candidates, function ($a, $b) use ($from) {
+            $distA = sqrt(
+                pow($a['coord_x'] - $from['coord_x'], 2) +
+                    pow($a['coord_y'] - $from['coord_y'], 2)
+            );
+            $distB = sqrt(
+                pow($b['coord_x'] - $from['coord_x'], 2) +
+                    pow($b['coord_y'] - $from['coord_y'], 2)
+            );
+            return $distA <=> $distB;
+        });
+
+        return $candidates[0];
+    }
+
+    protected function processDispersedUnits(): void
+    {
+        $companies = $this->db->table('units')
+            ->whereIn('unit_type', ['Company', 'Platoon'])
+            ->where('status !=', 'Deactivated')
+            ->get()->getResultArray();
+
+        foreach ($companies as $company) {
+            $children = $this->db->table('units')
+                ->select('location_id, status')
+                ->where('parent_unit_id', $company['unit_id'])
+                ->where('status !=', 'Deactivated')
+                ->get()->getResultArray();
+
+            if (empty($children)) continue;
+
+            $locations = array_unique(array_filter(
+                array_column($children, 'location_id')
+            ));
+
+            $allStatuses = array_column($children, 'status');
+            $allInTransit = count(array_filter(
+                $allStatuses,
+                fn($s) => in_array($s, ['In Transit', 'Combat'])
+            )) === count($children);
+
+            if (count($locations) === 1 && !$allInTransit) {
+                // All children co-located — consolidate
+                $this->db->table('units')
+                    ->where('unit_id', $company['unit_id'])
+                    ->update([
+                        'status'      => 'Garrisoned',
+                        'location_id' => $locations[0],
+                    ]);
+            } elseif (count($locations) > 1 || empty($locations)) {
+                // Children spread across locations — disperse
+                $this->db->table('units')
+                    ->where('unit_id', $company['unit_id'])
+                    ->update([
+                        'status'      => 'Dispersed',
+                        'location_id' => null,
+                    ]);
+            }
+        }
+    }
+    protected function arriveHQ(
+        array $unitIds,
+        int $locationId,
+        array $mission,
+        array $destCoords,
+        MissionModel $missionModel,
+        UnitModel $unitModel
+    ): void {
+        if (!empty($unitIds)) {
+            $unitModel->setMissionStatus($unitIds, 'Garrisoned', null, $locationId);
+
+            foreach ($unitIds as $unitId) {
+                $personnelIds = array_column(
+                    $this->db->table('personnel_assignments')
+                        ->select('personnel_id')
+                        ->where('unit_id', $unitId)
+                        ->where('date_released IS NULL', null, false)
+                        ->get()->getResultArray(),
+                    'personnel_id'
+                );
+                if (!empty($personnelIds)) {
+                    $this->db->table('personnel')
+                        ->whereIn('personnel_id', $personnelIds)
+                        ->update(['location_id' => $locationId]);
+                }
+                // Note: equipment NOT moved — HQ staff equipment stays with them
+                // but subunit equipment is untouched
+            }
+        }
+
+        $this->db->table('missions')
+            ->where('mission_id', $mission['mission_id'])
+            ->update([
+                'status'          => 'Arrived',
+                'arrived_date'    => $this->gameDate,
+                'current_coord_x' => $destCoords['coord_x'],
+                'current_coord_y' => $destCoords['coord_y'],
+                'days_elapsed'    => $mission['transit_days'],
+            ]);
     }
 }

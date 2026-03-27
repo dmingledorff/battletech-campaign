@@ -299,9 +299,12 @@
           <div class="col-4">
             <select id="filterMos" class="form-select form-select-sm bg-dark text-light border-secondary">
               <option value="">All MOS</option>
-              <option value="MechWarrior" <?= ($savedFilters['mos'] ?? '') === 'MechWarrior' ? 'selected' : '' ?>>MechWarrior</option>
-              <option value="Tanker" <?= ($savedFilters['mos'] ?? '') === 'Tanker'      ? 'selected' : '' ?>>Tanker</option>
-              <option value="Infantry" <?= ($savedFilters['mos'] ?? '') === 'Infantry'    ? 'selected' : '' ?>>Infantry</option>
+              <?php foreach ($mosTypes as $mos): ?>
+                <option value="<?= esc($mos) ?>"
+                  <?= ($savedFilters['mos'] ?? '') === $mos ? 'selected' : '' ?>>
+                  <?= esc($mos) ?>
+                </option>
+              <?php endforeach; ?>
             </select>
           </div>
           <div class="col-4 d-flex align-items-center">

@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Controllers;
 
@@ -8,13 +8,15 @@ use App\Models\PlanetModel;
 
 class BaseController extends Controller
 {
-    protected $helpers = ['url','form','html'];
+    protected $helpers = ['url', 'form', 'html'];
     protected $gameDate;
     protected $gameState;
     protected $allPlanets;
     protected $currentFaction;
+    protected array $enumCache = [];
 
-    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger) {
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
+    {
         parent::initController($request, $response, $logger);
 
         // Load GameState model
@@ -35,17 +37,17 @@ class BaseController extends Controller
         $this->currentFaction = null;
 
         if ($currentUser && ! empty($currentUser->faction_id)) {
-        $this->currentFaction = model('\App\Models\FactionModel')->find($currentUser->faction_id); // array
-}
-
+            $this->currentFaction = model('\App\Models\FactionModel')->find($currentUser->faction_id); // array
+        }
     }
 
     /**
      * Universal render wrapper
      * Injects game date + wraps header/footer around content
      */
-    protected function render(string $view, array $data = []): string {
-        
+    protected function render(string $view, array $data = []): string
+    {
+
         // Always include game date in every render
         $data['gameState'] = $this->gameState;
         $data['gameDate'] = $this->gameDate;
@@ -54,7 +56,12 @@ class BaseController extends Controller
 
 
         return view('layout/header', $data)
-             . view($view, $data)
-             . view('layout/footer', $data);
+            . view($view, $data)
+            . view('layout/footer', $data);
+    }
+    
+    protected function getEnumValues(string $table, string $column): array
+    {
+        return \App\Libraries\SchemaHelper::getEnumValues($table, $column);
     }
 }

@@ -103,6 +103,9 @@ class Units extends BaseController
             'speedMap'        => $speedMap,
             'showDeactivated' => $showDeactivated,
             'factionId'       => $factionId,
+            'unitTypes'       => $this->getEnumValues('units', 'unit_type'),
+            'roles'           => $this->getEnumValues('units', 'role'),
+            'statuses'        => $this->getEnumValues('units', 'status')
         ]);
     }
 

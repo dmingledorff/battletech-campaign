@@ -115,7 +115,7 @@
                             <select name="unit_type"
                                 class="form-select bg-dark text-light border-secondary"
                                 required>
-                                <?php foreach (['Regiment', 'Battalion', 'Company', 'Lance', 'Platoon', 'Squad'] as $t): ?>
+                                <?php foreach ($unitTypes as $t): ?>
                                     <option><?= $t ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -125,7 +125,7 @@
                             <select name="role"
                                 class="form-select bg-dark text-light border-secondary">
                                 <option value="">None</option>
-                                <?php foreach (['Command', 'Battle', 'Striker', 'Pursuit', 'Fire', 'Security', 'Support', 'Assault', 'Recon', 'Infantry'] as $r): ?>
+                                <?php foreach ($roles as $r): ?>
                                     <option><?= $r ?></option>
                                 <?php endforeach; ?>
                             </select>

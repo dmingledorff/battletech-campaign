@@ -53,6 +53,7 @@ class Dashboard extends BaseController
             'topUnits'     => $topUnits,
             'planets'      => $planets,
             'locations'    => $locations,
+            'mosTypes'     => $this->getEnumValues('personnel', 'mos'),
             'savedFilters' => session()->get('roster_filters') ?? [],
         ]);
     }

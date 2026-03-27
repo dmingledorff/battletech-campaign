@@ -8,7 +8,7 @@
   <div class="col-md-3">
     <label class="form-label">Unit Type</label>
     <select name="unit_type" class="form-select bg-dark text-light border-secondary" required>
-      <?php foreach (['Regiment','Battalion','Company','Lance','Platoon','Squad'] as $type): ?>
+      <?php foreach ($unitTypes as $type): ?>
         <option value="<?= $type ?>"
           <?= ($template['unit_type'] ?? '') === $type ? 'selected' : '' ?>>
           <?= $type ?>
@@ -20,7 +20,7 @@
     <label class="form-label">Role <span class="text-muted small">(optional)</span></label>
     <select name="role" class="form-select bg-dark text-light border-secondary">
       <option value="">None</option>
-      <?php foreach (['Command','Battle','Striker','Pursuit','Fire','Security','Support','Assault','Recon','Urban Combat','Infantry'] as $role): ?>
+      <?php foreach ($roles as $role): ?>
         <option value="<?= $role ?>"
           <?= ($template['role'] ?? '') === $role ? 'selected' : '' ?>>
           <?= $role ?>
@@ -32,7 +32,7 @@
     <label class="form-label">Mobility <span class="text-muted small">(optional)</span></label>
     <select name="mobility" class="form-select bg-dark text-light border-secondary">
       <option value="">None</option>
-      <?php foreach (['Foot','Mechanized','Motorized','Airborne','Jump','Hover'] as $mob): ?>
+      <?php foreach ($mobilities as $mob): ?>
         <option value="<?= $mob ?>"
           <?= ($template['mobility'] ?? '') === $mob ? 'selected' : '' ?>>
           <?= $mob ?>
