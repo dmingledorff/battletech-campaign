@@ -1,3 +1,4 @@
+<?php $onMission = in_array($unit['status'] ?? 'Garrisoned', ['In Transit', 'Combat']); ?>
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb bg-dark text-light p-2">
     <?php foreach ($breadcrumb as $b): ?>
@@ -23,8 +24,32 @@
         <p><strong>Nickname:</strong> <?= esc($unit['nickname']) ?></p>
         <p><strong>Type:</strong> <?= esc($unit['unit_type']) ?></p>
         <p><strong>Role:</strong> <?= esc($unit['role']) ?></p>
-        <p><strong>Location:</strong>
-          <?php if (!empty($unit['location_id'])): ?>
+        <p><strong>Status:</strong>
+          <?php
+          $statusColor = match ($unit['status'] ?? 'Garrisoned') {
+            'Garrisoned' => 'success',
+            'In Transit' => 'info',
+            'Combat'     => 'danger',
+            default      => 'secondary',
+          };
+          ?>
+          <span class="badge bg-<?= $statusColor ?>"><?= esc($unit['status'] ?? 'Garrisoned') ?></span>
+        </p>
+
+        <p>
+          <strong>Location:</strong>
+          <?php if (($unit['status'] === 'In Transit' || $unit['status'] === 'Combat') && $unit['mission_id']): ?>
+            <a class="link-info" href="/missions/<?= esc($unit['mission_id']) ?>">
+              <?= esc($unit['mission_name']) ?>
+            </a>
+            <?php if ($unit['status'] === 'In Transit'): ?>
+              <span class="text-muted small">
+                — <?= esc($unit['mission_origin']) ?> → <?= esc($unit['mission_destination']) ?>
+                · ETA: <?= esc($unit['eta_date']) ?>
+                (<?= esc($unit['days_elapsed']) ?>/<?= esc($unit['transit_days']) ?> days)
+              </span>
+            <?php endif; ?>
+          <?php elseif (!empty($unit['location_id'])): ?>
             <a class="link-info" href="/location/<?= esc($unit['location_id']) ?>">
               <?= esc($unit['location_name']) ?>
               <?php if (!empty($unit['planet_name'])): ?>
@@ -41,14 +66,18 @@
             <a class="link-info" href="/personnel/<?= esc($unit['commander_id']) ?>">
               <?= esc($unit['rank_abbr']) ?>. <?= esc($unit['last_name'] . ', ' . $unit['first_name']) ?>
             </a>
-            <button class="btn btn-sm btn-outline-danger ms-2" data-bs-toggle="modal" data-bs-target="#assignCommanderModal">
-              Dismiss
-            </button>
+            <?php if (!$onMission): ?>
+              <button class="btn btn-sm btn-outline-danger ms-2" data-bs-toggle="modal" data-bs-target="#assignCommanderModal">
+                Dismiss
+              </button>
+            <?php endif; ?>
           <?php else: ?>
             <span class="text-muted">Unassigned</span>
-            <button class="btn btn-sm btn-outline-info ms-2" data-bs-toggle="modal" data-bs-target="#assignCommanderModal">
-              Assign
-            </button>
+            <?php if (!$onMission): ?>
+              <button class="btn btn-sm btn-outline-info ms-2" data-bs-toggle="modal" data-bs-target="#assignCommanderModal">
+                Assign
+              </button>
+            <?php endif; ?>
           <?php endif; ?>
         </p>
       </div>
@@ -125,7 +154,13 @@
     <div class="card shadow mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>Personnel — <?= esc($unit['name']) ?></span>
-        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#managePersonnelModal">Manage</button>
+        <?php if (!$onMission): ?>
+          <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#managePersonnelModal">
+            Manage
+          </button>
+        <?php else: ?>
+          <span class="text-muted small fst-italic">Unit on mission</span>
+        <?php endif; ?>
       </div>
 
       <div class="card-body p-0">
@@ -195,7 +230,13 @@
     <div class="card shadow mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>Equipment — <?= esc($unit['name']) ?></span>
-        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#manageEquipmentModal">Manage</button>
+        <?php if (!$onMission): ?>
+          <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#manageEquipmentModal">
+            Manage
+          </button>
+        <?php else: ?>
+          <span class="text-muted small fst-italic">Unit on mission</span>
+        <?php endif; ?>
       </div>
 
       <div class="card-body p-0">
@@ -241,7 +282,7 @@
                 <th>Type</th>
                 <th>Unit</th>
                 <th>Status</th>
-              <th>Damage</th>
+                <th>Damage</th>
               </tr>
             </thead>
             <tbody>
@@ -283,13 +324,13 @@
               <?php foreach ($availablePersonnel as $p): ?>
                 <option value="<?= $p['personnel_id'] ?>"
                   <?= !$p['can_assign'] ? 'disabled class="text-muted"' : '' ?>
-                  data-name="<?= esc($p['first_name'].' '.$p['last_name']) ?>"
+                  data-name="<?= esc($p['first_name'] . ' ' . $p['last_name']) ?>"
                   data-mos="<?= esc($p['mos']) ?>"
                   data-status="<?= esc($p['status']) ?>"
                   data-dob="<?= esc($p['date_of_birth']) ?>"
                   data-experience="<?= esc($p['experience']) ?>"
                   data-morale="<?= esc($p['morale']) ?>">
-                  <?= esc($p['last_name'].', '.$p['first_name'].' ('.$p['rank_abbr'].')') ?>
+                  <?= esc($p['last_name'] . ', ' . $p['first_name'] . ' (' . $p['rank_abbr'] . ')') ?>
                   <?= !$p['can_assign'] ? ' — ' . esc($p['location_name'] ?? 'Unknown Location') : '' ?>
                 </option>
               <?php endforeach; ?>

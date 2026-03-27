@@ -59,16 +59,23 @@ class UnitModel extends Model
 
     public function getUnit($unit_id) {
         return $this->db->table('units u')
-            ->select('u.*, p.first_name, p.last_name, r.full_name AS rank_full, 
-                    r.abbreviation AS rank_abbr, loc.name AS location_name,
-                    loc.location_id, pl.name AS planet_name', false)
+            ->select('u.*, 
+                    p.first_name, p.last_name, 
+                    r.full_name AS rank_full, r.abbreviation AS rank_abbr,
+                    loc.name AS location_name, loc.location_id AS location_id,
+                    pl.name AS planet_name,
+                    m.mission_id, m.name AS mission_name, m.mission_type,
+                    m.eta_date, m.days_elapsed, m.transit_days,
+                    ol.name AS mission_origin, dl.name AS mission_destination')
             ->join('personnel p', 'u.commander_id = p.personnel_id', 'left')
             ->join('ranks r', 'p.rank_id = r.id', 'left')
             ->join('locations loc', 'loc.location_id = u.location_id', 'left')
             ->join('planets pl', 'pl.planet_id = loc.planet_id', 'left')
+            ->join('missions m', 'm.mission_id = u.mission_id', 'left')
+            ->join('locations ol', 'ol.location_id = m.origin_location_id', 'left')
+            ->join('locations dl', 'dl.location_id = m.destination_location_id', 'left')
             ->where('u.unit_id', $unit_id)
-            ->get()
-            ->getRowArray();
+            ->get()->getRowArray();
     }
 
     public function getPersonnel($unitId)
@@ -90,8 +97,7 @@ class UnitModel extends Model
             ->where('pa.date_released IS NULL')
             ->groupBy('p.personnel_id, r.full_name, r.abbreviation, r.grade, p.first_name, p.last_name, p.status')
             ->orderBy('r.grade', 'DESC') // optional if you add grade column in ranks
-            ->get()
-            ->getResultArray();
+            ->get()->getResultArray();
     }
 
     public function getEquipment($unitId)
@@ -282,8 +288,7 @@ class UnitModel extends Model
             ->orderBy('can_assign', 'DESC')
             ->orderBy('r.grade', 'ASC')
             ->orderBy('p.last_name', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->get()->getResultArray();
     }
 
     public function getAvailableEquipment(int $factionId): array
@@ -301,8 +306,7 @@ class UnitModel extends Model
             ->where('e.assigned_unit_id IS NULL', null, false)  // ✅ strict filter
             ->orderBy('c.weight_class', 'ASC')
             ->orderBy('c.name', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->get()->getResultArray();
     }
 
     public function managePersonnel(int $unitId, array $assignList, array $unassignList): void
@@ -382,8 +386,7 @@ class UnitModel extends Model
             ->where('e.assigned_unit_id', $unitId)
             ->orderBy('c.weight_class', 'ASC')
             ->orderBy('c.name', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->get()->getResultArray();
     }
 
     public function syncPersonnelAssignments(int $unitId, array $personnelIds, string $effectiveDate): bool
@@ -510,7 +513,6 @@ class UnitModel extends Model
             ->set([
                 'status'     => $status,
                 'mission_id' => $missionId,
-            ])
-            ->update();
+            ])->update();
     }
 }

@@ -1,4 +1,6 @@
-<?php namespace App\Controllers;
+<?php
+
+namespace App\Controllers;
 
 use App\Models\MissionModel;
 use App\Models\LocationModel;
@@ -42,13 +44,16 @@ class Missions extends BaseController
 
     public function store()
     {
+        $locationModel     = new LocationModel();
         $factionId     = $this->currentFaction['faction_id'] ?? null;
         $originId      = (int)$this->request->getPost('origin_location_id');
         $destinationId = (int)$this->request->getPost('destination_location_id');
-        $name          = $this->request->getPost('name');
         $type          = $this->request->getPost('mission_type');
         $notes         = $this->request->getPost('notes');
         $unitIds       = $this->request->getPost('unit_ids') ?? [];
+
+        $destLocation = $locationModel->find($destinationId);
+        $name = $this->request->getPost('name') ?: $type . ' ' . ($destLocation['name'] ?? 'Unknown');
 
         $missionModel = new MissionModel();
         $missionId    = $missionModel->createMission([
@@ -74,6 +79,7 @@ class Missions extends BaseController
         }
 
         $units = $missionModel->getMissionUnits($id);
+        $unitIds = array_column($units, 'unit_id');
         $log   = $missionModel->getLog($id);
 
         // Get strength for each unit
@@ -95,6 +101,39 @@ class Missions extends BaseController
         }
         unset($unit);
 
+        $kmPerCoord      = (float)($this->gameState['km_per_coord_unit'] ?? 100);
+        $speedEfficiency = (float)($this->gameState['speed_efficiency'] ?? 0.7);
+
+        // For launched missions, convert stored distance
+        $distanceKm = isset($mission['distance'])
+            ? round((float)$mission['distance'] * $kmPerCoord, 1)
+            : null;
+
+        // For planning missions, calculate estimated distance and ETA
+        $estimatedDistance    = null;
+        $estimatedDistanceKm  = null;
+        $estimatedTransitDays = null;
+        $slowestSpeed         = null;
+
+        if (
+            $mission['status'] === 'Planning'
+            && $mission['origin_location_id']
+            && $mission['destination_location_id']
+        ) {
+            $estimatedDistance    = $missionModel->calculateDistance(
+                (float)$mission['origin_x'],
+                (float)$mission['origin_y'],
+                (float)$mission['dest_x'],
+                (float)$mission['dest_y']
+            );
+            $estimatedDistanceKm  = round($estimatedDistance * $kmPerCoord, 1);
+            // Only calculate ETA if we have units assigned
+            if (!empty($unitIds)) {
+                $slowestSpeed         = $missionModel->getSlowestSpeed($unitIds);
+                $estimatedTransitDays = $missionModel->calculateTransitDays($estimatedDistance, $slowestSpeed);
+            }
+        }
+
         $availableUnits    = [];
         $friendlyLocations = [];
         $allLocations      = [];
@@ -114,6 +153,12 @@ class Missions extends BaseController
             'availableUnits'    => $availableUnits,
             'friendlyLocations' => $friendlyLocations,
             'allLocations'      => $allLocations,
+            'distanceKm'           => $distanceKm,
+            'estimatedDistanceKm'  => $estimatedDistanceKm,
+            'estimatedTransitDays' => $estimatedTransitDays,
+            'slowestSpeed'         => $slowestSpeed,
+            'kmPerCoord'           => $kmPerCoord,
+            'speedEfficiency'      => $speedEfficiency
         ]);
     }
 
@@ -178,13 +223,18 @@ class Missions extends BaseController
 
         $unitModel = new UnitModel();
         $unitModel->setMissionStatus($unitIds, 'In Transit', $id);
+        $kmPerCoord = (float)($this->gameState['km_per_coord_unit'] ?? 100);
+        $speedEfficiency = (float)($this->gameState['speed_efficiency'] ?? 0.7);
 
         $missionModel->logEvent(
-            $id, $gameDate, 'Launched',
+            $id,
+            $gameDate,
+            'Launched',
             "Mission launched from {$mission['origin_name']} to {$mission['destination_name']}. " .
-            "Distance: " . round($distance, 2) . " units. " .
-            "Slowest unit: " . round($slowestSpeed, 1) . " kph. " .
-            "ETA: {$etaDate->format('Y-m-d')} ({$transitDays} days)."
+                "Distance: " . round($distance * $kmPerCoord, 1) . " km. " .
+                "Slowest unit: " . round($slowestSpeed, 1) . " kph " .
+                "(" . round($slowestSpeed * $speedEfficiency, 1) . " kph effective). " .
+                "ETA: {$etaDate->format('Y-m-d')} ({$transitDays} days)."
         );
 
         return redirect()->to("/missions/{$id}");
@@ -204,7 +254,6 @@ class Missions extends BaseController
         if ($mission['status'] === 'Planning') {
             $missionModel->update($id, ['status' => 'Aborted']);
             $missionModel->logEvent($id, $gameDate, 'Aborted', 'Mission aborted during planning.');
-
         } elseif ($mission['status'] === 'In Transit') {
             $remainingDistance = $missionModel->calculateDistance(
                 (float)$mission['current_coord_x'],
@@ -213,7 +262,8 @@ class Missions extends BaseController
                 (float)$mission['origin_y']
             );
             $returnDays = $missionModel->calculateTransitDays(
-                $remainingDistance, (float)$mission['slowest_speed']
+                $remainingDistance,
+                (float)$mission['slowest_speed']
             );
             $etaDate = new \DateTime($gameDate);
             $etaDate->modify("+{$returnDays} days");
@@ -229,9 +279,11 @@ class Missions extends BaseController
             ]);
 
             $missionModel->logEvent(
-                $id, $gameDate, 'Aborted',
+                $id,
+                $gameDate,
+                'Aborted',
                 "Mission aborted in transit. Units reversing course. " .
-                "New ETA at origin: {$etaDate->format('Y-m-d')} ({$returnDays} days)."
+                    "New ETA at origin: {$etaDate->format('Y-m-d')} ({$returnDays} days)."
             );
         }
 
@@ -266,5 +318,19 @@ class Missions extends BaseController
         return $this->response->setJSON(
             $personnelModel->getUnitRosterForMission($unitId)
         );
+    }
+
+    public function getUnitsForMap(int $missionId)
+    {
+        $missionModel = new MissionModel();
+        $unitModel    = new UnitModel();
+        $units        = $missionModel->getMissionUnits($missionId);
+
+        foreach ($units as &$unit) {
+            $unit['unit_chain'] = $unitModel->getUnitChain($unit['unit_id']);
+        }
+        unset($unit);
+
+        return $this->response->setJSON($units);
     }
 }

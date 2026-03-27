@@ -23,9 +23,9 @@ INSERT INTO locations (name, type, terrain, planet_id, coord_x, coord_y, control
 ('Webster', 'City', 'Urban', @galtor3_id, 45, 50, NULL),
 ('Lifford', 'City', 'Rural', @galtor3_id, 38, 65, NULL),
 ('Cead Cathair', 'City', 'Urban', @galtor3_id, 49, 70, NULL),
-('Buncrana', 'City', 'Urban', @galtor3_id, 70, 85, NULL),
-('Rathmullan', 'City', 'Urban', @galtor3_id, 49, 88, NULL),
-('Cloc Ceann Faola', 'City', 'Urban', @galtor3_id, 8, 82, NULL);
+('Buncrana', 'City', 'Urban', @galtor3_id, 70, 85, 2),
+('Rathmullan', 'City', 'Urban', @galtor3_id, 49, 88, 2),
+('Cloc Ceann Faola', 'City', 'Urban', @galtor3_id, 8, 82, 2);
 
 -- ===========================
 -- Marduk System Inserts

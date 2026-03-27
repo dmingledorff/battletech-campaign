@@ -37,12 +37,42 @@ $progress = $mission['transit_days'] > 0
                         <?= esc($mission['destination_name']) ?>
                     </a>
                 </p>
-                <?php if ($mission['launched_date']): ?>
+
+                <?php if ($mission['status'] === 'Planning'): ?>
+                    <!-- Planning estimates -->
+                    <?php if ($estimatedDistanceKm !== null): ?>
+                        <p class="mb-1"><strong>Est. Distance:</strong>
+                            <?= number_format($estimatedDistanceKm, 1) ?> km
+                            <span class="text-muted small">(<?= number_format($estimatedDistanceKm / $kmPerCoord, 2) ?> map units)</span>
+                        </p>
+                    <?php endif; ?>
+                    <?php if ($estimatedTransitDays !== null): ?>
+                        <p class="mb-1"><strong>Est. Transit:</strong> ~<?= esc($estimatedTransitDays) ?> days</p>
+                        <p class="mb-1"><strong>Slowest Unit:</strong>
+                            <?= number_format((float)$slowestSpeed, 1) ?> kph
+                            <span class="text-muted small">
+                                (<?= number_format((float)$slowestSpeed * $speedEfficiency, 1) ?> kph effective)
+                            </span>
+                        </p>
+                    <?php else: ?>
+                        <p class="text-muted small fst-italic mb-1">Assign units to see ETA estimate.</p>
+                    <?php endif; ?>
+
+                <?php else: ?>
+                    <!-- Launched mission actuals -->
                     <p class="mb-1"><strong>Launched:</strong> <?= esc($mission['launched_date']) ?></p>
                     <p class="mb-1"><strong>ETA:</strong> <?= esc($mission['eta_date']) ?></p>
-                    <p class="mb-1"><strong>Distance:</strong> <?= number_format((float)$mission['distance'], 2) ?> units</p>
-                    <p class="mb-1"><strong>Slowest Unit:</strong> <?= number_format((float)$mission['slowest_speed'], 1) ?> kph</p>
-                    <p class="mb-1"><strong>Transit:</strong> <?= esc($mission['days_elapsed']) ?>/<?= esc($mission['transit_days']) ?> days</p>
+                    <p class="mb-1"><strong>Distance:</strong>
+                        <?= number_format((float)$distanceKm, 1) ?> km
+                        <span class="text-muted small">(<?= number_format((float)$mission['distance'], 2) ?> map units)</span>
+                    </p>
+                    <p class="mb-1"><strong>Slowest Unit:</strong>
+                        <?= number_format((float)$mission['slowest_speed'], 1) ?> kph
+                        <span class="text-muted small">(<?= number_format((float)$mission['slowest_speed'] * $speedEfficiency, 1) ?> kph effective)</span>
+                    </p>
+                    <p class="mb-1"><strong>Transit:</strong>
+                        <?= esc($mission['days_elapsed']) ?>/<?= esc($mission['transit_days']) ?> days
+                    </p>
                     <?php if ($mission['status'] === 'In Transit'): ?>
                         <div class="progress mt-2" style="height:8px;">
                             <div class="progress-bar bg-info" style="width:<?= $progress ?>%"></div>
@@ -50,6 +80,7 @@ $progress = $mission['transit_days'] > 0
                         <p class="text-muted small mt-1 mb-0"><?= $progress ?>% complete</p>
                     <?php endif; ?>
                 <?php endif; ?>
+
                 <?php if ($mission['notes']): ?>
                     <p class="mt-2 mb-0 text-muted small"><?= esc($mission['notes']) ?></p>
                 <?php endif; ?>

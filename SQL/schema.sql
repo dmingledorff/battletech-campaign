@@ -10,7 +10,11 @@ DROP VIEW IF EXISTS unit_personnel_equipment;
 DROP VIEW IF EXISTS unit_hierarchy_chain;
 
 -- Drop dependent tables (reverse FK order)
+SET FOREIGN_KEY_CHECKS=0;
 DROP TABLE IF EXISTS buildings;
+DROP TABLE IF EXISTS mission_units;
+DROP TABLE IF EXISTS mission_log;
+DROP TABLE IF EXISTS missions;
 DROP TABLE IF EXISTS unit_command_history;
 DROP TABLE IF EXISTS personnel_equipment;
 DROP TABLE IF EXISTS personnel_assignments;
@@ -31,10 +35,6 @@ DROP TABLE IF EXISTS toe_templates;
 DROP TABLE IF EXISTS ranks;
 DROP TABLE IF EXISTS game_state;
 DROP TABLE IF EXISTS chassis_crew_requirements;
-DROP TABLE IF EXISTS missions;
-DROP TABLE IF EXISTS mission_units;
-DROP TABLE IF EXISTS mission_log;
-SET FOREIGN_KEY_CHECKS=0;
 DROP TABLE IF EXISTS factions;
 DROP TABLE IF EXISTS chassis;
 SET FOREIGN_KEY_CHECKS=1;
@@ -49,7 +49,7 @@ CREATE TABLE game_state (
 );
 INSERT INTO game_state (property_name, property_value) VALUES
 ('current_date', '3025-01-01'),
-('km_per_coord_unit', '40'),
+('km_per_coord_unit', '100'),
 ('speed_efficiency', '0.7');
 
 CREATE TABLE factions (
@@ -156,6 +156,33 @@ CREATE TABLE toe_templates (
     era VARCHAR(50) -- optional filter
 );
 
+SET FOREIGN_KEY_CHECKS = 0;
+CREATE TABLE units (
+    unit_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    faction_id INT,
+    nickname VARCHAR(100),
+    current_supply DECIMAL(10,2) DEFAULT 0,
+    unit_type ENUM('Regiment','Battalion','Company','Lance','Platoon','Squad') NOT NULL,
+    role ENUM(
+        'Command','Battle','Striker','Pursuit',
+        'Fire','Security','Support','Assault', 'Recon', 'Urban Combat'
+    ) NULL,
+    status ENUM('Garrisoned', 'In Transit', 'Combat') DEFAULT 'Garrisoned',
+    mission_id INT NULL,
+    parent_unit_id INT,
+    commander_id INT,
+    location_id INT,
+    template_id INT NULL,
+    FOREIGN KEY (parent_unit_id) REFERENCES units(unit_id),
+    FOREIGN KEY (commander_id) REFERENCES personnel(personnel_id),
+    FOREIGN KEY (location_id) REFERENCES locations(location_id),
+    FOREIGN KEY (template_id) REFERENCES toe_templates(template_id),
+    FOREIGN KEY (faction_id) REFERENCES factions(faction_id) ON DELETE SET NULL,
+    FOREIGN KEY (mission_id) REFERENCES missions(mission_id) ON DELETE SET NULL
+);
+SET FOREIGN_KEY_CHECKS = 1;
+
 CREATE TABLE missions (
     mission_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100),
@@ -194,31 +221,6 @@ CREATE TABLE mission_log (
     event_type ENUM('Launched','In Transit','Arrived','Aborted','Combat') NOT NULL,
     description TEXT,
     FOREIGN KEY (mission_id) REFERENCES missions(mission_id) ON DELETE CASCADE
-);
-
-CREATE TABLE units (
-    unit_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    faction_id INT,
-    nickname VARCHAR(100),
-    current_supply DECIMAL(10,2) DEFAULT 0,
-    unit_type ENUM('Regiment','Battalion','Company','Lance','Platoon','Squad') NOT NULL,
-    role ENUM(
-        'Command','Battle','Striker','Pursuit',
-        'Fire','Security','Support','Assault', 'Recon', 'Urban Combat'
-    ) NULL,
-    status ENUM('Garrisoned', 'In Transit', 'Combat') DEFAULT 'Garrisoned',
-    mission_id INT NULL,
-    parent_unit_id INT,
-    commander_id INT,
-    location_id INT,
-    template_id INT NULL,
-    FOREIGN KEY (parent_unit_id) REFERENCES units(unit_id),
-    FOREIGN KEY (commander_id) REFERENCES personnel(personnel_id),
-    FOREIGN KEY (location_id) REFERENCES locations(location_id),
-    FOREIGN KEY (template_id) REFERENCES toe_templates(template_id),
-    FOREIGN KEY (faction_id) REFERENCES factions(faction_id) ON DELETE SET NULL,
-    FOREIGN KEY (mission_id) REFERENCES missions(mission_id) ON DELETE SET NULL
 );
 
 CREATE TABLE chassis (
