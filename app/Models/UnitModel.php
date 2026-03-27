@@ -515,4 +515,33 @@ class UnitModel extends Model
                 'mission_id' => $missionId,
             ])->update();
     }
+
+    public function getSummaryByFaction(?int $factionId): array
+    {
+        return $this->db->table('units u')
+            ->select('
+                u.unit_id, u.name, u.unit_type, u.role, u.parent_unit_id, u.status,
+                COUNT(DISTINCT pa.personnel_id) AS personnel_count,
+                COUNT(DISTINCT e.equipment_id)  AS equipment_count,
+                COALESCE(SUM(DISTINCT ch.supply_consumption), 0) AS required_supply,
+                u.current_supply
+            ')
+            ->join('personnel_assignments pa',
+                'pa.unit_id = u.unit_id AND pa.date_released IS NULL', 'left')
+            ->join('equipment e', 'e.assigned_unit_id = u.unit_id', 'left')
+            ->join('chassis ch', 'ch.chassis_id = e.chassis_id', 'left')
+            ->where('u.faction_id', $factionId)
+            ->groupBy('u.unit_id')
+            ->get()->getResultArray();
+    }
+
+    public function getAllChildrenByFaction(?int $factionId): array
+    {
+        $units = $this->where('faction_id', $factionId)->findAll();
+        $map   = [];
+        foreach ($units as $u) {
+            $map[$u['parent_unit_id']][] = $u;
+        }
+        return $map;
+    }
 }

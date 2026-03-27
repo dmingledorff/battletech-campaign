@@ -1,4 +1,6 @@
-<?php namespace App\Models;
+<?php
+
+namespace App\Models;
 
 use CodeIgniter\Model;
 
@@ -48,8 +50,7 @@ class PersonnelModel extends Model
     {
         return $this->baseSelect()
             ->where('p.personnel_id', $id)
-            ->get()
-            ->getRowArray();
+            ->get()->getRowArray();
     }
 
     /**
@@ -65,8 +66,7 @@ class PersonnelModel extends Model
         return $builder
             ->orderBy('r.grade', 'DESC')
             ->orderBy('p.last_name', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->get()->getResultArray();
     }
 
     /**
@@ -80,8 +80,7 @@ class PersonnelModel extends Model
         }
         return $builder
             ->orderBy('r.grade', 'DESC')
-            ->get()
-            ->getResultArray();
+            ->get()->getResultArray();
     }
 
     // Units this person is assigned to
@@ -91,8 +90,7 @@ class PersonnelModel extends Model
             ->select('u.unit_id, u.name, u.unit_type, u.nickname')
             ->join('units u', 'u.unit_id = pa.unit_id')
             ->where('pa.personnel_id', $personnelId)
-            ->get()
-            ->getResultArray();
+            ->get()->getResultArray();
     }
 
     // Equipment this person is crewing
@@ -114,8 +112,7 @@ class PersonnelModel extends Model
             ->join('chassis c', 'c.chassis_id = e.chassis_id')
             ->where('pe.personnel_id', $personnelId)
             ->where('pe.is_active', true)
-            ->get()
-            ->getResultArray();
+            ->get()->getResultArray();
     }
 
     // Current active assignment only
@@ -127,8 +124,7 @@ class PersonnelModel extends Model
             ->where('pa.personnel_id', $personnelId)
             ->where('pa.date_released IS NULL', null, false)
             ->orderBy('pa.date_assigned', 'DESC')
-            ->get(1)
-            ->getRowArray();
+            ->get(1)->getRowArray();
 
         return $row ?: null;
     }
@@ -141,8 +137,7 @@ class PersonnelModel extends Model
             ->join('units u', 'u.unit_id = pa.unit_id')
             ->where('pa.personnel_id', $personnelId)
             ->orderBy('pa.date_assigned', 'DESC')
-            ->get()
-            ->getResultArray();
+            ->get()->getResultArray();
     }
 
     public function getRoster(array $filters = [], int $page = 1, int $perPage = 25): array
@@ -166,12 +161,18 @@ class PersonnelModel extends Model
                 pl.name AS planet_name
             ')
             ->join('ranks r', 'r.id = p.rank_id', 'left')
-            ->join('personnel_assignments pa', 
-                'pa.personnel_id = p.personnel_id AND pa.date_released IS NULL', 'left')
+            ->join(
+                'personnel_assignments pa',
+                'pa.personnel_id = p.personnel_id AND pa.date_released IS NULL',
+                'left'
+            )
             ->join('units u', 'u.unit_id = pa.unit_id', 'left')
             ->join('locations loc', 'loc.location_id = p.location_id', 'left')
             ->join('planets pl', 'pl.planet_id = loc.planet_id', 'left');
 
+        if (!empty($filters['faction_id'])) {
+            $builder->where('p.faction_id', $filters['faction_id']);
+        }
         // Unassigned filter
         if (!empty($filters['unassigned'])) {
             $builder->where('pa.unit_id IS NULL', null, false);
@@ -210,7 +211,7 @@ class PersonnelModel extends Model
         }
 
         $builder->orderBy('r.grade', 'DESC')
-                ->orderBy('p.last_name', 'ASC');
+            ->orderBy('p.last_name', 'ASC');
 
         // Get total count before pagination
         $total = $builder->countAllResults(false);
@@ -252,15 +253,20 @@ class PersonnelModel extends Model
                 c.variant
             ')
             ->join('ranks r', 'r.id = p.rank_id', 'left')
-            ->join('personnel_assignments pa',
-                'pa.personnel_id = p.personnel_id AND pa.date_released IS NULL', 'left')
-            ->join('personnel_equipment pe',
-                'pe.personnel_id = p.personnel_id AND pe.is_active = 1', 'left')
+            ->join(
+                'personnel_assignments pa',
+                'pa.personnel_id = p.personnel_id AND pa.date_released IS NULL',
+                'left'
+            )
+            ->join(
+                'personnel_equipment pe',
+                'pe.personnel_id = p.personnel_id AND pe.is_active = 1',
+                'left'
+            )
             ->join('equipment e', 'e.equipment_id = pe.equipment_id', 'left')
             ->join('chassis c', 'c.chassis_id = e.chassis_id', 'left')
             ->where('pa.unit_id', $unitId)
             ->orderBy('r.grade', 'DESC')
-            ->get()
-            ->getResultArray();
+            ->get()->getResultArray();
     }
 }

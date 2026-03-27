@@ -11,6 +11,7 @@ use CodeIgniter\Router\RouteCollection;
 // ================================
 $routes->get('/', 'Home::index');
 $routes->get('/dashboard', 'Dashboard::index');
+$routes->get('dashboard/unitChildren/(:num)', 'Dashboard::unitChildren/$1');
 
 // ================================
 // Faction

@@ -46,6 +46,8 @@ class Personnel extends BaseController
 
     public function roster()
     {
+        $factionId = $this->currentFaction['faction_id'] ?? null;
+
         $all = [
             'unassigned'  => $this->request->getGet('unassigned'),
             'unit_id'     => $this->request->getGet('unit_id'),
@@ -59,11 +61,10 @@ class Personnel extends BaseController
             '_planet'     => $this->request->getGet('_planet'),
         ];
 
-        // Save everything to session including empty cascade keys
         session()->set('roster_filters', $all);
 
-        // Only pass non-empty values to the query
         $filters = array_filter($all, fn($v) => $v !== null && $v !== '');
+        $filters['faction_id'] = $factionId;
 
         $page = (int)($this->request->getGet('page') ?? 1);
 
@@ -72,5 +73,4 @@ class Personnel extends BaseController
 
         return $this->response->setJSON($result);
     }
-
 }

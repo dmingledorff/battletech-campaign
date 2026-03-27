@@ -6,26 +6,42 @@ class Dashboard extends BaseController
 {
     public function index()
     {
-        $unitModel = new UnitModel();
+        $unitModel  = new UnitModel();
+        $factionId  = $this->currentFaction['faction_id'] ?? null;
 
-        $summary          = $unitModel->getSummary();
-        $childrenByParent = $unitModel->getAllChildren();
+        // Only top-level units for this faction
+        $topUnits = $unitModel
+            ->where('parent_unit_id IS NULL', null, false)
+            ->where('faction_id', $factionId)
+            ->findAll();
+
+        // Totals rolled up across all faction units
+        $summary          = $unitModel->getSummaryByFaction($factionId);
+        $childrenByParent = $unitModel->getAllChildrenByFaction($factionId);
 
         $summaryById = [];
         foreach ($summary as $s) {
             $summaryById[$s['unit_id']] = $s;
         }
 
-        $this->rollupTotals(1, $childrenByParent, $summaryById);
+        // Roll up from each top-level unit
+        $totalPersonnel = 0;
+        $totalEquipment = 0;
+        $totalSupply    = 0;
+        foreach ($topUnits as $u) {
+            $rolled = $this->rollupTotals($u['unit_id'], $childrenByParent, $summaryById);
+            $totalPersonnel += $rolled['personnel'];
+            $totalEquipment += $rolled['equipment'];
+            $totalSupply    += $rolled['supply'];
+        }
 
         $totals = [
             'units'      => count($summary),
-            'personnel'  => $summaryById[1]['rolled_personnel'] ?? 0,
-            'equipment'  => $summaryById[1]['rolled_equipment'] ?? 0,
-            'supply_req' => $summaryById[1]['rolled_supply'] ?? 0,
+            'personnel'  => $totalPersonnel,
+            'equipment'  => $totalEquipment,
+            'supply_req' => $totalSupply,
         ];
 
-        $topUnits  = $unitModel->where('parent_unit_id IS NULL', null, false)->findAll();
         $db        = \Config\Database::connect();
         $planets   = $db->table('planets')->orderBy('name')->get()->getResultArray();
         $locations = $db->table('locations')->orderBy('name')->get()->getResultArray();
@@ -34,12 +50,46 @@ class Dashboard extends BaseController
             'summary'      => $summaryById,
             'children'     => $childrenByParent,
             'totals'       => $totals,
-            'rootId'       => 1,
             'topUnits'     => $topUnits,
             'planets'      => $planets,
             'locations'    => $locations,
             'savedFilters' => session()->get('roster_filters') ?? [],
         ]);
+    }
+
+    public function unitChildren(int $unitId)
+    {
+        $unitModel = new UnitModel();
+        $factionId = $this->currentFaction['faction_id'] ?? null;
+
+        $children  = $unitModel
+            ->where('parent_unit_id', $unitId)
+            ->where('faction_id', $factionId)
+            ->findAll();
+
+        $summary = $unitModel->getSummaryByFaction($factionId);
+        $summaryById = array_column($summary, null, 'unit_id');
+
+        $childrenByParent = $unitModel->getAllChildrenByFaction($factionId);
+
+        $rows = [];
+        foreach ($children as $c) {
+            $rolled = $this->rollupTotals($c['unit_id'], $childrenByParent, $summaryById);
+            $hasChildren = isset($childrenByParent[$c['unit_id']]);
+            $rows[] = [
+                'unit_id'    => $c['unit_id'],
+                'name'       => $c['name'],
+                'unit_type'  => $c['unit_type'],
+                'role'       => $c['role'],
+                'status'     => $c['status'] ?? 'Garrisoned',
+                'personnel'  => $rolled['personnel'],
+                'equipment'  => $rolled['equipment'],
+                'supply'     => round($rolled['supply'], 2),
+                'hasChildren'=> $hasChildren,
+            ];
+        }
+
+        return $this->response->setJSON($rows);
     }
 
     private function rollupTotals($unitId, $children, &$summaryById)
