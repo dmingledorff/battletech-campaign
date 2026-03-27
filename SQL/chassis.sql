@@ -13,6 +13,13 @@ INSERT INTO chassis
 ('Valkyrie','VLK-QA','BattleMech','Light','Missile Boat',48,14,80,0.30,8.0,30,86.4),
 ('Raven','RVN-1X','BattleMech','Light','Scout',48,14,80,0.30,8.0,35,86.4),
 ('Firestarter','FS9-H','BattleMech','Light','Scout',48,14,80,0.30,8.0,35,97.2),
+('Wasp','WSP-1A','BattleMech','Light','Scout',35,10,55,0.15,6.5,20,97.2),
+('Wasp','WSP-1L','BattleMech','Light','Scout',35,10,55,0.15,6.5,20,97.2),
+('Commando','COM-2D','BattleMech','Light','Striker',42,12,65,0.30,7.0,25,97.2),
+('Mongoose','MON-66','BattleMech','Light','Scout',45,12,60,0.20,7.0,25,129.6),
+('UrbanMech','UM-R60','BattleMech','Light','Brawler',38,8,100,0.40,7.5,30,43.2),
+('Ostscout','OTT-7J','BattleMech','Light','Scout',30,8,50,0.10,6.0,35,129.6),
+('Flea','FLE-4','BattleMech','Light','Scout',28,8,45,0.15,5.5,20,129.6),
 
 -- Medium 'Mechs
 ('Centurion','CN9-A','BattleMech','Medium','Brawler',70,30,120,0.75,12.0,50,64.8),
@@ -29,6 +36,13 @@ INSERT INTO chassis
 ('Clint','CLNT-2-3T','BattleMech','Medium','Striker',62,22,90,0.70,9,40,97.0),
 ('Clint','CLNT-2-4T','BattleMech','Medium','Sniper',62,22,90,0.70,10,40,97.0),
 ('Vulcan','VL-5T','BattleMech','Medium','Striker',60,22,100,0.70,10,40,97.0),
+('Dervish','DV-6M','BattleMech','Medium','Missile Boat',60,22,100,0.75,10.5,55,86.4),
+('Cicada','CDA-2A','BattleMech','Medium','Scout',55,16,80,0.30,9.0,40,129.6),
+('Cicada','CDA-3C','BattleMech','Medium','Striker',58,18,85,0.35,9.5,40,129.6),
+('Vindicator','VND-1R','BattleMech','Medium','Sniper',60,20,100,0.40,10.0,45,64.8),
+('Kintaro','KTO-18','BattleMech','Medium','Missile Boat',64,24,110,0.70,11.0,55,86.4),
+('Wolverine','WVR-6M','BattleMech','Medium','Skirmisher',64,22,105,0.40,10.5,55,86.4),
+('Crab','CRB-20','BattleMech','Medium','Brawler',66,20,130,0.10,11.0,50,64.8),
 
 -- Heavy Mechs
 ('Rifleman','RFL-3N','BattleMech','Heavy','Sniper',72,24,120,0.70,12.5,60,64.8),
@@ -42,6 +56,16 @@ INSERT INTO chassis
 ('Thunderbolt','TDR-5S','BattleMech','Heavy','Brawler',78,22,150,0.60,12.9,65,64.8),
 ('Warhammer','WHM-6R','BattleMech','Heavy','Brawler',84,28,145,0.70,13.8,70,64.8),
 ('Black Knight','BL-6-KNT','BattleMech','Heavy','Brawler',84,28,150,0.10,8.0,75,64.8),
+('Dragon','DRG-1N','BattleMech','Heavy','Brawler',76,24,140,0.50,12.5,60,86.4),
+('Dragon','DRG-1G','BattleMech','Heavy','Skirmisher',72,22,135,0.45,12.0,60,86.4),
+('Cataphract','CTF-1X','BattleMech','Heavy','Brawler',78,24,145,0.60,12.8,70,64.8),
+('Crusader','CRD-3R','BattleMech','Heavy','Missile Boat',74,26,130,0.80,13.0,65,64.8),
+('Bombardier','BMB-12D','BattleMech','Heavy','Missile Boat',70,22,120,0.85,12.5,65,64.8),
+('Lancelot','LNC25-01','BattleMech','Heavy','Sniper',75,22,130,0.20,12.5,60,86.4),
+('Ostsol','OTL-4D','BattleMech','Heavy','Sniper',72,20,125,0.10,12.0,60,86.4),
+('Ostroc','OSR-2C','BattleMech','Heavy','Skirmisher',70,22,140,0.30,12.3,60,86.4),
+('Thug','THG-11E','BattleMech','Heavy','Brawler',80,24,155,0.10,13.0,70,64.8),
+('Rifleman','RFL-3C','BattleMech','Heavy','Sniper',70,22,115,0.65,12.0,60,64.8),
 
 -- Assault Mechs
 ('Atlas','AS7-D','BattleMech','Assault','Juggernaut',100,30,200,0.70,15.0,100,54.0),
@@ -54,16 +78,26 @@ INSERT INTO chassis
 ('Mauler','MAL-1R','BattleMech','Assault','Sniper',88,22,170,0.70,13.0,90,54.0),
 ('Banshee','BNC-3E','BattleMech','Assault','Juggernaut',82,20,160,0.50,11.5,95,54.0),
 ('Highlander','HGN-732','BattleMech','Assault','Juggernaut',95,28,185,0.60,14.0,90,54.0),
+('King Crab','KGC-0000','BattleMech','Assault','Juggernaut',105,30,210,0.70,15.5,100,43.2),
+('Charger','CGR-1A1','BattleMech','Assault','Scout',55,18,120,0.10,10.0,80,86.4),
+('Charger','CGR-1L','BattleMech','Assault','Brawler',75,22,150,0.30,12.0,80,64.8),
+('Goliath','GOL-1H','BattleMech','Assault','Missile Boat',85,25,170,0.75,13.5,80,43.2),
+('Longbow','LGB-7Q','BattleMech','Assault','Missile Boat',80,25,160,0.90,13.0,85,54.0),
+('Black Knight','BL-7-KNT','BattleMech','Assault','Brawler',88,28,165,0.10,13.5,75,54.0),
 
 -- Light Vehicles
 ('Scorpion Light Tank','SLT-STD','Vehicle','Light','Scout',35,12,80,0.50,6.8,25,64.8),
 ('Pegasus Scout Hover','PSH-STD','Vehicle','Light','Striker',40,14,75,0.50,6.5,35,129.6),
 ('Striker','Standard','Vehicle','Light','Striker',25,5,70,0.35,5.0,35,86.4),
 ('Hunter LST','HNT-STD','Vehicle','Light','Missile Boat',28,8,80,0.40,5.5,35,86.4),
+('Harasser','HAR-STD','Vehicle','Light','Striker',30,10,65,0.45,5.5,15,162.0),
+('Skulker','SKU-STD','Vehicle','Light','Scout',20,6,50,0.30,4.5,20,129.6),
 
 -- Medium Vehicles
 ('Goblin','GBL-STD','Vehicle','Medium','Brawler',35,10,90,0.45,6.5,45,64.8),
 ('Vedette Medium Tank','VMT-STD','Vehicle','Medium','Brawler',48,15,115,0.55,7.8,50,86.0),
+('Hetzer','HTZ-STD','Vehicle','Medium','Brawler',40,12,95,0.40,7.0,40,43.2),
+('Maxim','MXM-STD','Vehicle','Medium','Support',25,8,80,0.30,6.0,50,97.2),
 
 -- Heavy Vehicles
 ('Von Luckner Heavy Tank','VNL-K100','Vehicle','Heavy','Juggernaut',70,25,160,0.70,11.0,75,54.0),
@@ -72,6 +106,8 @@ INSERT INTO chassis
 ('Brutus','BTS-STD','Vehicle','Heavy','Juggernaut',50,15,160,0.60,10.5,75,54.0),
 ('Manticore','MHT-STD','Vehicle','Heavy','Brawler',60,20,150,0.65,10.0,60,54.0),
 ('Bulldog Medium Tank','BMT-STD','Vehicle','Heavy','Brawler',50,15,120,0.60,8.0,60,65.0),
+('SRM Carrier','SRM-STD','Vehicle','Heavy','Missile Boat',45,15,60,0.80,8.0,60,43.2),
+('LRM Carrier','LRM-STD','Vehicle','Heavy','Missile Boat',35,12,55,0.85,7.5,60,32.4),
 
 -- Assault Vehicles
 ('Schrek','SHK-STD','Vehicle','Assault','Sniper',55,20,170,0.65,11.5,80,54.0),
@@ -79,6 +115,9 @@ INSERT INTO chassis
 ('Ontos','ONT-STD','Vehicle','Assault','Juggernaut',30,7,75,0.40,5.5,95,97.2),
 ('Demolisher','DML-STD','Vehicle','Assault','Juggernaut',45,10,155,0.55,10.0,80,54.0),
 ('Behemoth','BHM-STD','Vehicle','Assault','Juggernaut',80,20,200,0.60,12.0,100,32.0),
+('Devastator','DVS-STD','Vehicle','Heavy','Juggernaut',65,20,155,0.65,11.0,80,43.2),
+('Fury','FUR-STD','Vehicle','Assault','Juggernaut',60,18,180,0.60,11.5,85,43.2),
+('Marsden II','MRS-STD','Vehicle','Assault','Juggernaut',55,15,175,0.55,11.0,90,32.4),
 
 -- APCs
 ('APC','Wheeled','APC','Light','Scout',10,8,60,0.40,4.0,10,97.2),

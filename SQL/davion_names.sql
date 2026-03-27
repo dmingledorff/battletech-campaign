@@ -411,3 +411,20 @@ INSERT INTO name_pool (faction, name_type, value) VALUES
 ('Davion','last','Tremblay'),
 ('Davion','last','Verneuil'),
 ('Davion','last','Yorke');
+
+-- Additional Davion names with Pan Oriental flavour (Galtor III heritage)
+INSERT INTO name_pool (faction, name_type, value) VALUES
+('Davion','first_male','Anaru'),
+('Davion','first_male','Daichi'),
+('Davion','first_male','Kenji'),
+('Davion','first_male','Ryo'),
+('Davion','first_female','Naomi'),
+('Davion','first_female','Midori'),
+('Davion','first_female','Yuki'),
+('Davion','last','Chin'),
+('Davion','last','Tuu'),
+('Davion','last','Yamamoto'),
+('Davion','last','Nakamura'),
+('Davion','last','Chang'),
+('Davion','last','Wong'),
+('Davion','last','Liu');
