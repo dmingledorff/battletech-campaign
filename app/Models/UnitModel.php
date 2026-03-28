@@ -514,15 +514,25 @@ class UnitModel extends Model
         $this->db->transComplete();
     }
 
-    public function setMissionStatus(array $unitIds, string $status, ?int $missionId): void
+    public function setMissionStatus(array $unitIds, string $status, ?int $missionId, ?int $locationId = null): void
     {
         if (empty($unitIds)) return;
 
-        $this->whereIn('unit_id', $unitIds)
-            ->set([
-                'status'     => $status,
-                'mission_id' => $missionId,
-            ])->update();
+        $data = [
+            'status'     => $status,
+            'mission_id' => $missionId,
+        ];
+
+        if ($status === 'In Transit') {
+            // Clear location — unit is no longer at a physical location
+            $data['location_id'] = null;
+        } elseif ($locationId !== null) {
+            $data['location_id'] = $locationId;
+        }
+
+        $this->db->table('units')
+            ->whereIn('unit_id', $unitIds)
+            ->update($data);
     }
 
     public function getSummaryByFaction(?int $factionId): array
@@ -688,5 +698,99 @@ class UnitModel extends Model
         }
 
         return $builder->orderBy('u.parent_unit_id')->get()->getResultArray();
+    }
+
+    public function assignCommander(int $unitId, int $personnelId): void
+    {
+        $this->db->table('units')
+            ->where('unit_id', $unitId)
+            ->update(['commander_id' => $personnelId]);
+    }
+
+    public function dismissCommander(int $unitId): void
+    {
+        $this->db->table('units')
+            ->where('unit_id', $unitId)
+            ->update(['commander_id' => null]);
+    }
+
+    public function assignPersonnelToUnitDirect(int $unitId, int $personnelId, string $date): void
+    {
+        $this->db->table('personnel_assignments')->insert([
+            'personnel_id' => $personnelId,
+            'unit_id'      => $unitId,
+            'date_assigned' => $date,
+        ]);
+    }
+
+    public function unassignPersonnelFromUnit(int $unitId, int $personnelId, string $date): void
+    {
+        $this->db->table('personnel_assignments')
+            ->where('personnel_id', $personnelId)
+            ->where('unit_id', $unitId)
+            ->update(['date_released' => $date]);
+    }
+
+    public function assignEquipmentToUnit(int $unitId, int $equipmentId): void
+    {
+        $this->db->table('equipment')
+            ->where('equipment_id', $equipmentId)
+            ->update(['assigned_unit_id' => $unitId]);
+    }
+
+    public function unassignEquipmentFromUnit(int $equipmentId): void
+    {
+        $this->db->table('equipment')
+            ->where('equipment_id', $equipmentId)
+            ->update(['assigned_unit_id' => null]);
+    }
+
+    public function syncDispersedStatus(): void
+    {
+        $companies = $this->db->table('units')
+            ->whereIn('unit_type', ['Company', 'Platoon'])
+            ->where('status !=', 'Deactivated')
+            ->get()->getResultArray();
+
+        foreach ($companies as $company) {
+            $children = $this->db->table('units')
+                ->select('unit_id, name, location_id, status')
+                ->where('parent_unit_id', $company['unit_id'])
+                ->where('status !=', 'Deactivated')
+                ->get()->getResultArray();
+
+            log_message('debug', "syncDispersed: {$company['name']} ({$company['unit_id']}) — "
+                . count($children) . " children: "
+                . implode(', ', array_map(fn($c) => "{$c['name']}={$c['status']}@{$c['location_id']}", $children)));
+
+            if (empty($children)) continue;
+
+            $locations   = array_unique(array_filter(array_column($children, 'location_id')));
+            $allStatuses = array_column($children, 'status');
+            $anyMoving = !empty(array_filter(
+                $allStatuses,
+                fn($s) => in_array($s, ['In Transit', 'Combat'])
+            ));
+
+            $garrisonedLocations = array_unique(array_filter($locations ?? array_column($children, 'location_id')));
+
+            if (!$anyMoving && count($garrisonedLocations) === 1) {
+                // All children garrisoned at same location — consolidate
+                $this->db->table('units')
+                    ->where('unit_id', $company['unit_id'])
+                    ->update([
+                        'status'      => 'Garrisoned',
+                        'location_id' => reset($garrisonedLocations),
+                    ]);
+            } else {
+                // Any child moving or split locations — disperse
+                $this->db->table('units')
+                    ->where('unit_id', $company['unit_id'])
+                    ->update([
+                        'status'      => 'Dispersed',
+                        'location_id' => null,
+                    ]);
+            }
+        }
     }
 }

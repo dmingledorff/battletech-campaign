@@ -187,7 +187,7 @@ CREATE TABLE missions (
     mission_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100),
     mission_type ENUM('Transfer','Resupply','Assault','Recon','Harass','Withdrawal') NOT NULL,
-    status ENUM('Planning','In Transit','Arrived','Complete','Aborted') DEFAULT 'Planning',
+    status ENUM('Planning','In Transit','Arrived','Complete','Aborted','Combat') DEFAULT 'Planning',
     origin_location_id INT NOT NULL,
     destination_location_id INT NOT NULL,
     launched_date DATE NULL,
@@ -218,7 +218,7 @@ CREATE TABLE mission_log (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
     mission_id INT NOT NULL,
     game_date DATE NOT NULL,
-    event_type ENUM('Launched','In Transit','Arrived','Aborted','Combat') NOT NULL,
+    event_type ENUM('Launched','In Transit','Arrived','Aborted','Combat','Withdrawal') NOT NULL,
     description TEXT,
     FOREIGN KEY (mission_id) REFERENCES missions(mission_id) ON DELETE CASCADE
 );

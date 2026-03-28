@@ -63,11 +63,13 @@ class Units extends BaseController
                 );
             }
         }
+        $isDispersed = $unit['status'] === 'Dispersed';
+        $onMission   = in_array($unit['status'] ?? 'Garrisoned', ['In Transit', 'Combat']);
 
         return $this->render('units/show', [
             'unit'                    => $unit,
-            'personnel'               => $personnel,               // recursive for the table
-            'equipment'               => $equipment,               // recursive for the table
+            'personnel'               => $personnel,
+            'equipment'               => $equipment,
             'breadcrumb'              => $breadcrumb,
             'strength'                => $strength,
             'children'                => $children,
@@ -76,7 +78,9 @@ class Units extends BaseController
             'assignedDirectPersonnel' => $assignedDirectPersonnel,
             'directEquipment'         => $directEquipment,
             'speedMap'                => $speedMap,
-            'subStrengths' => $subStrengths,
+            'subStrengths'            => $subStrengths,
+            'isDispersed'             => $isDispersed,
+            'onMission'               => $onMission,
         ]);
     }
 
@@ -136,14 +140,10 @@ class Units extends BaseController
     public function assignPersonnel($unitId)
     {
         $personnelId = $this->request->getPost('personnel_id');
+        $date        = $this->gameState['current_date'] ?? date('Y-m-d');
         if ($personnelId) {
-            $db = \Config\Database::connect();
-            $builder = $db->table('personnel_assignments');
-            $builder->insert([
-                'personnel_id' => $personnelId,
-                'unit_id' => $unitId,
-                'date_assigned' => date('Y-m-d'),
-            ]);
+            $unitModel = new UnitModel();
+            $unitModel->assignPersonnelToUnitDirect((int)$unitId, (int)$personnelId, $date);
         }
         return redirect()->to("/units/$unitId");
     }
@@ -151,12 +151,10 @@ class Units extends BaseController
     public function unassignPersonnel($unitId)
     {
         $personnelId = $this->request->getPost('personnel_id');
+        $date        = $this->gameState['current_date'] ?? date('Y-m-d');
         if ($personnelId) {
-            $db = \Config\Database::connect();
-            $builder = $db->table('personnel_assignments');
-            $builder->where('personnel_id', $personnelId)
-                ->where('unit_id', $unitId)
-                ->update(['date_released' => date('Y-m-d')]);
+            $unitModel = new UnitModel();
+            $unitModel->unassignPersonnelFromUnit((int)$unitId, (int)$personnelId, $date);
         }
         return redirect()->to("/units/$unitId");
     }
@@ -165,10 +163,8 @@ class Units extends BaseController
     {
         $equipmentId = $this->request->getPost('equipment_id');
         if ($equipmentId) {
-            $db = \Config\Database::connect();
-            $builder = $db->table('equipment');
-            $builder->where('equipment_id', $equipmentId)
-                ->update(['assigned_unit_id' => $unitId]);
+            $unitModel = new UnitModel();
+            $unitModel->assignEquipmentToUnit((int)$unitId, (int)$equipmentId);
         }
         return redirect()->to("/units/$unitId");
     }
@@ -177,10 +173,8 @@ class Units extends BaseController
     {
         $equipmentId = $this->request->getPost('equipment_id');
         if ($equipmentId) {
-            $db = \Config\Database::connect();
-            $builder = $db->table('equipment');
-            $builder->where('equipment_id', $equipmentId)
-                ->update(['assigned_unit_id' => null]);
+            $unitModel = new UnitModel();
+            $unitModel->unassignEquipmentFromUnit((int)$equipmentId);
         }
         return redirect()->to("/units/$unitId");
     }
@@ -197,28 +191,20 @@ class Units extends BaseController
 
     public function assignCommander($unitId)
     {
-        $data = $this->request->getJSON(true);
+        $data        = $this->request->getJSON(true);
         $personnelId = $data['personnel_id'] ?? null;
-
         if (!$personnelId) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'No personnel selected']);
         }
-
-        $db = \Config\Database::connect();
-        $db->table('units')
-            ->where('unit_id', $unitId)
-            ->update(['commander_id' => $personnelId]);
-
+        $unitModel = new UnitModel();
+        $unitModel->assignCommander((int)$unitId, (int)$personnelId);
         return $this->response->setJSON(['status' => 'success']);
     }
 
     public function dismissCommander($unitId)
     {
-        $db = \Config\Database::connect();
-        $db->table('units')
-            ->where('unit_id', $unitId)
-            ->update(['commander_id' => null]);
-
+        $unitModel = new UnitModel();
+        $unitModel->dismissCommander((int)$unitId);
         return $this->response->setJSON(['status' => 'success']);
     }
 

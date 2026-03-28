@@ -236,6 +236,7 @@ class Missions extends BaseController
 
         $unitModel = new UnitModel();
         $unitModel->setMissionStatus($unitIds, 'In Transit', $id);
+        $unitModel->syncDispersedStatus();
         $kmPerCoord = (float)($this->gameState['km_per_coord_unit'] ?? 100);
         $speedEfficiency = (float)($this->gameState['speed_efficiency'] ?? 0.7);
 
@@ -290,6 +291,8 @@ class Missions extends BaseController
                 'eta_date'                => $etaDate->format('Y-m-d'),
                 'notes'                   => ($mission['notes'] ?? '') . ' [RETURNING TO BASE]',
             ]);
+
+            (new UnitModel())->syncDispersedStatus();
 
             $missionModel->logEvent(
                 $id,

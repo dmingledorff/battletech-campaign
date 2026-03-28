@@ -1,5 +1,3 @@
-<?php $onMission = in_array($unit['status'] ?? 'Garrisoned', ['In Transit', 'Combat']); ?>
-<?php $isDispersed = $unit['status'] === 'Dispersed'; ?>
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb bg-dark text-light p-2">
     <?php foreach ($breadcrumb as $b): ?>
