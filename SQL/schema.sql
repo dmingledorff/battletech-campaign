@@ -231,7 +231,8 @@ CREATE TABLE chassis (
         'Command',
         'MASH',
         'Repair',
-        'Supply'
+        'Supply',
+        'Transport'
     ) DEFAULT 'Brawler',
     hard_attack INT,
     soft_attack INT,
@@ -247,7 +248,7 @@ CREATE TABLE chassis_crew_requirements (
     chassis_id INT NOT NULL,
     crew_role ENUM('Commander','Driver','Gunner','Loader','Pilot','Dismount', 'Crew') NOT NULL,
     is_required BOOLEAN DEFAULT TRUE,
-    required_mos VARCHAR(50) NOT NULL DEFAULT 'Infantry',
+    required_mos VARCHAR(50),
     FOREIGN KEY (chassis_id) REFERENCES chassis(chassis_id) ON DELETE CASCADE
 );
 
@@ -333,13 +334,15 @@ CREATE TABLE toe_slots (
     -- Equipment slots
     equipment_type ENUM('BattleMech','Vehicle','APC','Aerospace','Infantry') NULL,
     weight_class ENUM('Light','Medium','Heavy','Assault') NULL,
+    chassis_id INT NULL,
     crew_size INT DEFAULT 1, -- 1 = Mechs, >1 = Vehicles
     -- Subunits
     subunit_template_id INT NULL,
     is_core BOOLEAN DEFAULT TRUE, -- differentiate core vs detachment
     FOREIGN KEY (template_id) REFERENCES toe_templates(template_id) ON DELETE CASCADE,
     FOREIGN KEY (min_rank_id) REFERENCES ranks(id) ON DELETE SET NULL,
-    FOREIGN KEY (max_rank_id) REFERENCES ranks(id) ON DELETE SET NULL
+    FOREIGN KEY (max_rank_id) REFERENCES ranks(id) ON DELETE SET NULL,
+    FOREIGN KEY (chassis_id) REFERENCES chassis(chassis_id) ON DELETE SET NULL
 );
 
 CREATE TABLE toe_subunits (
@@ -359,7 +362,7 @@ CREATE TABLE toe_slot_roles (
     battlefield_role ENUM(
         'Ambusher','Brawler','Missile Boat','Juggernaut',
         'Scout','Sniper','Skirmisher','Striker','MASH',
-        'Repair', 'Supply'
+        'Repair', 'Supply', 'Transport'
     ) NOT NULL,
     FOREIGN KEY (slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
 );
@@ -368,7 +371,7 @@ CREATE TABLE toe_slot_crews (
     crew_id INT AUTO_INCREMENT PRIMARY KEY,
     equipment_slot_id INT NOT NULL,
     personnel_slot_id INT NOT NULL,
-    crew_role ENUM('Commander','Driver','Gunner','Loader','Tech','Pilot','Dismount') NOT NULL,
+    crew_role ENUM('Commander','Driver','Gunner','Loader','Tech','Pilot','Dismount','Crew') NOT NULL,
     FOREIGN KEY (equipment_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE,
     FOREIGN KEY (personnel_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
 );

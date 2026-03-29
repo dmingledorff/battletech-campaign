@@ -200,6 +200,13 @@ class Generator
     ) {
         $dateAssigned = $dateAssigned ?? date('Y-m-d');
 
+        // Get personnel MOS for slot matching
+        $person = $this->db->table('personnel')
+            ->select('mos')
+            ->where('personnel_id', $personnelId)
+            ->get()->getRowArray();
+        $personnelMos = $person['mos'] ?? null;
+
         // Step 1: Find the personnel's current unit and its location
         $unitRow = $this->db->table('personnel_assignments pa')
             ->select('pa.unit_id, u.location_id')
@@ -220,6 +227,10 @@ class Generator
             ->join('equipment e', 'e.chassis_id = ccr.chassis_id')
             ->where('e.equipment_id', $equipmentId)
             ->where('ccr.crew_role', $role)
+            ->groupStart()
+            ->where('ccr.required_mos IS NULL', null, false)  // any MOS accepted
+            ->orWhere('ccr.required_mos', $personnelMos)      // or matching MOS
+            ->groupEnd()
             ->where('ccr.id NOT IN (
                 SELECT slot_id FROM personnel_equipment
                 WHERE equipment_id = ' . $equipmentId . '

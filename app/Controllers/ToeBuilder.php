@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\ToeTemplateModel;
 use App\Models\RankModel;
 use App\Models\FactionModel;
+use App\Models\ChassisModel;
 
 class ToeBuilder extends BaseController
 {
@@ -57,6 +58,7 @@ class ToeBuilder extends BaseController
         $toeModel     = new ToeTemplateModel();
         $rankModel    = new RankModel();
         $factionModel = new FactionModel();
+        $chassisModel = new ChassisModel();
         $template     = $toeModel->getFullTemplate($id);
 
         if (!$template) {
@@ -81,14 +83,15 @@ class ToeBuilder extends BaseController
             'ranks'        => $ranks,
             'factions'     => $factionModel->findAll(),
             'rankFaction'  => $rankFaction,
-            'unitTypes'  => $this->getEnumValues('toe_templates', 'unit_type'),
-            'roles'      => $this->getEnumValues('toe_templates', 'role'),
-            'mobilities' => $this->getEnumValues('toe_templates', 'mobility'),
-            'eqTypes'    => $this->getEnumValues('toe_slots', 'equipment_type'),
-            'weights'    => $this->getEnumValues('toe_slots', 'weight_class'),
-            'mosTypes'   => $this->getEnumValues('toe_slots', 'mos'),
-            'crewRoles'  => $this->getEnumValues('toe_slot_crews', 'crew_role'),
-            'slotRoles'  => $this->getEnumValues('toe_slot_roles', 'battlefield_role')
+            'unitTypes'    => $this->getEnumValues('toe_templates', 'unit_type'),
+            'roles'        => $this->getEnumValues('toe_templates', 'role'),
+            'mobilities'   => $this->getEnumValues('toe_templates', 'mobility'),
+            'eqTypes'      => $this->getEnumValues('toe_slots', 'equipment_type'),
+            'weights'      => $this->getEnumValues('toe_slots', 'weight_class'),
+            'mosTypes'     => $this->getEnumValues('toe_slots', 'mos'),
+            'crewRoles'    => $this->getEnumValues('toe_slot_crews', 'crew_role'),
+            'slotRoles'    => $this->getEnumValues('toe_slot_roles', 'battlefield_role'),
+            'chassis'      => $chassisModel->orderBy('type')->orderBy('name')->findAll(),
         ]);
     }
 
@@ -120,27 +123,21 @@ class ToeBuilder extends BaseController
 
     public function addSlot(int $templateId)
     {
-        $data     = $this->request->getJSON(true);
-        $toeModel = new ToeTemplateModel();
+        $data = $this->request->getJSON(true);
 
         $slotData = [
-            'slot_type' => $data['slot_type'],
-            'is_core'   => 1,
+            'slot_type'      => $data['slot_type'],
+            'mos'            => $data['mos']            ?? null,
+            'min_grade'      => $data['min_grade']      ?? null,
+            'max_grade'      => $data['max_grade']      ?? null,
+            'equipment_type' => $data['equipment_type'] ?? null,
+            'weight_class'   => $data['weight_class']   ?? null,
+            'chassis_id'     => $data['chassis_id']     ?? null,  // add this
         ];
 
-        $roles = [];
-
-        if ($data['slot_type'] === 'Personnel') {
-            $slotData['mos']       = $data['mos'];
-            $slotData['min_grade'] = (int)$data['min_grade'];
-            $slotData['max_grade'] = (int)$data['max_grade'];
-        } else {
-            $slotData['equipment_type'] = $data['equipment_type'];
-            $slotData['weight_class']   = $data['weight_class'] ?: null;
-            $roles = $data['roles'] ?? [];
-        }
-
-        $slotId = $toeModel->addSlot($templateId, $slotData, $roles);
+        $roles  = $data['roles'] ?? [];
+        $toeModel = new ToeTemplateModel();
+        $slotId   = $toeModel->addSlot($templateId, $slotData, $roles);
 
         return $this->response->setJSON(['success' => true, 'slot_id' => $slotId]);
     }
@@ -194,5 +191,21 @@ class ToeBuilder extends BaseController
         $toeModel = new ToeTemplateModel();
         $toeModel->deleteSubunit($subunitId);
         return $this->response->setJSON(['success' => true]);
+    }
+
+    public function crewRequirements()
+    {
+        $chassisId = $this->request->getGet('chassis_id');
+        $type      = $this->request->getGet('type');
+        $weight    = $this->request->getGet('weight');
+        $toeModel  = new ToeTemplateModel();
+
+        return $this->response->setJSON(
+            $toeModel->getChassisCrewRequirements(
+                $type      ?: null,
+                $weight    ?: null,
+                $chassisId ? (int)$chassisId : null
+            )
+        );
     }
 }

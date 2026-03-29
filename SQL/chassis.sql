@@ -121,9 +121,10 @@ INSERT INTO chassis
 ('Marsden II','MRS-STD','Vehicle','Assault','Juggernaut',55,15,175,0.55,11.0,90,32.4),
 
 -- Support Vehicles
-('MASH Truck','MSH-STD','Vehicle','Light','MASH',0,0,15,0.0,0.0,20,86.4),
-('Flatbed Truck','FBD-STD','Vehicle','Light','Supply',0,0,10,0.0,0.0,10,86.4),
-('Repair Vehicle','RPR-STD','Vehicle','Heavy','Repair',0,0,80,0.0,0.0,60,86.4),
+('MASH Truck','MSH-STD','Vehicle','Light','MASH',0,0,15,0.0,0.5,20,86.4),
+('Flatbed Truck','FBD-STD','Vehicle','Light','Supply',0,0,10,0.0,0.3,10,86.4),
+('Repair Vehicle','RPR-STD','Vehicle','Heavy','Repair',0,0,80,0.0,0.3,60,86.4),
+('Transport Truck', 'TRK-5T', 'Vehicle', 'Light', 'Transport', 0, 0, 10, 0.00, 0.50, 5, 86.4),
 
 -- APCs
 ('APC','Wheeled','APC','Light','Scout',10,8,60,0.40,4.0,10,97.2),
@@ -189,8 +190,12 @@ INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, requi
 SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
 INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
 SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
 
--- Supply Trucks
+-- Repair Trucks
 INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
 SELECT chassis_id, 'Driver', TRUE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
 INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
@@ -207,3 +212,17 @@ INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, requi
 SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
 INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
 SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+
+-- Transport Truck
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', 1, NULL FROM chassis WHERE variant = 'TRK-5T';
+-- 13 passenger/cargo slots with NULL mos (any)
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT c.chassis_id, 'Crew', 0, NULL
+FROM chassis c
+CROSS JOIN (
+    SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5
+    UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 UNION SELECT 10
+    UNION SELECT 11 UNION SELECT 12 UNION SELECT 13
+) AS nums
+WHERE c.variant = 'TRK-5T';

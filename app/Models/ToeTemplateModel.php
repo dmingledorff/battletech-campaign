@@ -8,7 +8,7 @@ class ToeTemplateModel extends Model
 {
     protected $table      = 'toe_templates';
     protected $primaryKey = 'template_id';
-    protected $allowedFields = ['name', 'description', 'unit_type', 'faction', 'era', 'role', 'mobility'];
+    protected $allowedFields = ['name', 'description', 'unit_type', 'faction', 'era', 'role', 'mobility', 'chassis_id'];
     protected $returnType = 'array';
 
     public function getTemplateIdByName(string $name): ?int
@@ -177,9 +177,9 @@ class ToeTemplateModel extends Model
 
         // Equipment slots with their crew assignments
         $equipSlots = $this->db->table('toe_slots s')
-            ->select('s.*')
+            ->select('s.*, GROUP_CONCAT(r.battlefield_role) AS roles, c.name AS chassis_name, c.variant AS chassis_variant')
             ->join('toe_slot_roles r', 'r.slot_id = s.slot_id', 'left')
-            ->select('GROUP_CONCAT(r.battlefield_role) AS roles')
+            ->join('chassis c', 'c.chassis_id = s.chassis_id', 'left')
             ->where('s.template_id', $templateId)
             ->where('s.slot_type', 'Equipment')
             ->groupBy('s.slot_id')
@@ -276,5 +276,26 @@ class ToeTemplateModel extends Model
             ->orWhere('child_template_id', $templateId)
             ->delete();
         $this->delete($templateId);
+    }
+
+    public function getChassisCrewRequirements(
+        ?string $equipmentType = null,
+        ?string $weightClass   = null,
+        ?int    $chassisId     = null
+    ): array {
+        $builder = $this->db->table('chassis_crew_requirements ccr')
+            ->select('ccr.crew_role, ccr.is_required, ccr.required_mos')
+            ->join('chassis c', 'c.chassis_id = ccr.chassis_id')
+            ->orderBy('ccr.is_required', 'DESC')
+            ->orderBy('ccr.crew_role');
+
+        if ($chassisId) {
+            $builder->where('ccr.chassis_id', $chassisId);
+        } else {
+            if ($equipmentType) $builder->where('c.type', $equipmentType);
+            if ($weightClass)   $builder->where('c.weight_class', $weightClass);
+        }
+
+        return $builder->get()->getResultArray();
     }
 }

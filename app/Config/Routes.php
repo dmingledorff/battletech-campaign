@@ -97,6 +97,7 @@ $routes->post('toe/(:num)/slots/add', 'ToeBuilder::addSlot/$1');
 $routes->post('toe/slots/(:num)/delete', 'ToeBuilder::deleteSlot/$1');
 $routes->post('toe/slots/(:num)/crew/add', 'ToeBuilder::addCrew/$1');
 $routes->post('toe/crews/(:num)/delete', 'ToeBuilder::deleteCrew/$1');
+$routes->get('toe/crewRequirements', 'ToeBuilder::crewRequirements');
 
 // Subunit management (AJAX)
 $routes->post('toe/(:num)/subunits/add', 'ToeBuilder::addSubunit/$1');
