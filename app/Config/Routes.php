@@ -109,9 +109,14 @@ $routes->get('eventlog',      'EventLog::index');
 $routes->get('eventlog/(:num)', 'EventLog::index/$1');
 
 // ================================
-// Dev / Testing
+// Admin panel
 // ================================
-$routes->get('/testgen', 'TestGen');
+$routes->get('admin',                    'Admin::index');
+$routes->post('admin/generateUnit',      'Admin::generateUnit');
+$routes->post('admin/setDate',           'Admin::setDate');
+$routes->post('admin/moveUnit',          'Admin::moveUnit');
+$routes->post('admin/sendLog',           'Admin::sendLog');
+$routes->post('admin/tick',              'Admin::tick');
 
 // ================================
 // Auth (CodeIgniter Shield)

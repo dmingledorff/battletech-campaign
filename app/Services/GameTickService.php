@@ -13,9 +13,9 @@ class GameTickService
     protected string $gameDate;
     protected GameStateModel $gameStateModel;
 
-    public function __construct(BaseConnection $db)
+    public function __construct(?BaseConnection $db = null)
     {
-        $this->db             = $db;
+        $this->db             = $db ?? db_connect();
         $this->gameStateModel = new GameStateModel();
         $this->gameDate       = $this->gameStateModel->getProperty('current_date') ?? '3025-01-01';
     }

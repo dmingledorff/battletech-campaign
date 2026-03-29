@@ -1,4 +1,6 @@
-<?php namespace App\Libraries;
+<?php
+
+namespace App\Libraries;
 
 use CodeIgniter\Database\ConnectionInterface;
 use App\Models\RankModel;
@@ -29,7 +31,7 @@ class Generator
      * @return int                Inserted personnel_id
      */
     public function generatePersonnel(
-        string $house = 'Davion',
+        string $house = 'Mercenary',
         string $role = 'MechWarrior',
         int $rankId = 1,
         string $experience = 'Green',
@@ -48,8 +50,10 @@ class Generator
 
         $firstType = ($gender === 'Female') ? 'first_female' : 'first_male';
 
-        if ($first === null) $first = $this->pickRandomNameRow($faction['house'], $firstType)->value;
-        if ($last === null)  $last  = $this->pickRandomNameRow($faction['house'], 'last')->value;
+        if ($first === null) $first = $this->pickRandomNameRow($faction['house'], $firstType)->value
+            ?? $this->pickRandomNameRow('Mercenary', $firstType)->value;
+        if ($last === null)  $last  = $this->pickRandomNameRow($faction['house'], 'last')->value
+            ?? $this->pickRandomNameRow('Mercenary', 'last')->value;
 
         if (!$first || !$last) {
             throw new \RuntimeException("No names available for faction: {$faction['house']}");
@@ -102,7 +106,8 @@ class Generator
         return $id;
     }
 
-    private function pickRandomNameRow(string $faction, string $nameType): ?object {
+    private function pickRandomNameRow(string $faction, string $nameType): ?object
+    {
         // Try specific faction + Generic as fallback in one query
         return $this->db->table('name_pool')
             ->whereIn('faction', [$faction, 'Generic'])
@@ -110,7 +115,7 @@ class Generator
             ->orderBy('RAND()', '', false)  // MySQL RAND()
             ->get(1)
             ->getRow();
-    }  
+    }
 
     public function generateEquipment(
         ?string $type = null,             // e.g. 'BattleMech','Vehicle'
@@ -119,7 +124,7 @@ class Generator
         $battlefieldRole = null,         // can be string or array of roles
         ?string $weightClass = null,      // optional: Light/Medium/etc
         ?int $unitId = null,
-        string $house = 'Davion',
+        string $house = 'Mercenary',
         string $status = 'Active'
     ) {
         $builder = $this->db->table('chassis');
@@ -157,9 +162,9 @@ class Generator
 
         if (!$rows) {
             throw new \RuntimeException(
-                "No chassis found (type={$type}, name={$name}, variant={$variant}, role=" 
-                . (is_array($battlefieldRole) ? implode(',', $battlefieldRole) : $battlefieldRole) 
-                . ", weight={$weightClass})."
+                "No chassis found (type={$type}, name={$name}, variant={$variant}, role="
+                    . (is_array($battlefieldRole) ? implode(',', $battlefieldRole) : $battlefieldRole)
+                    . ", weight={$weightClass})."
             );
         }
 
@@ -177,7 +182,7 @@ class Generator
             'chassis_id'       => $chassis->chassis_id,
             'serial_number'    => $serial,
             'assigned_unit_id' => $unitId,
-            'damage_percentage'=> 0.0,
+            'damage_percentage' => 0.0,
             'equipment_status' => $status,
             'faction_id'       => $faction['faction_id']
         ];
@@ -236,8 +241,8 @@ class Generator
             'equipment_id' => $equipmentId,
             'slot_id'      => $slotRow->slot_id,
             'role'         => $role,
-            'date_assigned'=> $dateAssigned,
-            'date_released'=> null,
+            'date_assigned' => $dateAssigned,
+            'date_released' => null,
         ]);
 
         // Step 4: Update equipment — assign to unit and sync location
@@ -298,8 +303,8 @@ class Generator
         $this->db->table('personnel_assignments')->insert([
             'personnel_id' => $personnelId,
             'unit_id'      => $unitId,
-            'date_assigned'=> $dateAssigned,
-            'date_released'=> null
+            'date_assigned' => $dateAssigned,
+            'date_released' => null
         ]);
 
         // Sync personnel location to unit location
@@ -318,7 +323,8 @@ class Generator
         return true;
     }
 
-    public function promotePersonnel(int $personnelId, int $newRankId) {
+    public function promotePersonnel(int $personnelId, int $newRankId)
+    {
         $profileService = new PersonnelProfileService();
         $rankModel = new RankModel();
         $newRank      = $rankModel->find($newRankId);
