@@ -111,13 +111,14 @@ $routes->get('eventlog/(:num)', 'EventLog::index/$1');
 // ================================
 // Admin panel
 // ================================
-$routes->get('admin',                    'Admin::index');
-$routes->post('admin/generateUnit',      'Admin::generateUnit');
-$routes->post('admin/setDate',           'Admin::setDate');
-$routes->post('admin/moveUnit',          'Admin::moveUnit');
-$routes->post('admin/sendLog',           'Admin::sendLog');
-$routes->post('admin/tick',              'Admin::tick');
-
+$routes->group('admin', ['filter' => 'admin'], function($routes) {
+    $routes->get('/',                'Admin::index');
+    $routes->post('setDate',         'Admin::setDate');
+    $routes->post('generateUnit',    'Admin::generateUnit');
+    $routes->post('moveUnit',        'Admin::moveUnit');
+    $routes->post('sendLog',         'Admin::sendLog');
+    $routes->post('tick',            'Admin::tick');
+});
 // ================================
 // Auth (CodeIgniter Shield)
 // ================================

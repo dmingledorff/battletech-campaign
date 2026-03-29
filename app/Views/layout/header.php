@@ -86,12 +86,14 @@
               <i class="bi bi-journal-text me-1"></i>Log
             </a>
           </li>
-          <li class="nav-item">
-            <a class="nav-link <?= (service('uri')->getSegment(1) === 'admin' ? 'active' : '') ?>"
-              href="<?= base_url('/admin') ?>">
-              <i class="bi bi-shield-lock me-1"></i>Admin
-            </a>
-          </li>
+          <?php if (auth()->loggedIn() && auth()->user()->inGroup('admin', 'superadmin')): ?>
+            <li class="nav-item">
+              <a class="nav-link <?= (service('uri')->getSegment(1) === 'admin' ? 'active' : '') ?>"
+                href="<?= base_url('/admin') ?>">
+                <i class="bi bi-shield-lock me-1"></i>Admin
+              </a>
+            </li>
+          <?php endif; ?>
         </ul>
 
         <!-- Right section: date + faction + user info -->

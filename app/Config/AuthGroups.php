@@ -46,20 +46,12 @@ class AuthGroups extends ShieldAuthGroups
             'description' => 'Complete control of the site.',
         ],
         'admin' => [
-            'title'       => 'Admin',
-            'description' => 'Day to day administrators of the site.',
-        ],
-        'developer' => [
-            'title'       => 'Developer',
-            'description' => 'Site programmers.',
+            'title'       => 'Administrator',
+            'description' => 'Game administrator with access to admin panel.',
         ],
         'user' => [
             'title'       => 'User',
-            'description' => 'General users of the site. Often customers.',
-        ],
-        'beta' => [
-            'title'       => 'Beta User',
-            'description' => 'Has access to beta-level features.',
+            'description' => 'Standard player.',
         ],
     ];
 
