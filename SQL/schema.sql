@@ -214,15 +214,6 @@ CREATE TABLE mission_units (
     FOREIGN KEY (unit_id) REFERENCES units(unit_id) ON DELETE CASCADE
 );
 
-CREATE TABLE mission_log (
-    log_id INT AUTO_INCREMENT PRIMARY KEY,
-    mission_id INT NOT NULL,
-    game_date DATE NOT NULL,
-    event_type ENUM('Launched','In Transit','Arrived','Aborted','Combat','Withdrawal') NOT NULL,
-    description TEXT,
-    FOREIGN KEY (mission_id) REFERENCES missions(mission_id) ON DELETE CASCADE
-);
-
 CREATE TABLE chassis (
     chassis_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -380,6 +371,37 @@ CREATE TABLE toe_slot_crews (
     crew_role ENUM('Commander','Driver','Gunner','Loader','Tech','Pilot','Dismount') NOT NULL,
     FOREIGN KEY (equipment_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE,
     FOREIGN KEY (personnel_slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
+);
+
+CREATE TABLE event_log (
+    log_id       INT AUTO_INCREMENT PRIMARY KEY,
+    faction_id   INT NULL,
+    game_date    DATE NOT NULL,
+    log_type     ENUM(
+                     'System',
+                     'Mission',
+                     'Combat',
+                     'Supply',
+                     'Maintenance',
+                     'Personnel',
+                     'World',
+                     'Intel'
+                 ) NOT NULL DEFAULT 'System',
+    severity     ENUM('Info','Warning','Critical') NOT NULL DEFAULT 'Info',
+    title        VARCHAR(150) NOT NULL,
+    description  TEXT NULL,
+    -- Optional FK references for filtering/linking
+    unit_id      INT NULL,
+    mission_id   INT NULL,
+    location_id  INT NULL,
+    personnel_id INT NULL,
+    FOREIGN KEY (faction_id)   REFERENCES factions(faction_id)   ON DELETE CASCADE,
+    FOREIGN KEY (unit_id)      REFERENCES units(unit_id)         ON DELETE SET NULL,
+    FOREIGN KEY (mission_id)   REFERENCES missions(mission_id)   ON DELETE SET NULL,
+    FOREIGN KEY (location_id)  REFERENCES locations(location_id) ON DELETE SET NULL,
+    FOREIGN KEY (personnel_id) REFERENCES personnel(personnel_id) ON DELETE SET NULL,
+    INDEX idx_faction_date (faction_id, game_date),
+    INDEX idx_log_type    (log_type)
 );
 
 

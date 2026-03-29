@@ -179,18 +179,20 @@ $progress = $mission['transit_days'] > 0
                         </thead>
                         <tbody>
                             <?php foreach ($log as $entry): ?>
-                                <?php
-                                $entryColor = match ($entry['event_type']) {
-                                    'Launched'   => 'info',
-                                    'Arrived'    => 'success',
-                                    'Aborted'    => 'warning',
-                                    'Combat'     => 'danger',
-                                    default      => 'secondary',
-                                };
-                                ?>
                                 <tr>
                                     <td class="text-muted small"><?= esc($entry['game_date']) ?></td>
-                                    <td><span class="badge bg-<?= $entryColor ?>"><?= esc($entry['event_type']) ?></span></td>
+                                    <td>
+                                        <?php
+                                        $badgeColor = match ($entry['severity'] ?? 'Info') {
+                                            'Warning'  => 'warning',
+                                            'Critical' => 'danger',
+                                            default    => 'info',
+                                        };
+                                        // Extract event type from title (before the dash)
+                                        $eventLabel = explode(' — ', $entry['title'])[0] ?? $entry['title'];
+                                        ?>
+                                        <span class="badge bg-<?= $badgeColor ?>"><?= esc($eventLabel) ?></span>
+                                    </td>
                                     <td class="small"><?= esc($entry['description']) ?></td>
                                 </tr>
                             <?php endforeach; ?>

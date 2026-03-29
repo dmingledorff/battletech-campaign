@@ -19,10 +19,79 @@
   </div>
 </div>
 
-<div class="row">
-  <div class="col-md-6">
+<div class="row g-3">
 
-    <div class="card shadow-sm">
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-journal-text me-1"></i>Recent Events</span>
+        <a href="/eventlog" class="btn btn-xs btn-outline-secondary">View All</a>
+      </div>
+      <?php if (empty($eventLog)): ?>
+        <p class="text-muted small p-3 mb-0">No events in the last 7 days.</p>
+      <?php else: ?>
+        <div style="max-height: 480px; overflow-y: auto;">
+          <?php $currentDate = null; ?>
+          <?php foreach ($eventLog as $entry): ?>
+            <?php if ($entry['game_date'] !== $currentDate): ?>
+              <?php $currentDate = $entry['game_date']; ?>
+              <div class="px-3 py-1 bg-black border-bottom border-secondary sticky-top">
+                <span class="text-muted" style="font-size:0.7rem; font-weight:600; letter-spacing:0.05em; text-transform:uppercase;">
+                  <?= date('j F Y', strtotime($entry['game_date'])) ?>
+                </span>
+              </div>
+            <?php endif; ?>
+            <?php
+            $icon = match ($entry['log_type']) {
+              'Mission'     => 'bi-crosshair',
+              'Combat'      => 'bi-fire',
+              'Supply'      => 'bi-box-seam',
+              'Maintenance' => 'bi-wrench',
+              'Personnel'   => 'bi-person',
+              'World'       => 'bi-globe',
+              'Intel'       => 'bi-eye',
+              default       => 'bi-info-circle',
+            };
+            $color = match ($entry['severity']) {
+              'Warning'  => 'text-warning',
+              'Critical' => 'text-danger',
+              default    => 'text-info',
+            };
+            $links = [];
+            if ($entry['mission_name'])  $links[] = '<a class="link-secondary" href="/missions/'  . $entry['mission_id']  . '">' . esc($entry['mission_name'])  . '</a>';
+            if ($entry['unit_name'])     $links[] = '<a class="link-secondary" href="/units/'     . $entry['unit_id']     . '">' . esc($entry['unit_name'])     . '</a>';
+            if ($entry['location_name']) $links[] = '<a class="link-secondary" href="/location/'  . $entry['location_id'] . '">' . esc($entry['location_name']) . '</a>';
+            ?>
+            <div class="d-flex align-items-start gap-2 px-3 py-2 border-bottom border-secondary">
+              <i class="bi <?= $icon ?> <?= $color ?> flex-shrink-0 mt-1"></i>
+              <div class="flex-fill small">
+                <div class="d-flex justify-content-between align-items-start">
+                  <span class="fw-semibold"><?= esc($entry['title']) ?></span>
+                  <span class="badge bg-dark border border-secondary ms-1 flex-shrink-0"
+                    style="font-size:0.65rem;">
+                    <?= esc($entry['log_type']) ?>
+                  </span>
+                </div>
+                <?php if ($entry['description']): ?>
+                  <div class="text-muted" style="font-size:0.8rem; line-height:1.3;">
+                    <?= esc($entry['description']) ?>
+                  </div>
+                <?php endif; ?>
+                <?php if (!empty($links)): ?>
+                  <div class="text-muted" style="font-size:0.7rem;">
+                    <?= implode(' · ', $links) ?>
+                  </div>
+                <?php endif; ?>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>Unit Summary</span>
         <button class="btn btn-xs btn-outline-secondary" onclick="expandAll()">Expand All</button>
@@ -32,10 +101,10 @@
           <thead>
             <tr>
               <th>Unit</th>
-              <th>Type</th>
               <th title="Personnel">Per</th>
               <th title="Equipment">Eqp</th>
               <th>Status</th>
+              <th>Location</th>
             </tr>
           </thead>
           <tbody id="unitTreeBody">
@@ -64,162 +133,20 @@
                     </span>
                   <?php endif; ?>
                 </td>
-                <td class="text-muted small"><?= esc($u['unit_type']) ?></td>
                 <td><?= esc($pers) ?></td>
                 <td><?= esc($eqp) ?></td>
                 <td><span class="badge bg-<?= $statusColor ?>"><?= esc($status) ?></span></td>
+                <td class="text-muted small"><?= esc($u['location_name'] ?? '—') ?></td>
               </tr>
             <?php endforeach; ?>
           </tbody>
         </table>
       </div>
     </div>
-
-    <script>
-      const loadedChildren = new Set();
-      const expandedUnits = new Set();
-
-      const statusColors = {
-        'Garrisoned': 'success',
-        'In Transit': 'info',
-        'Combat': 'danger',
-      };
-
-      async function toggleChildren(unitId, btn) {
-        const isExpanded = expandedUnits.has(unitId);
-
-        if (isExpanded) {
-          // Collapse — hide all descendant rows
-          collapseChildren(unitId);
-          expandedUnits.delete(unitId);
-          btn.textContent = '▶';
-          return;
-        }
-
-        // Expand
-        expandedUnits.add(unitId);
-        btn.textContent = '▼';
-
-        if (loadedChildren.has(unitId)) {
-          // Already loaded — just show them
-          showChildren(unitId);
-          return;
-        }
-
-        // Fetch from server
-        btn.textContent = '…';
-        const rows = await fetch(`/dashboard/unitChildren/${unitId}`).then(r => r.json());
-        loadedChildren.add(unitId);
-
-        if (!rows.length) {
-          btn.textContent = '·';
-          return;
-        }
-
-        btn.textContent = '▼';
-
-        // Find the parent row and insert after it
-        const parentRow = document.querySelector(`tr[data-unit-id="${unitId}"]`);
-        const depth = parseInt(parentRow.dataset.depth) + 1;
-        const indent = depth * 16;
-        const tbody = document.getElementById('unitTreeBody');
-
-        // Find insertion point — after parent and any existing descendants
-        let insertAfter = parentRow;
-        let next = parentRow.nextElementSibling;
-        while (next && parseInt(next.dataset.depth ?? 0) > parseInt(parentRow.dataset.depth)) {
-          insertAfter = next;
-          next = next.nextElementSibling;
-        }
-
-        rows.forEach(u => {
-          const statusColor = statusColors[u.status] ?? 'secondary';
-          const toggleHtml = u.hasChildren ?
-            `<span class="toggle-btn me-1" style="cursor:pointer; width:14px; display:inline-block;"
-                     onclick="toggleChildren(${u.unit_id}, this)">▶</span>` :
-            `<span style="width:14px; display:inline-block;" class="me-1"> </span>`;
-
-          const tr = document.createElement('tr');
-          tr.className = 'unit-row';
-          tr.dataset.unitId = u.unit_id;
-          tr.dataset.depth = depth;
-          tr.dataset.parent = unitId;
-          tr.innerHTML = `
-            <td style="padding-left:${indent}px">
-                ${toggleHtml}
-                <a class="link-info" href="/units/${u.unit_id}">${u.name}</a>
-                ${u.role ? `<span class="text-muted small ms-1">${u.role}</span>` : ''}
-            </td>
-            <td class="text-muted small">${u.unit_type}</td>
-            <td>${u.personnel}</td>
-            <td>${u.equipment}</td>
-            <td><span class="badge bg-${statusColor}">${u.status}</span></td>
-        `;
-
-          insertAfter.insertAdjacentElement('afterend', tr);
-          insertAfter = tr;
-        });
-      }
-
-      function collapseChildren(unitId) {
-        document.querySelectorAll(`tr[data-parent="${unitId}"]`).forEach(row => {
-          const childId = parseInt(row.dataset.unitId);
-          if (expandedUnits.has(childId)) {
-            collapseChildren(childId);
-            expandedUnits.delete(childId);
-          }
-          row.style.display = 'none';
-        });
-      }
-
-      function showChildren(unitId) {
-        document.querySelectorAll(`tr[data-parent="${unitId}"]`).forEach(row => {
-          row.style.display = '';
-          const childId = parseInt(row.dataset.unitId);
-          if (expandedUnits.has(childId)) {
-            showChildren(childId);
-          }
-        });
-      }
-
-      async function expandAll() {
-        const btn = document.querySelector('[onclick="expandAll()"]');
-        if (btn) btn.disabled = true;
-
-        await expandUnit(null);
-
-        if (btn) btn.disabled = false;
-      }
-
-      async function expandUnit(parentId) {
-        // Find all rows at this level that haven't been expanded yet
-        const selector = parentId === null ?
-          'tr[data-depth="0"]' :
-          `tr[data-parent="${parentId}"]`;
-
-        const rows = document.querySelectorAll(selector);
-
-        for (const row of rows) {
-          const unitId = parseInt(row.dataset.unitId);
-          const toggle = row.querySelector('.toggle-btn');
-
-          if (!toggle) continue; // no children — leaf node
-
-          // Expand if not already expanded
-          if (!expandedUnits.has(unitId)) {
-            await toggleChildren(unitId, toggle);
-          }
-
-          // Recurse into this unit's children
-          await expandUnit(unitId);
-        }
-      }
-    </script>
-
   </div>
 
-  <div class="col-md-6">
-    <div class="card shadow-sm">
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>Personnel Roster</span>
         <div class="d-flex gap-2 align-items-center">
@@ -347,6 +274,147 @@
     </div>
   </div>
 </div>
+
+<script>
+  const loadedChildren = new Set();
+  const expandedUnits = new Set();
+
+  const statusColors = {
+    'Garrisoned': 'success',
+    'In Transit': 'info',
+    'Combat': 'danger',
+  };
+
+  async function toggleChildren(unitId, btn) {
+    const isExpanded = expandedUnits.has(unitId);
+
+    if (isExpanded) {
+      // Collapse — hide all descendant rows
+      collapseChildren(unitId);
+      expandedUnits.delete(unitId);
+      btn.textContent = '▶';
+      return;
+    }
+
+    // Expand
+    expandedUnits.add(unitId);
+    btn.textContent = '▼';
+
+    if (loadedChildren.has(unitId)) {
+      // Already loaded — just show them
+      showChildren(unitId);
+      return;
+    }
+
+    // Fetch from server
+    btn.textContent = '…';
+    const rows = await fetch(`/dashboard/unitChildren/${unitId}`).then(r => r.json());
+    loadedChildren.add(unitId);
+
+    if (!rows.length) {
+      btn.textContent = '·';
+      return;
+    }
+
+    btn.textContent = '▼';
+
+    // Find the parent row and insert after it
+    const parentRow = document.querySelector(`tr[data-unit-id="${unitId}"]`);
+    const depth = parseInt(parentRow.dataset.depth) + 1;
+    const indent = depth * 16;
+    const tbody = document.getElementById('unitTreeBody');
+
+    // Find insertion point — after parent and any existing descendants
+    let insertAfter = parentRow;
+    let next = parentRow.nextElementSibling;
+    while (next && parseInt(next.dataset.depth ?? 0) > parseInt(parentRow.dataset.depth)) {
+      insertAfter = next;
+      next = next.nextElementSibling;
+    }
+
+    rows.forEach(u => {
+      const statusColor = statusColors[u.status] ?? 'secondary';
+      const toggleHtml = u.hasChildren ?
+        `<span class="toggle-btn me-1" style="cursor:pointer; width:14px; display:inline-block;"
+                     onclick="toggleChildren(${u.unit_id}, this)">▶</span>` :
+        `<span style="width:14px; display:inline-block;" class="me-1"> </span>`;
+
+      const tr = document.createElement('tr');
+      tr.className = 'unit-row';
+      tr.dataset.unitId = u.unit_id;
+      tr.dataset.depth = depth;
+      tr.dataset.parent = unitId;
+      tr.innerHTML = `
+        <td style="padding-left:${indent}px">
+          ${toggleHtml}
+          <a class="link-info" href="/units/${u.unit_id}">${u.name}</a>
+          ${u.role ? `<span class="text-muted small ms-1">${u.role}</span>` : ''}
+        </td>
+        <td>${u.personnel}</td>
+        <td>${u.equipment}</td>
+        <td><span class="badge bg-${statusColor}">${u.status}</span></td>
+        <td class="text-muted small">${u.location_name ?? '—'}</td>
+      `;
+
+      insertAfter.insertAdjacentElement('afterend', tr);
+      insertAfter = tr;
+    });
+  }
+
+  function collapseChildren(unitId) {
+    document.querySelectorAll(`tr[data-parent="${unitId}"]`).forEach(row => {
+      const childId = parseInt(row.dataset.unitId);
+      if (expandedUnits.has(childId)) {
+        collapseChildren(childId);
+        expandedUnits.delete(childId);
+      }
+      row.style.display = 'none';
+    });
+  }
+
+  function showChildren(unitId) {
+    document.querySelectorAll(`tr[data-parent="${unitId}"]`).forEach(row => {
+      row.style.display = '';
+      const childId = parseInt(row.dataset.unitId);
+      if (expandedUnits.has(childId)) {
+        showChildren(childId);
+      }
+    });
+  }
+
+  async function expandAll() {
+    const btn = document.querySelector('[onclick="expandAll()"]');
+    if (btn) btn.disabled = true;
+
+    await expandUnit(null);
+
+    if (btn) btn.disabled = false;
+  }
+
+  async function expandUnit(parentId) {
+    // Find all rows at this level that haven't been expanded yet
+    const selector = parentId === null ?
+      'tr[data-depth="0"]' :
+      `tr[data-parent="${parentId}"]`;
+
+    const rows = document.querySelectorAll(selector);
+
+    for (const row of rows) {
+      const unitId = parseInt(row.dataset.unitId);
+      const toggle = row.querySelector('.toggle-btn');
+
+      if (!toggle) continue; // no children — leaf node
+
+      // Expand if not already expanded
+      if (!expandedUnits.has(unitId)) {
+        await toggleChildren(unitId, toggle);
+      }
+
+      // Recurse into this unit's children
+      await expandUnit(unitId);
+    }
+  }
+</script>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {

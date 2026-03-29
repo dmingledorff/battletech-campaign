@@ -87,6 +87,17 @@ class UnitModel extends Model
             ->get()->getRowArray();
     }
 
+    public function getTopLevelByFaction(int $factionId): array
+    {
+        return $this->db->table('units u')
+            ->select('u.*, l.name AS location_name')
+            ->join('locations l', 'l.location_id = u.location_id', 'left')
+            ->where('u.parent_unit_id IS NULL', null, false)
+            ->where('u.faction_id', $factionId)
+            ->where('u.status !=', 'Deactivated')
+            ->get()->getResultArray();
+    }
+
     public function getPersonnel($unitId)
     {
         return $this->db->table('personnel p')
@@ -688,9 +699,10 @@ class UnitModel extends Model
     public function getUnitsByFaction(int $factionId, bool $includeDeactivated = false): array
     {
         $builder = $this->db->table('units u')
-            ->select('u.*, p.last_name, r.abbreviation AS rank_abbr')
+            ->select('u.*, p.last_name, r.abbreviation AS rank_abbr, l.name AS location_name')
             ->join('personnel p', 'p.personnel_id = u.commander_id', 'left')
-            ->join('ranks r', 'r.id = p.rank_id', 'left')
+            ->join('ranks r',     'r.id = p.rank_id',               'left')
+            ->join('locations l', 'l.location_id = u.location_id',  'left')
             ->where('u.faction_id', $factionId);
 
         if (!$includeDeactivated) {

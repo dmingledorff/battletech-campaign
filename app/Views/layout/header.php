@@ -80,6 +80,12 @@
               <i class="bi bi-diagram-3 me-1"></i>TOE Builder
             </a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link <?= (service('uri')->getSegment(1) === 'eventlog' ? 'active' : '') ?>"
+              href="<?= base_url('/eventlog') ?>">
+              <i class="bi bi-journal-text me-1"></i>Log
+            </a>
+          </li>
         </ul>
 
         <!-- Right section: date + faction + user info -->

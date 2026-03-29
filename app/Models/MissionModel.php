@@ -192,22 +192,25 @@ class MissionModel extends Model
         return (int)ceil($days);
     }
 
-    public function logEvent(int $missionId, string $gameDate, string $eventType, string $description): void
-    {
-        $this->db->table('mission_log')->insert([
-            'mission_id'  => $missionId,
-            'game_date'   => $gameDate,
-            'event_type'  => $eventType,
-            'description' => $description,
-        ]);
-    }
+    public function logEvent(
+        int    $missionId,
+        string $gameDate,
+        string $eventType,
+        string $description
+    ): void {
+        $mission   = $this->find($missionId);
+        $factionId = $mission['faction_id'] ?? null;
 
-    public function getLog(int $missionId): array
-    {
-        return $this->db->table('mission_log')
-            ->where('mission_id', $missionId)
-            ->orderBy('game_date', 'DESC')
-            ->get()
-            ->getResultArray();
+        $eventLog = new \App\Models\EventLogModel();
+        $eventLog->log(
+            $factionId,
+            $gameDate,
+            'Mission',
+            $eventType . ' — ' . ($mission['name'] ?? "Mission #{$missionId}"),
+            $description,
+            $eventType === 'Combat' ? 'Warning' : 'Info',
+            null,
+            $missionId
+        );
     }
 }

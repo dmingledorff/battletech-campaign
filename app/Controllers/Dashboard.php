@@ -1,4 +1,6 @@
-<?php namespace App\Controllers;
+<?php
+
+namespace App\Controllers;
 
 use App\Models\UnitModel;
 
@@ -9,11 +11,7 @@ class Dashboard extends BaseController
         $unitModel  = new UnitModel();
         $factionId  = $this->currentFaction['faction_id'] ?? null;
 
-        // Only top-level units for this faction
-        $topUnits = $unitModel
-            ->where('parent_unit_id IS NULL', null, false)
-            ->where('faction_id', $factionId)
-            ->findAll();
+        $topUnits = $unitModel->getTopLevelByFaction($factionId);
 
         // Totals rolled up across all faction units
         $summary          = $unitModel->getSummaryByFaction($factionId);
@@ -46,6 +44,13 @@ class Dashboard extends BaseController
         $planets   = $db->table('planets')->orderBy('name')->get()->getResultArray();
         $locations = $db->table('locations')->orderBy('name')->get()->getResultArray();
 
+        $eventLogModel = new \App\Models\EventLogModel();
+        $eventLog      = $eventLogModel->getForDashboard(
+            $factionId,
+            $this->gameState['current_date'] ?? '3025-01-01',
+            7
+        );
+
         return $this->render('dashboard/index', [
             'summary'      => $summaryById,
             'children'     => $childrenByParent,
@@ -55,6 +60,7 @@ class Dashboard extends BaseController
             'locations'    => $locations,
             'mosTypes'     => $this->getEnumValues('personnel', 'mos'),
             'savedFilters' => session()->get('roster_filters') ?? [],
+            'eventLog'     => $eventLog
         ]);
     }
 
@@ -64,6 +70,8 @@ class Dashboard extends BaseController
         $factionId = $this->currentFaction['faction_id'] ?? null;
 
         $children  = $unitModel
+            ->select('units.*, locations.name AS location_name')
+            ->join('locations', 'locations.location_id = units.location_id', 'left')
             ->where('parent_unit_id', $unitId)
             ->where('faction_id', $factionId)
             ->findAll();
@@ -86,7 +94,8 @@ class Dashboard extends BaseController
                 'personnel'  => $rolled['personnel'],
                 'equipment'  => $rolled['equipment'],
                 'supply'     => round($rolled['supply'], 2),
-                'hasChildren'=> $hasChildren,
+                'hasChildren' => $hasChildren,
+                'location_name' => $c['location_name'] ?? null
             ];
         }
 

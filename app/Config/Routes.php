@@ -103,6 +103,12 @@ $routes->post('toe/(:num)/subunits/add', 'ToeBuilder::addSubunit/$1');
 $routes->post('toe/subunits/(:num)/delete', 'ToeBuilder::deleteSubunit/$1');
 
 // ================================
+// Event log
+// ================================
+$routes->get('eventlog',      'EventLog::index');
+$routes->get('eventlog/(:num)', 'EventLog::index/$1');
+
+// ================================
 // Dev / Testing
 // ================================
 $routes->get('/testgen', 'TestGen');

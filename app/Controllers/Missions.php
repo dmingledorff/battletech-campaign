@@ -7,6 +7,7 @@ use App\Models\LocationModel;
 use App\Models\UnitModel;
 use App\Models\PlanetModel;
 use App\Models\PersonnelModel;
+use App\Models\EventLogModel;
 
 class Missions extends BaseController
 {
@@ -91,9 +92,10 @@ class Missions extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound("Mission $id not found.");
         }
 
-        $units = $missionModel->getMissionUnits($id);
-        $unitIds = array_column($units, 'unit_id');
-        $log   = $missionModel->getLog($id);
+        $units         = $missionModel->getMissionUnits($id);
+        $unitIds       = array_column($units, 'unit_id');
+        $eventLogModel = new EventLogModel();
+        $log           = $eventLogModel->getForMission($id);
 
         // Get strength for each unit
         $unitModel   = new UnitModel();
