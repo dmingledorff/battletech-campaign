@@ -5,6 +5,7 @@ namespace App\Controllers;
 use CodeIgniter\Controller;
 use App\Models\GameStateModel;
 use App\Models\PlanetModel;
+use App\Models\LocationModel;
 
 class BaseController extends Controller
 {
@@ -13,7 +14,7 @@ class BaseController extends Controller
     protected $gameState;
     protected $allPlanets;
     protected $currentFaction;
-    protected array $enumCache = [];
+    protected $allLocations;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
     {
@@ -28,9 +29,11 @@ class BaseController extends Controller
 
         // Save formatted date for all controllers
         $this->gameDate = $dateObj->format('j F Y');
-
         $planetModel = new PlanetModel();
         $this->allPlanets = $planetModel->getAllWithSystems();
+        $locationModel = new LocationModel();
+        $this->allLocations = $locationModel->getAllLocationsWithFactionInfo();
+
 
         $auth         = service('auth');
         $currentUser  = $auth->loggedIn() ? $auth->user() : null;
@@ -53,6 +56,7 @@ class BaseController extends Controller
         $data['gameDate'] = $this->gameDate;
         $data['allPlanets'] = $this->allPlanets;
         $data['currentFaction'] = $this->currentFaction;
+        $data['allLocations'] = $this->allLocations;
 
 
         return view('layout/header', $data)

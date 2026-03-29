@@ -50,6 +50,10 @@ $routes->get('units',                        'Units::index');
 $routes->post('units/store',                 'Units::store');
 $routes->post('units/(:num)/updateName',     'Units::updateName/$1');
 $routes->post('units/(:num)/deactivate',     'Units::deactivate/$1');
+$routes->post('units/(:num)/reactivate', 'Units::reactivate/$1');
+
+$routes->post('units/(:num)/subunit/add',             'Units::addSubunit/$1');
+$routes->post('units/(:num)/subunit/(:num)/remove',   'Units::removeSubunit/$1/$2');
 
 // ================================
 // Personnel

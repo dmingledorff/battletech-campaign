@@ -805,4 +805,64 @@ class UnitModel extends Model
             }
         }
     }
+
+    public function reactivateUnit(int $unitId, int $locationId): void
+    {
+        $this->db->table('units')
+            ->where('unit_id', $unitId)
+            ->update([
+                'status'      => 'Garrisoned',
+                'location_id' => $locationId,
+            ]);
+    }
+
+    protected array $unitTypeHierarchy = [
+        'Regiment'  => 1,
+        'Battalion' => 2,
+        'Company'   => 3,
+        'Platoon'   => 4,
+        'Lance'     => 4,
+        'Squad'     => 5,
+    ];
+
+    public function getValidSubunitTypes(string $parentType): array
+    {
+        $parentRank = $this->unitTypeHierarchy[$parentType] ?? 0;
+        return array_keys(array_filter(
+            $this->unitTypeHierarchy,
+            fn($rank) => $rank > $parentRank
+        ));
+    }
+
+    public function getAvailableSubunits(int $factionId, int $unitId, string $parentType): array
+    {
+        $validTypes = $this->getValidSubunitTypes($parentType);
+        if (empty($validTypes)) return [];
+
+        $typeList = implode("','", $validTypes);
+
+        $units = $this->db->query("
+            SELECT u.unit_id, u.name, u.unit_type, u.parent_unit_id, u.status
+            FROM units u
+            WHERE u.faction_id = {$factionId}
+            AND u.unit_type IN ('{$typeList}')
+            AND u.status != 'Deactivated'
+            AND u.unit_id != {$unitId}
+            ORDER BY u.unit_type, u.name
+        ")->getResultArray();
+
+        foreach ($units as &$u) {
+            $u['unit_chain'] = $this->getUnitChain($u['unit_id']);
+        }
+        unset($u);
+
+        return $units;
+    }
+
+    public function assignParent(int $unitId, ?int $parentId): void
+    {
+        $this->db->table('units')
+            ->where('unit_id', $unitId)
+            ->update(['parent_unit_id' => $parentId]);
+    }
 }

@@ -25,7 +25,7 @@ class Units extends BaseController
         $moraleValues = array_filter(array_column($personnel, 'morale'), fn($m) => $m !== null);
         $unit['avg_morale'] = count($moraleValues) > 0
             ? array_sum($moraleValues) / count($moraleValues)
-            : null;
+            : 0;
         $breadcrumb = $unitModel->getBreadcrumb($id);
         $strengthMap = $unitModel->getStrengthAll();
         $strength    = $unitModel->rollupStrength($id, $children, $strengthMap);
@@ -66,6 +66,12 @@ class Units extends BaseController
         $isDispersed = $unit['status'] === 'Dispersed';
         $onMission   = in_array($unit['status'] ?? 'Garrisoned', ['In Transit', 'Combat']);
 
+        $availableSubunits = $unitModel->getAvailableSubunits(
+            (int)$factionId,
+            (int)$id,
+            $unit['unit_type']
+        );
+
         return $this->render('units/show', [
             'unit'                    => $unit,
             'personnel'               => $personnel,
@@ -81,6 +87,7 @@ class Units extends BaseController
             'subStrengths'            => $subStrengths,
             'isDispersed'             => $isDispersed,
             'onMission'               => $onMission,
+            'availableSubunits' => $availableSubunits,
         ]);
     }
 
@@ -276,5 +283,61 @@ class Units extends BaseController
         ]);
 
         return redirect()->to("/units/{$unitId}");
+    }
+
+    public function reactivate(int $unitId)
+    {
+        $data       = $this->request->getJSON(true);
+        $locationId = (int)($data['location_id'] ?? 0);
+
+        if (!$locationId) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No location selected.']);
+        }
+
+        $unitModel = new UnitModel();
+        $unit      = $unitModel->find($unitId);
+
+        if (!$unit || $unit['status'] !== 'Deactivated') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unit not found or not deactivated.']);
+        }
+
+        $unitModel->reactivateUnit($unitId, $locationId);
+
+        return $this->response->setJSON(['success' => true]);
+    }
+
+    public function addSubunit(int $unitId)
+    {
+        $subunitId = (int)$this->request->getJSON(true)['subunit_id'];
+        $unitModel = new UnitModel();
+        $unit      = $unitModel->find($unitId);
+        $subunit   = $unitModel->find($subunitId);
+
+        if (!$unit || !$subunit) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unit not found.']);
+        }
+
+        $validTypes = $unitModel->getValidSubunitTypes($unit['unit_type']);
+        if (!in_array($subunit['unit_type'], $validTypes)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid subunit type.']);
+        }
+
+        $unitModel->assignParent($subunitId, $unitId);
+
+        return $this->response->setJSON(['success' => true]);
+    }
+
+    public function removeSubunit(int $unitId, int $subunitId)
+    {
+        $unitModel = new UnitModel();
+        $subunit   = $unitModel->find($subunitId);
+
+        if (!$subunit || $subunit['parent_unit_id'] !== $unitId) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Subunit not found.']);
+        }
+
+        $unitModel->assignParent($subunitId, null);
+
+        return $this->response->setJSON(['success' => true]);
     }
 }

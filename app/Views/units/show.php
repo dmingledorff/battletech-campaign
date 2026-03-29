@@ -111,6 +111,61 @@
             <i class="bi bi-slash-circle me-1"></i>Deactivate Unit
           </button>
         <?php endif; ?>
+        <?php if ($unit['status'] === 'Deactivated'): ?>
+          <div class="alert alert-warning d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-exclamation-triangle me-2"></i>This unit is deactivated.</span>
+            <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#reactivateModal">
+              Reactivate
+            </button>
+          </div>
+
+          <!-- Reactivate Modal -->
+          <div class="modal fade" id="reactivateModal" tabindex="-1">
+            <div class="modal-dialog">
+              <div class="modal-content bg-dark text-light">
+                <div class="modal-header border-secondary">
+                  <h5 class="modal-title">Reactivate <?= esc($unit['name']) ?></h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <label class="form-label">Starting Location</label>
+                  <select id="reactivateLocation"
+                    class="form-select bg-dark text-light border-secondary">
+                    <?php foreach ($allLocations as $loc): ?>
+                      <option value="<?= $loc['location_id'] ?>">
+                        <?= esc($loc['name']) ?> (<?= esc($loc['planet_name']) ?>)
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="modal-footer border-secondary">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                  <button type="button" class="btn btn-outline-success" onclick="reactivateUnit()">Reactivate</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <script>
+            function reactivateUnit() {
+              const locationId = document.getElementById('reactivateLocation').value;
+              fetch(`/units/<?= $unit['unit_id'] ?>/reactivate`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    location_id: locationId
+                  })
+                })
+                .then(r => r.json())
+                .then(d => {
+                  if (d.success) location.reload();
+                  else alert(d.message);
+                });
+            }
+          </script>
+        <?php endif; ?>
       </div>
     </div>
   </div>
@@ -160,28 +215,27 @@
 <div class="card shadow mb-3">
   <div class="card-header">Sub-Units</div>
   <div class="card-body p-0">
-    <?php if (!empty($children[$unit['unit_id']])): ?>
-      <table class="table table-dark table-sm mb-0">
-        <thead>
-          <tr>
-            <th>Unit</th>
-            <th>Type</th>
-            <th>Role</th>
-            <th>Speed</th>
-            <th>Per%</th>
-            <th>Eqp%</th>
-          </tr>
-        </thead>
-        <tbody>
+    <table class="table table-dark table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Unit</th>
+          <th>Type</th>
+          <th>Role</th>
+          <th>Speed</th>
+          <th>Per%</th>
+          <th>Eqp%</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="subunitTableBody">
+        <?php if (!empty($children[$unit['unit_id']])): ?>
           <?php foreach ($children[$unit['unit_id']] as $sub):
             $speed    = $speedMap[$sub['unit_id']] ?? null;
-            $strength = $subStrengths[$sub['unit_id']] ?? ['pct_personnel' => 0, 'pct_equipment' => 0];
-            $persColor = $strength['pct_personnel'] >= 75 ? 'success'
-              : ($strength['pct_personnel'] >= 50 ? 'warning' : 'danger');
-            $eqpColor  = $strength['pct_equipment'] >= 75 ? 'success'
-              : ($strength['pct_equipment'] >= 50 ? 'warning' : 'danger');
+            $subStr   = $subStrengths[$sub['unit_id']] ?? ['pct_personnel' => 0, 'pct_equipment' => 0];
+            $persColor = $subStr['pct_personnel'] >= 75 ? 'success' : ($subStr['pct_personnel'] >= 50 ? 'warning' : 'danger');
+            $eqpColor  = $subStr['pct_equipment'] >= 75 ? 'success' : ($subStr['pct_equipment'] >= 50 ? 'warning' : 'danger');
           ?>
-            <tr>
+            <tr id="subunit-<?= $sub['unit_id'] ?>">
               <td>
                 <a class="link-info" href="/units/<?= esc($sub['unit_id']) ?>">
                   <?= esc($sub['name']) ?>
@@ -195,30 +249,59 @@
               <td class="small"><?= esc($sub['unit_type']) ?></td>
               <td class="small"><?= esc($sub['role'] ?? '—') ?></td>
               <td class="small">
-                <?= $speed !== null
-                  ? number_format($speed, 1) . ' kph'
-                  : '<span class="text-muted">—</span>' ?>
+                <?= $speed !== null ? number_format($speed, 1) . ' kph' : '<span class="text-muted">—</span>' ?>
               </td>
+              <td><span class="text-<?= $persColor ?>"><?= number_format($subStr['pct_personnel'], 1) ?>%</span></td>
+              <td><span class="text-<?= $eqpColor ?>"><?= number_format($subStr['pct_equipment'], 1) ?>%</span></td>
               <td>
-                <span class="text-<?= $persColor ?>">
-                  <?= number_format($strength['pct_personnel'], 1) ?>%
-                </span>
-              </td>
-              <td>
-                <span class="text-<?= $eqpColor ?>">
-                  <?= number_format($strength['pct_equipment'], 1) ?>%
-                </span>
+                <?php if (!$onMission): ?>
+                  <button class="btn btn-xs btn-outline-danger"
+                    onclick="removeSubunit(<?= $unit['unit_id'] ?>, <?= $sub['unit_id'] ?>, this)">
+                    Remove
+                  </button>
+                <?php endif; ?>
               </td>
             </tr>
           <?php endforeach; ?>
-        </tbody>
-      </table>
-    <?php else: ?>
-      <p class="text-muted p-3 mb-0">No sub-units assigned.</p>
-    <?php endif; ?>
+        <?php else: ?>
+          <tr id="subunitEmpty">
+            <td colspan="7" class="text-muted p-3">No sub-units assigned.</td>
+          </tr>
+        <?php endif; ?>
+      </tbody>
+    </table>
   </div>
+  <?php if (!$onMission && !empty($availableSubunits)): ?>
+    <div class="card-footer border-secondary">
+      <div class="d-flex gap-2 align-items-center">
+        <select id="addSubunitSelect"
+          class="form-select form-select-sm bg-dark text-light border-secondary">
+          <option value="">Select unit to add...</option>
+          <?php
+          $byType = [];
+          foreach ($availableSubunits as $u) {
+            $byType[$u['unit_type']][] = $u;
+          }
+          foreach (['Battalion', 'Company', 'Platoon', 'Lance', 'Squad'] as $type):
+            if (empty($byType[$type])) continue;
+          ?>
+            <optgroup label="<?= $type ?>">
+              <?php foreach ($byType[$type] as $u): ?>
+                <option value="<?= $u['unit_id'] ?>">
+                  <?= esc($u['unit_chain']) ?>
+                </option>
+              <?php endforeach; ?>
+            </optgroup>
+          <?php endforeach; ?>
+        </select>
+        <button class="btn btn-sm btn-outline-success flex-shrink-0"
+          onclick="addSubunit(<?= $unit['unit_id'] ?>)">
+          <i class="bi bi-plus me-1"></i>Add
+        </button>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
-
 
 <div class="row">
   <div class="col-md-6">
@@ -814,6 +897,101 @@
         }
         // Navigate to parent or units index
         window.location.href = d.parent_id ? `/units/${d.parent_id}` : '/units';
+      });
+  }
+
+  function addSubunit(unitId) {
+    const select = document.getElementById('addSubunitSelect');
+    const subunitId = select.value;
+    if (!subunitId) return;
+
+    fetch(`/units/${unitId}/subunit/add`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          subunit_id: subunitId
+        })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (!d.success) {
+          alert(d.message);
+          return;
+        }
+
+        // Remove from dropdown
+        const opt = select.options[select.selectedIndex];
+        const name = opt.text;
+        const type = opt.closest('optgroup')?.label ?? '';
+        opt.remove();
+
+        // Remove empty placeholder
+        document.getElementById('subunitEmpty')?.remove();
+
+        // Add row to table
+        const tbody = document.getElementById('subunitTableBody');
+        const tr = document.createElement('tr');
+        tr.id = `subunit-${subunitId}`;
+        tr.innerHTML = `
+            <td><a class="link-info" href="/units/${subunitId}">${name}</a></td>
+            <td class="small">${type}</td>
+            <td class="small">—</td>
+            <td class="small">—</td>
+            <td><span class="text-danger">0.0%</span></td>
+            <td><span class="text-danger">0.0%</span></td>
+            <td>
+                <button class="btn btn-xs btn-outline-danger"
+                    onclick="removeSubunit(${unitId}, ${subunitId}, this)">
+                    Remove
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+        select.value = '';
+      });
+  }
+
+  function removeSubunit(unitId, subunitId, btn) {
+    if (!confirm('Remove this subunit from the unit?')) return;
+
+    fetch(`/units/${unitId}/subunit/${subunitId}/remove`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (!d.success) {
+          alert(d.message);
+          return;
+        }
+
+        // Remove row from table
+        document.getElementById(`subunit-${subunitId}`)?.remove();
+
+        // Add back to dropdown if it exists
+        const select = document.getElementById('addSubunitSelect');
+        if (select) {
+          const name = btn.closest('tr').querySelector('a').textContent.trim();
+          const type = btn.closest('tr').querySelector('td:nth-child(2)').textContent.trim();
+
+          // Find or create optgroup
+          let group = Array.from(select.querySelectorAll('optgroup'))
+            .find(g => g.label === type);
+          if (!group) {
+            group = document.createElement('optgroup');
+            group.label = type;
+            select.appendChild(group);
+          }
+
+          const opt = document.createElement('option');
+          opt.value = subunitId;
+          opt.textContent = name;
+          group.appendChild(opt);
+        }
       });
   }
 </script>
