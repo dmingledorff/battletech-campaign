@@ -11,6 +11,8 @@ class BaseController extends Controller
 {
     protected $helpers = ['url', 'form', 'html'];
     protected $gameDate;
+    protected $gameHour;
+    protected $gameDateTime;
     protected $gameState;
     protected $allPlanets;
     protected $currentFaction;
@@ -26,9 +28,14 @@ class BaseController extends Controller
 
         $currentDate = $gameStateModel->getProperty('current_date') ?? '3025-01-01';
         $dateObj     = new \DateTime($currentDate);
-
-        // Save formatted date for all controllers
         $this->gameDate = $dateObj->format('j F Y');
+
+        $this->gameHour  = (int)($this->gameState['current_hour'] ?? 0);
+        // Format for views
+        $this->gameDateTime = date('j F Y', strtotime($this->gameDate))
+            . ' — '
+            . str_pad($this->gameHour, 2, '0', STR_PAD_LEFT) . ':00';
+
         $planetModel = new PlanetModel();
         $this->allPlanets = $planetModel->getAllWithSystems();
         $locationModel = new LocationModel();
@@ -54,6 +61,8 @@ class BaseController extends Controller
         // Always include game date in every render
         $data['gameState'] = $this->gameState;
         $data['gameDate'] = $this->gameDate;
+        $data['gameDateTime'] = $this->gameDateTime;
+        $data['gameHour']     = $this->gameHour;
         $data['allPlanets'] = $this->allPlanets;
         $data['currentFaction'] = $this->currentFaction;
         $data['allLocations'] = $this->allLocations;
@@ -63,7 +72,7 @@ class BaseController extends Controller
             . view($view, $data)
             . view('layout/footer', $data);
     }
-    
+
     protected function getEnumValues(string $table, string $column): array
     {
         return \App\Libraries\SchemaHelper::getEnumValues($table, $column);

@@ -11,6 +11,8 @@ class GameTickService
 {
     protected $db;
     protected string $gameDate;
+    protected int    $currentHour;
+    protected bool   $dayRollover = false;
     protected GameStateModel $gameStateModel;
 
     public function __construct(?BaseConnection $db = null)
@@ -18,17 +20,40 @@ class GameTickService
         $this->db             = $db ?? db_connect();
         $this->gameStateModel = new GameStateModel();
         $this->gameDate       = $this->gameStateModel->getProperty('current_date') ?? '3025-01-01';
+        $this->currentHour    = (int)($this->gameStateModel->getProperty('current_hour') ?? 0);
     }
 
-    public function processTick(int $days = 1): void
+    public function processTick(): void
     {
-        $this->advanceDate($days);
-        $this->gameDate = $this->gameStateModel->getProperty('current_date') ?? '3025-01-01';
+        $this->advanceTime();
 
-        $this->processMorale();
-        $this->processMissions();
-        $this->processDispersedUnits();
-        $this->updateTick();
+        // Every tick
+        $this->processCombat();
+        $this->updateMissionCoords();
+
+        // Once per game day only
+        if ($this->dayRollover) {
+            $this->processMissions();
+            $this->processMorale();
+            $this->processDispersedUnits();
+            $this->updateDayCount();
+        }
+    }
+
+    protected function advanceTime(): void
+    {
+        $hoursPerTick    = (int)($this->gameStateModel->getProperty('hours_per_tick') ?? 3);
+        $newHour         = $this->currentHour + $hoursPerTick;
+
+        if ($newHour >= 24) {
+            $newHour          -= 24;
+            $this->dayRollover = true;
+            $this->advanceDate(1);
+            $this->gameDate    = $this->gameStateModel->getProperty('current_date') ?? $this->gameDate;
+        }
+
+        $this->currentHour = $newHour;
+        $this->gameStateModel->setProperty('current_hour', (string)$newHour);
     }
 
     protected function advanceDate(int $days): void
@@ -38,11 +63,58 @@ class GameTickService
         $this->gameStateModel->setProperty('current_date', $dateObj->format('Y-m-d'));
     }
 
-    protected function updateTick(): void
+
+    protected function updateDayCount(): void
     {
-        $tickCount = (int)$this->gameStateModel->getProperty('tick_count') ?? 0;
-        $this->gameStateModel->setProperty('tick_count', $tickCount + 1);
+        $count = (int)($this->gameStateModel->getProperty('day_count') ?? 0);
+        $this->gameStateModel->setProperty('day_count', $count + 1);
     }
+
+    protected function processCombat(): void
+    {
+        // TODO — CombatService will plug in here
+        // Processes one combat round for every mission in Combat status
+    }
+
+    protected function updateMissionCoords(): void
+    {
+        // Update current_coord_x/y for in-transit missions every tick
+        // for smoother map movement — no arrival logic here
+        $missions = $this->db->table('missions')
+            ->where('status', 'In Transit')
+            ->get()->getResultArray();
+
+        foreach ($missions as $mission) {
+            $elapsed     = (int)$mission['days_elapsed'];
+            $transitDays = (int)$mission['transit_days'];
+            if ($transitDays <= 0) continue;
+
+            // Progress as fraction of total transit (days elapsed + hour fraction)
+            $hourFraction = $this->currentHour / 24;
+            $progress     = min(1.0, ($elapsed + $hourFraction) / $transitDays);
+
+            $origin = $this->db->table('locations')
+                ->where('location_id', $mission['origin_location_id'])
+                ->get()->getRowArray();
+
+            $dest = $this->db->table('locations')
+                ->where('location_id', $mission['destination_location_id'])
+                ->get()->getRowArray();
+
+            if (!$origin || !$dest) continue;
+
+            $currentX = $origin['coord_x'] + ($progress * ($dest['coord_x'] - $origin['coord_x']));
+            $currentY = $origin['coord_y'] + ($progress * ($dest['coord_y'] - $origin['coord_y']));
+
+            $this->db->table('missions')
+                ->where('mission_id', $mission['mission_id'])
+                ->update([
+                    'current_coord_x' => round($currentX, 4),
+                    'current_coord_y' => round($currentY, 4),
+                ]);
+        }
+    }
+
 
     protected function processMorale(): void
     {
@@ -60,39 +132,24 @@ class GameTickService
 
     protected function processMissions(): void
     {
-        $missionModel = new MissionModel();
-
         $missions = $this->db->table('missions')
             ->where('status', 'In Transit')
-            ->get()
-            ->getResultArray();
+            ->get()->getResultArray();
 
         foreach ($missions as $mission) {
             $elapsed     = (int)$mission['days_elapsed'] + 1;
             $transitDays = (int)$mission['transit_days'];
-            $progress    = min(1.0, $elapsed / max(1, $transitDays));
-
-            $origin = $this->db->table('locations')
-                ->where('location_id', $mission['origin_location_id'])
-                ->get()->getRowArray();
 
             $dest = $this->db->table('locations')
                 ->where('location_id', $mission['destination_location_id'])
                 ->get()->getRowArray();
-
-            $currentX = $origin['coord_x'] + ($progress * ($dest['coord_x'] - $origin['coord_x']));
-            $currentY = $origin['coord_y'] + ($progress * ($dest['coord_y'] - $origin['coord_y']));
 
             if ($elapsed >= $transitDays) {
                 $this->completeMission($mission, $dest);
             } else {
                 $this->db->table('missions')
                     ->where('mission_id', $mission['mission_id'])
-                    ->update([
-                        'days_elapsed'    => $elapsed,
-                        'current_coord_x' => round($currentX, 4),
-                        'current_coord_y' => round($currentY, 4),
-                    ]);
+                    ->update(['days_elapsed' => $elapsed]);
             }
         }
     }
@@ -115,7 +172,7 @@ class GameTickService
         );
 
         // Determine if this is an HQ move (Battalion/Regiment)
-        $isHQMove = !empty(array_filter($unitIds, function($uid) {
+        $isHQMove = !empty(array_filter($unitIds, function ($uid) {
             $u = $this->db->table('units')->where('unit_id', $uid)->get()->getRowArray();
             return in_array($u['unit_type'] ?? '', ['Battalion', 'Regiment']);
         }));
@@ -141,33 +198,53 @@ class GameTickService
             if ($isFriendlyNow) {
                 if ($isHQMove) {
                     $this->arriveHQ($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
-                    $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                        "HQ relocated to {$dest['name']}. Subunits unaffected.");
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
+                        "HQ relocated to {$dest['name']}. Subunits unaffected."
+                    );
                 } else {
                     $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
-                    $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                        "Mission arrived at {$dest['name']}. " . count($unitIds) . " units transferred.");
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
+                        "Mission arrived at {$dest['name']}. " . count($unitIds) . " units transferred."
+                    );
                 }
             } elseif ($isUncontrolled) {
                 $this->takeControl($destLocationId, $missionFactionId);
                 $isHQMove
                     ? $this->arriveHQ($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel)
                     : $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
-                $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                    "Transfer arrived at {$dest['name']} — location became uncontrolled during transit. Units secured it.");
+                $missionModel->logEvent(
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
+                    "Transfer arrived at {$dest['name']} — location became uncontrolled during transit. Units secured it."
+                );
             } else {
                 // Enemy took it during transit
                 if ($enemyPresent) {
                     $this->returnToOrigin($unitIds, $originLocationId, $mission, $missionModel, $unitModel);
-                    $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Aborted',
-                        "Transfer to {$dest['name']} aborted — location captured by enemy with active garrison. Units returning to origin.");
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Aborted',
+                        "Transfer to {$dest['name']} aborted — location captured by enemy with active garrison. Units returning to origin."
+                    );
                 } else {
                     $this->takeControl($destLocationId, $missionFactionId);
                     $isHQMove
                         ? $this->arriveHQ($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel)
                         : $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
-                    $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                        "Transfer arrived at {$dest['name']} — enemy claimed it during transit but no garrison. Units secured it.");
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
+                        "Transfer arrived at {$dest['name']} — enemy claimed it during transit but no garrison. Units secured it."
+                    );
                 }
             }
             return;
@@ -179,23 +256,39 @@ class GameTickService
         if ($missionType === 'Withdrawal') {
             if ($isFriendlyNow) {
                 $this->arriveHQ($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
-                $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                    "Units withdrew to {$dest['name']}.");
+                $missionModel->logEvent(
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
+                    "Units withdrew to {$dest['name']}."
+                );
             } elseif ($isUncontrolled) {
                 $this->takeControl($destLocationId, $missionFactionId);
                 $this->arriveHQ($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
-                $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                    "Units withdrew to {$dest['name']} — location was uncontrolled, now secured.");
+                $missionModel->logEvent(
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
+                    "Units withdrew to {$dest['name']} — location was uncontrolled, now secured."
+                );
             } else {
                 $nearest = $this->findNearestFriendlyLocation($destLocationId, $missionFactionId);
                 if ($nearest) {
                     $this->returnToOrigin($unitIds, $nearest['location_id'], $mission, $missionModel, $unitModel);
-                    $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Aborted',
-                        "Withdrawal destination {$dest['name']} captured — rerouting to {$nearest['name']}.");
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Aborted',
+                        "Withdrawal destination {$dest['name']} captured — rerouting to {$nearest['name']}."
+                    );
                 } else {
                     $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
-                    $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                        "Withdrawal to {$dest['name']} failed — no friendly locations available. Units trapped. [COMBAT TODO]");
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
+                        "Withdrawal to {$dest['name']} failed — no friendly locations available. Units trapped. [COMBAT TODO]"
+                    );
                 }
             }
             return;
@@ -208,13 +301,21 @@ class GameTickService
             if ($missionType === 'Recon') {
                 $this->takeControl($destLocationId, $missionFactionId);
                 $this->returnToOrigin($unitIds, $originLocationId, $mission, $missionModel, $unitModel);
-                $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                    "Recon completed. {$dest['name']} uncontrolled — player takes control. Units returning to origin.");
+                $missionModel->logEvent(
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
+                    "Recon completed. {$dest['name']} uncontrolled — player takes control. Units returning to origin."
+                );
             } elseif ($missionType === 'Assault') {
                 $this->takeControl($destLocationId, $missionFactionId);
                 $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
-                $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                    "Assault on uncontrolled {$dest['name']} successful. Units garrisoning location.");
+                $missionModel->logEvent(
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
+                    "Assault on uncontrolled {$dest['name']} successful. Units garrisoning location."
+                );
             }
             return;
         }
@@ -225,12 +326,20 @@ class GameTickService
         if ($isFriendlyNow) {
             if (in_array($missionType, ['Assault', 'Harass'])) {
                 $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
-                $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                    "{$missionType} mission arrived at {$dest['name']} — now under friendly control. Units garrisoned.");
+                $missionModel->logEvent(
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
+                    "{$missionType} mission arrived at {$dest['name']} — now under friendly control. Units garrisoned."
+                );
             } elseif ($missionType === 'Recon') {
                 $this->returnToOrigin($unitIds, $originLocationId, $mission, $missionModel, $unitModel);
-                $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                    "Recon reached {$dest['name']} — now under friendly control. Units returning to origin.");
+                $missionModel->logEvent(
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
+                    "Recon reached {$dest['name']} — now under friendly control. Units returning to origin."
+                );
             }
             return;
         }
@@ -242,13 +351,21 @@ class GameTickService
             if ($missionType === 'Recon') {
                 if ($enemyPresent) {
                     $this->returnToOrigin($unitIds, $originLocationId, $mission, $missionModel, $unitModel);
-                    $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                        "Recon reached {$dest['name']}. Enemy present — intel gathered. Units returning. [COMBAT TODO]");
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
+                        "Recon reached {$dest['name']}. Enemy present — intel gathered. Units returning. [COMBAT TODO]"
+                    );
                 } else {
                     $this->takeControl($destLocationId, $missionFactionId);
                     $this->returnToOrigin($unitIds, $originLocationId, $mission, $missionModel, $unitModel);
-                    $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                        "Recon reached {$dest['name']}. No enemy — player takes control. Units returning to origin.");
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
+                        "Recon reached {$dest['name']}. No enemy — player takes control. Units returning to origin."
+                    );
                 }
             } elseif ($missionType === 'Assault') {
                 if ($enemyPresent) {
@@ -262,19 +379,31 @@ class GameTickService
                             'days_elapsed'    => $mission['transit_days'],
                         ]);
                     $unitModel->setMissionStatus($unitIds, 'Combat', $mission['mission_id'], $destLocationId);
-                    $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Combat',
-                        "Assault force arrived at {$dest['name']}. Enemy present — combat initiated. [COMBAT TODO]");
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Combat',
+                        "Assault force arrived at {$dest['name']}. Enemy present — combat initiated. [COMBAT TODO]"
+                    );
                     return;
                 } else {
                     $this->takeControl($destLocationId, $missionFactionId);
                     $this->arriveAtLocation($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
-                    $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                        "Assault on {$dest['name']} — no enemy present. Player takes control. Units garrisoning.");
+                    $missionModel->logEvent(
+                        $mission['mission_id'],
+                        $this->gameDate,
+                        'Arrived',
+                        "Assault on {$dest['name']} — no enemy present. Player takes control. Units garrisoning."
+                    );
                 }
             } elseif ($missionType === 'Harass') {
                 $this->returnToOrigin($unitIds, $originLocationId, $mission, $missionModel, $unitModel);
-                $missionModel->logEvent($mission['mission_id'], $this->gameDate, 'Arrived',
-                    "Harassment at {$dest['name']} completed. Units returning to origin. [HARASS TODO]");
+                $missionModel->logEvent(
+                    $mission['mission_id'],
+                    $this->gameDate,
+                    'Arrived',
+                    "Harassment at {$dest['name']} completed. Units returning to origin. [HARASS TODO]"
+                );
             }
         }
     }
@@ -390,11 +519,14 @@ class GameTickService
             ->get()->getRowArray();
 
         $returnDistance = $missionModel->calculateDistance(
-            $currentX, $currentY,
-            (float)$origin['coord_x'], (float)$origin['coord_y']
+            $currentX,
+            $currentY,
+            (float)$origin['coord_x'],
+            (float)$origin['coord_y']
         );
         $returnDays = $missionModel->calculateTransitDays(
-            $returnDistance, (float)$mission['slowest_speed']
+            $returnDistance,
+            (float)$mission['slowest_speed']
         );
 
         $etaDate = new \DateTime($this->gameDate);
@@ -437,8 +569,10 @@ class GameTickService
             if (!$nearest) continue;
 
             $distance    = $missionModel->calculateDistance(
-                (float)$from['coord_x'], (float)$from['coord_y'],
-                (float)$nearest['coord_x'], (float)$nearest['coord_y']
+                (float)$from['coord_x'],
+                (float)$from['coord_y'],
+                (float)$nearest['coord_x'],
+                (float)$nearest['coord_y']
             );
             $speedRow     = $this->db->table('equipment e')
                 ->select('MIN(ch.speed) AS min_speed')
@@ -472,8 +606,12 @@ class GameTickService
             $unitModel = new UnitModel();
             $unitModel->setMissionStatus([$hq['unit_id']], 'In Transit', $missionId);
 
-            $missionModel->logEvent($missionId, $this->gameDate, 'Withdrawal',
-                "{$hq['name']} HQ forced to withdraw from {$from['name']} — location captured. Routing to {$nearest['name']} ({$transitDays} days).");
+            $missionModel->logEvent(
+                $missionId,
+                $this->gameDate,
+                'Withdrawal',
+                "{$hq['name']} HQ forced to withdraw from {$from['name']} — location captured. Routing to {$nearest['name']} ({$transitDays} days)."
+            );
         }
     }
 
@@ -493,7 +631,7 @@ class GameTickService
 
         if (empty($candidates)) return null;
 
-        usort($candidates, function($a, $b) use ($from) {
+        usort($candidates, function ($a, $b) use ($from) {
             $distA = sqrt(pow($a['coord_x'] - $from['coord_x'], 2) + pow($a['coord_y'] - $from['coord_y'], 2));
             $distB = sqrt(pow($b['coord_x'] - $from['coord_x'], 2) + pow($b['coord_y'] - $from['coord_y'], 2));
             return $distA <=> $distB;

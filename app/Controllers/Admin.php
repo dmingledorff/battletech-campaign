@@ -71,9 +71,14 @@ class Admin extends BaseController
         $tickService = new \App\Services\GameTickService();
         $tickService->processTick();
 
-        $gameDate = (new \App\Models\GameStateModel())->getProperty('current_date');
+        $gameStateModel = new GameStateModel();
+        $newDate = $gameStateModel->getProperty('current_date');
+        $newHour = $gameStateModel->getProperty('current_hour');
+        $timeStr = date('j F Y', strtotime($newDate))
+            . ' ' . str_pad($newHour, 2, '0', STR_PAD_LEFT) . ':00';
 
-        return redirect()->to('/admin')->with('success', "Tick processed. New date: " . date('j F Y', strtotime($gameDate)));
+        return redirect()->to('/admin')
+            ->with('success', "Tick processed. Game time: {$timeStr}");
     }
 
     public function generateUnit()

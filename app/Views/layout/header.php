@@ -101,7 +101,7 @@
 
           <!-- Game Date -->
           <li class="nav-item me-3">
-            <span class="text-light small"><strong>Date:</strong> <?= esc($gameDate) ?></span>
+            <span class="text-light small"><strong>Date:</strong> <?= esc($gameDateTime) ?></span>
           </li>
 
           <!-- Divider -->

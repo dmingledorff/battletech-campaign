@@ -47,10 +47,6 @@ CREATE TABLE game_state (
     property_value VARCHAR(255) NOT NULL,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
-INSERT INTO game_state (property_name, property_value) VALUES
-('current_date', '3025-01-01'),
-('km_per_coord_unit', '100'),
-('speed_efficiency', '0.7');
 
 CREATE TABLE factions (
     faction_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -201,6 +197,8 @@ CREATE TABLE missions (
     current_coord_y DECIMAL(8,4) NULL,
     faction_id INT NOT NULL,
     notes TEXT NULL,
+	combat_phase    ENUM('Skirmish','Melee','Pursuit') NULL,
+    combat_round    INT DEFAULT 0,
     FOREIGN KEY (origin_location_id) REFERENCES locations(location_id),
     FOREIGN KEY (destination_location_id) REFERENCES locations(location_id),
     FOREIGN KEY (faction_id) REFERENCES factions(faction_id)
@@ -215,32 +213,35 @@ CREATE TABLE mission_units (
 );
 
 CREATE TABLE chassis (
-    chassis_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    variant VARCHAR(50),
-    type ENUM('BattleMech','Vehicle','APC') NOT NULL,
-    weight_class ENUM('Light','Medium','Heavy','Assault','Infantry') NOT NULL,
-    battlefield_role ENUM(
-        'Ambusher',
-        'Brawler',
-        'Missile Boat',
-        'Juggernaut',
-        'Scout','Sniper',
-        'Skirmisher',
-        'Striker',
-        'Command',
-        'MASH',
-        'Repair',
-        'Supply',
-        'Transport'
-    ) DEFAULT 'Brawler',
-    hard_attack INT,
-    soft_attack INT,
-    armor_value INT,
-    ammo_reliance DECIMAL(4,2),
-    supply_consumption DECIMAL(6,2),
-    tonnage INT,
-    speed DECIMAL(5,2)
+    chassis_id          INT AUTO_INCREMENT PRIMARY KEY,
+    name                VARCHAR(100) NOT NULL,
+    variant             VARCHAR(50),
+    type                ENUM('BattleMech','Vehicle','APC') NOT NULL,
+    weight_class        ENUM('Light','Medium','Heavy','Assault','Infantry') NOT NULL,
+    battlefield_role    ENUM(
+                            'Ambusher','Brawler','Missile Boat','Juggernaut',
+                            'Scout','Sniper','Skirmisher','Striker',
+                            'Command','MASH','Repair','Supply','Transport'
+                        ) DEFAULT 'Brawler',
+    supply_consumption  DECIMAL(6,2),
+    tonnage             INT,
+    speed               DECIMAL(5,2)    COMMENT 'kph — used for travel/transit',
+    -- Alpha Strike stats
+    as_pv               INT NULL,
+    as_type             VARCHAR(10) NULL,
+    as_size             INT NULL,
+    as_tmm              INT NULL,
+    as_mv               INT NULL        COMMENT 'Movement in AS inches — used for combat',
+    as_mv_type          VARCHAR(5) NULL COMMENT 'g/j/v/f/w/t/h',
+    as_dmg_s            DECIMAL(4,1) NULL,
+    as_dmg_m            DECIMAL(4,1) NULL,
+    as_dmg_l            DECIMAL(4,1) NULL,
+    as_dmg_e            DECIMAL(4,1) NULL,
+    as_ov               INT NULL,
+    as_armor            INT NULL,
+    as_structure        INT NULL,
+    as_threshold        INT NULL,
+    as_specials         VARCHAR(255) NULL
 );
 
 CREATE TABLE chassis_crew_requirements (
@@ -267,6 +268,14 @@ CREATE TABLE equipment (
         'Repair',
         'Mothballed'
     ) NOT NULL DEFAULT 'Active',
+    max_armor          INT NULL          COMMENT 'Scaled max armor (as_armor × multiplier)',
+    max_structure      INT NULL          COMMENT 'Scaled max structure (as_structure × multiplier)',
+    current_armor      INT NULL          COMMENT 'Current armor — persists between battles',
+    current_structure  INT NULL          COMMENT 'Current structure — persists between battles',
+    heat_buildup       INT DEFAULT 0     COMMENT 'Accumulated heat tokens',
+    combat_status      ENUM('Operational','Crippled','Destroyed') DEFAULT 'Operational',
+    salvage_status     ENUM('None','Available','Claimed') DEFAULT 'None'
+                                  COMMENT 'Post-battle salvage state',
     FOREIGN KEY (chassis_id) REFERENCES chassis(chassis_id) ON DELETE CASCADE,
     FOREIGN KEY (assigned_unit_id) REFERENCES units(unit_id) ON DELETE SET NULL,
     FOREIGN KEY (location_id) REFERENCES locations(location_id) ON DELETE SET NULL,
@@ -405,6 +414,35 @@ CREATE TABLE event_log (
     FOREIGN KEY (personnel_id) REFERENCES personnel(personnel_id) ON DELETE SET NULL,
     INDEX idx_faction_date (faction_id, game_date),
     INDEX idx_log_type    (log_type)
+);
+
+CREATE TABLE battle_log (
+    log_id       INT AUTO_INCREMENT PRIMARY KEY,
+    mission_id   INT NOT NULL,
+    game_date    DATE NOT NULL,
+    game_hour    TINYINT NOT NULL DEFAULT 0,
+    combat_phase ENUM('Skirmish','Melee','Pursuit') NOT NULL,
+    combat_round INT NOT NULL,
+    log_type     ENUM(
+                     'RoundSummary',
+                     'Attack',
+                     'Damage',
+                     'Crippled',
+                     'Destroyed',
+                     'Ejection',
+                     'Retreat',
+                     'PhaseChange',
+                     'BattleStart',
+                     'BattleEnd'
+                 ) NOT NULL,
+    attacker_id  INT NULL COMMENT 'equipment_id of attacker',
+    target_id    INT NULL COMMENT 'equipment_id or unit_id for infantry',
+    damage_dealt DECIMAL(5,2) NULL,
+    description  TEXT NOT NULL,
+    FOREIGN KEY (mission_id)  REFERENCES missions(mission_id) ON DELETE CASCADE,
+    FOREIGN KEY (attacker_id) REFERENCES equipment(equipment_id) ON DELETE SET NULL,
+    INDEX idx_mission_round (mission_id, combat_round),
+    INDEX idx_mission_phase (mission_id, combat_phase)
 );
 
 
