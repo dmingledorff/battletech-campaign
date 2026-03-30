@@ -199,6 +199,16 @@
                             <td><?= esc($slot['equipment_type']) ?></td>
                             <td><?= esc($slot['weight_class'] ?? '—') ?></td>
                             <td>
+                                <?php if (!empty($slot['chassis_name'])): ?>
+                                    <span class="text-muted small">
+                                        <?= esc($slot['chassis_name']) ?>
+                                        <?= esc($slot['chassis_variant'] ?? '') ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-muted small">—</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
                                 <?php if ($slot['roles']): ?>
                                     <?php foreach (explode(',', $slot['roles']) as $role): ?>
                                         <span class="badge bg-dark border border-secondary me-1">
@@ -207,16 +217,6 @@
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <span class="text-muted small">Any</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if (!empty($slot['chassis_name'])): ?>
-                                    <span class="text-muted small">
-                                        <?= esc($slot['chassis_name']) ?>
-                                        <?= esc($slot['chassis_variant'] ?? '') ?>
-                                    </span>
-                                <?php else: ?>
-                                    <span class="text-muted small">—</span>
                                 <?php endif; ?>
                             </td>
                             <td id="crew-<?= $slot['slot_id'] ?>">
