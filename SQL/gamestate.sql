@@ -71,4 +71,4 @@ INSERT INTO game_state (property_name, property_value) VALUES
 ('commander_morale_penalty',      '40'),   -- morale < this gives -1 to-hit all lances
 
 -- Global combat morale loss scaling (tune overall combat intensity)
-('combat_morale_loss_multiplier', '1.0');
+('combat_morale_loss_multiplier', '5.0');

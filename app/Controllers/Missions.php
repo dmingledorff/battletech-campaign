@@ -54,15 +54,13 @@ class Missions extends BaseController
         $notes         = $this->request->getPost('notes');
         $unitIds       = $this->request->getPost('unit_ids') ?? [];
 
-        // After getting $unitIds
+        // Validate units
         $unitModel = new UnitModel();
         foreach ($unitIds as $uid) {
             $u = $unitModel->find($uid);
-            if (in_array($u['unit_type'], ['Company', 'Platoon'])) {
-                if ($u['status'] === 'Dispersed') {
-                    return redirect()->back()
-                        ->with('error', "Cannot assign dispersed unit {$u['name']} to a mission — assign individual lances instead.");
-                }
+            if (in_array($u['unit_type'], ['Company', 'Platoon']) && $u['status'] === 'Dispersed') {
+                return redirect()->back()
+                    ->with('error', "Cannot assign dispersed unit {$u['name']} to a mission — assign individual lances instead.");
             }
         }
 
@@ -145,7 +143,8 @@ class Missions extends BaseController
             // Only calculate ETA if we have units assigned
             if (!empty($unitIds)) {
                 $slowestSpeed         = $missionModel->getSlowestSpeed($unitIds);
-                $estimatedTransitDays = $missionModel->calculateTransitDays($estimatedDistance, $slowestSpeed);
+                $estimatedTransitHours = $missionModel->calculateTransitHours($estimatedDistance, $slowestSpeed);
+                $estimatedTransitDays  = (int)ceil($estimatedTransitHours / 24);
             }
         }
 
@@ -171,6 +170,7 @@ class Missions extends BaseController
             'distanceKm'           => $distanceKm,
             'estimatedDistanceKm'  => $estimatedDistanceKm,
             'estimatedTransitDays' => $estimatedTransitDays,
+            'estimatedTransitHours' => $estimatedTransitHours ?? null,
             'slowestSpeed'         => $slowestSpeed,
             'kmPerCoord'           => $kmPerCoord,
             'speedEfficiency'      => $speedEfficiency
@@ -213,6 +213,7 @@ class Missions extends BaseController
         }
 
         $gameDate     = $this->gameState['current_date'] ?? '3025-01-01';
+        $gameHour     = (int)($this->gameState['current_hour'] ?? 0);
         $slowestSpeed = $missionModel->getSlowestSpeed($unitIds);
         $distance     = $missionModel->calculateDistance(
             (float)$mission['origin_x'],
@@ -220,8 +221,11 @@ class Missions extends BaseController
             (float)$mission['dest_x'],
             (float)$mission['dest_y']
         );
-        $transitDays = $missionModel->calculateTransitDays($distance, $slowestSpeed);
-        $etaDate     = new \DateTime($gameDate);
+
+        $transitHours = $missionModel->calculateTransitHours($distance, $slowestSpeed);
+        $transitDays  = (int)ceil($transitHours / 24);
+
+        $etaDate = new \DateTime($gameDate);
         $etaDate->modify("+{$transitDays} days");
 
         $missionModel->update($id, [
@@ -230,7 +234,9 @@ class Missions extends BaseController
             'eta_date'        => $etaDate->format('Y-m-d'),
             'distance'        => $distance,
             'transit_days'    => $transitDays,
+            'transit_hours'   => $transitHours,
             'days_elapsed'    => 0,
+            'hours_elapsed'   => 0,
             'slowest_speed'   => $slowestSpeed,
             'current_coord_x' => $mission['origin_x'],
             'current_coord_y' => $mission['origin_y'],
@@ -239,7 +245,8 @@ class Missions extends BaseController
         $unitModel = new UnitModel();
         $unitModel->setMissionStatus($unitIds, 'In Transit', $id);
         $unitModel->syncDispersedStatus();
-        $kmPerCoord = (float)($this->gameState['km_per_coord_unit'] ?? 100);
+
+        $kmPerCoord      = (float)($this->gameState['km_per_coord_unit'] ?? 100);
         $speedEfficiency = (float)($this->gameState['speed_efficiency'] ?? 0.7);
 
         $missionModel->logEvent(
@@ -250,7 +257,7 @@ class Missions extends BaseController
                 "Distance: " . round($distance * $kmPerCoord, 1) . " km. " .
                 "Slowest unit: " . round($slowestSpeed, 1) . " kph " .
                 "(" . round($slowestSpeed * $speedEfficiency, 1) . " kph effective). " .
-                "ETA: {$etaDate->format('Y-m-d')} ({$transitDays} days)."
+                "ETA: {$etaDate->format('Y-m-d')} ({$transitDays}d / {$transitHours}h)."
         );
 
         return redirect()->to("/missions/{$id}");
@@ -277,10 +284,13 @@ class Missions extends BaseController
                 (float)$mission['origin_x'],
                 (float)$mission['origin_y']
             );
-            $returnDays = $missionModel->calculateTransitDays(
+
+            $returnHours = $missionModel->calculateTransitHours(
                 $remainingDistance,
                 (float)$mission['slowest_speed']
             );
+            $returnDays = (int)ceil($returnHours / 24);
+
             $etaDate = new \DateTime($gameDate);
             $etaDate->modify("+{$returnDays} days");
 
@@ -288,7 +298,9 @@ class Missions extends BaseController
                 'status'                  => 'In Transit',
                 'destination_location_id' => $mission['origin_location_id'],
                 'origin_location_id'      => $mission['destination_location_id'],
+                'transit_hours'           => $returnHours,
                 'transit_days'            => $returnDays,
+                'hours_elapsed'           => 0,
                 'days_elapsed'            => 0,
                 'eta_date'                => $etaDate->format('Y-m-d'),
                 'notes'                   => ($mission['notes'] ?? '') . ' [RETURNING TO BASE]',
@@ -301,7 +313,7 @@ class Missions extends BaseController
                 $gameDate,
                 'Aborted',
                 "Mission aborted in transit. Units reversing course. " .
-                    "New ETA at origin: {$etaDate->format('Y-m-d')} ({$returnDays} days)."
+                    "New ETA at origin: {$etaDate->format('Y-m-d')} ({$returnDays}d / {$returnHours}h)."
             );
         }
 

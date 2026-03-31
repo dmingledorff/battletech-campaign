@@ -31,14 +31,14 @@
             <div class="col-md-2">
                 <label class="form-label small text-muted">From</label>
                 <input type="date" name="date_from"
-                       value="<?= esc($filters['date_from'] ?? '') ?>"
-                       class="form-control form-control-sm bg-dark text-light border-secondary">
+                    value="<?= esc($filters['date_from'] ?? '') ?>"
+                    class="form-control form-control-sm bg-dark text-light border-secondary">
             </div>
             <div class="col-md-2">
                 <label class="form-label small text-muted">To</label>
                 <input type="date" name="date_to"
-                       value="<?= esc($filters['date_to'] ?? '') ?>"
-                       class="form-control form-control-sm bg-dark text-light border-secondary">
+                    value="<?= esc($filters['date_to'] ?? '') ?>"
+                    class="form-control form-control-sm bg-dark text-light border-secondary">
             </div>
             <div class="col-md-2 d-flex gap-2">
                 <button type="submit" class="btn btn-sm btn-outline-info">Filter</button>
@@ -70,7 +70,7 @@
                 <div class="d-flex gap-3 px-3 py-2 border-bottom border-secondary">
                     <div class="flex-shrink-0 pt-1">
                         <?php
-                        $icon = match($entry['log_type']) {
+                        $icon = match ($entry['log_type']) {
                             'Mission'     => 'bi-crosshair',
                             'Combat'      => 'bi-fire',
                             'Supply'      => 'bi-box-seam',
@@ -80,7 +80,7 @@
                             'Intel'       => 'bi-eye',
                             default       => 'bi-info-circle',
                         };
-                        $color = match($entry['severity']) {
+                        $color = match ($entry['severity']) {
                             'Warning'  => 'text-warning',
                             'Critical' => 'text-danger',
                             default    => 'text-info',
@@ -117,6 +117,15 @@
                             <?php if ($entry['personnel_name']): ?>
                                 · <?= esc($entry['personnel_name']) ?>
                             <?php endif; ?>
+                            <?php if ($entry['mission_id'] && $entry['log_type'] === 'Combat'): ?>
+                                <a class="link-danger" href="/combat/<?= $entry['mission_id'] ?>">
+                                    <i class="bi bi-crosshair me-1"></i>Battle Report
+                                </a>
+                            <?php elseif ($entry['mission_name']): ?>
+                                <a class="link-secondary" href="/missions/<?= $entry['mission_id'] ?>">
+                                    <?= esc($entry['mission_name']) ?>
+                                </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -133,11 +142,11 @@
             <div class="d-flex gap-2">
                 <?php if ($result['page'] > 1): ?>
                     <a href="?<?= http_build_query(array_merge($filters, ['page' => $result['page'] - 1])) ?>"
-                       class="btn btn-sm btn-outline-secondary">← Prev</a>
+                        class="btn btn-sm btn-outline-secondary">← Prev</a>
                 <?php endif; ?>
                 <?php if ($result['page'] < $result['last_page']): ?>
                     <a href="?<?= http_build_query(array_merge($filters, ['page' => $result['page'] + 1])) ?>"
-                       class="btn btn-sm btn-outline-secondary">Next →</a>
+                        class="btn btn-sm btn-outline-secondary">Next →</a>
                 <?php endif; ?>
             </div>
         </div>

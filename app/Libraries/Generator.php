@@ -241,9 +241,9 @@ class Generator
             ->getRow();
 
         if (!$slotRow) {
-            throw new \RuntimeException(
-                "No available slot for role '{$role}' on equipment {$equipmentId}."
-            );
+            // Log and skip — optional slots may not exist on all chassis
+            log_message('debug', "No available slot for role '{$role}' on equipment {$equipmentId} — skipping.");
+            return false;
         }
 
         // Step 3: Insert crew assignment
@@ -352,6 +352,35 @@ class Generator
                 'rank_id'       => $newRankId,
                 'experience'    => $profile['experience'],
                 'date_of_birth' => $profile['dob']
+            ]);
+    }
+
+    public function initializeEquipmentCombatStats(int $equipmentId): void
+    {
+        $gameState  = new \App\Models\GameStateModel();
+        $armorMult  = (float)($gameState->getProperty('combat_armor_multiplier')     ?? 3);
+        $structMult = (float)($gameState->getProperty('combat_structure_multiplier') ?? 3);
+
+        $chassis = $this->db->table('equipment e')
+            ->select('c.as_armor, c.as_structure')
+            ->join('chassis c', 'c.chassis_id = e.chassis_id')
+            ->where('e.equipment_id', $equipmentId)
+            ->get()->getRowArray();
+
+        if (!$chassis || $chassis['as_armor'] === null) return;
+
+        $maxArmor     = (int)round($chassis['as_armor']     * $armorMult);
+        $maxStructure = (int)round($chassis['as_structure'] * $structMult);
+
+        $this->db->table('equipment')
+            ->where('equipment_id', $equipmentId)
+            ->update([
+                'max_armor'         => $maxArmor,
+                'max_structure'     => $maxStructure,
+                'current_armor'     => $maxArmor,
+                'current_structure' => $maxStructure,
+                'combat_status'     => 'Operational',
+                'salvage_status'    => 'None',
             ]);
     }
 }

@@ -24,7 +24,11 @@ class MissionModel extends Model
         'current_coord_x',
         'current_coord_y',
         'faction_id',
-        'notes'
+        'notes',
+        'combat_phase',
+        'combat_round',
+        'transit_hours',
+        'hours_elapsed',
     ];
 
     public function getActiveMissions(int $factionId): array
@@ -181,15 +185,22 @@ class MissionModel extends Model
 
     public function calculateTransitDays(float $distance, float $speedKph): int
     {
-        $gameState      = new \App\Models\GameStateModel();
-        $kmPerCoord     = (float)$gameState->getProperty('km_per_coord_unit') ?? 40;
-        $speedEfficiency = (float)$gameState->getProperty('speed_efficiency') ?? 0.7;
+        return (int)ceil($this->calculateTransitHours($distance, $speedKph) / 24);
+    }
 
-        if ($speedKph <= 0) return 999;
-        $km          = $distance * $kmPerCoord;
+    public function calculateTransitHours(float $distance, float $speedKph): int
+    {
+        $gameState       = new \App\Models\GameStateModel();
+        $kmPerCoord      = (float)($gameState->getProperty('km_per_coord_unit') ?? 40);
+        $speedEfficiency = (float)($gameState->getProperty('speed_efficiency')  ?? 0.7);
+
+        if ($speedKph <= 0) return 99999;
+
+        $km           = $distance * $kmPerCoord;
         $effectiveKph = $speedKph * $speedEfficiency;
-        $days        = $km / ($effectiveKph * 24);
-        return (int)ceil($days);
+        $hours        = $km / $effectiveKph;
+
+        return (int)ceil($hours);
     }
 
     public function logEvent(

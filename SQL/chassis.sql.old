@@ -1,0 +1,227 @@
+-- Corrected / Expanded Chassis Insert List (AUTO_INCREMENT IDs)
+
+INSERT INTO chassis 
+(name, variant, type, weight_class, battlefield_role, hard_attack, soft_attack, armor_value, ammo_reliance, supply_consumption, tonnage, speed) VALUES
+
+-- Light Mechs
+('Jenner','JR7-D','BattleMech','Light','Striker',50,15,70,0.30,8.0,35,118.8),
+('Spider','SDR-5V','BattleMech','Light','Scout',45,12,65,0.20,7.5,30,129.6),
+('Locust','LCT-1V','BattleMech','Light','Scout',40,10,60,0.20,7.0,20,129.6),
+('Javelin','JVN-10N','BattleMech','Light','Striker',46,13,70,0.40,7.8,30,97.2),
+('Panther','PNT-9R','BattleMech','Light','Brawler',48,14,80,0.30,8.0,35,64.8),
+('Panther', 'PNT-9ALAG', 'BattleMech', 'Light', 'Striker', 42, 13, 175, 0.50, 7.5, 35, 86.4),
+('Stinger','STG-3R','BattleMech','Light','Scout',48,14,80,0.30,8.0,35,91.6),
+('Valkyrie','VLK-QA','BattleMech','Light','Missile Boat',48,14,80,0.30,8.0,30,86.4),
+('Raven','RVN-1X','BattleMech','Light','Scout',48,14,80,0.30,8.0,35,86.4),
+('Firestarter','FS9-H','BattleMech','Light','Scout',48,14,80,0.30,8.0,35,97.2),
+('Wasp','WSP-1L','BattleMech','Light','Scout',35,10,55,0.15,6.5,20,97.2),
+('Commando','COM-2D','BattleMech','Light','Striker',42,12,65,0.30,7.0,25,97.2),
+('Mongoose','MON-66','BattleMech','Light','Scout',45,12,60,0.20,7.0,25,129.6),
+('UrbanMech','UM-R60','BattleMech','Light','Ambusher',38,8,100,0.40,7.5,30,32.0),
+('UrbanMech','UM-R60L','BattleMech','Light','Ambusher',38,8,100,0.40,7.5,30,32.0),
+('Ostscout','OTT-7J','BattleMech','Light','Scout',30,8,50,0.10,6.0,35,129.6),
+('Flea','FLE-4','BattleMech','Light','Scout',28,8,45,0.15,5.5,20,129.6),
+
+-- Medium 'Mechs
+('Centurion','CN9-A','BattleMech','Medium','Brawler',70,30,120,0.75,12.0,50,64.8),
+('Centurion','CN9-AL','BattleMech','Medium','Brawler',68,28,115,0.70,11.5,50,64.8),
+('Enforcer','ENF-4R','BattleMech','Medium','Skirmisher',65,25,115,0.50,11.0,50,64.8),
+('Griffin','GRF-1N','BattleMech','Medium','Sniper',68,22,110,0.40,11.0,55,86.4),
+('Shadow Hawk','SHD-2H','BattleMech','Medium','Skirmisher',64,24,105,0.45,10.5,55,86.4),
+('Wolverine','WVR-6R','BattleMech','Medium','Skirmisher',66,24,110,0.45,10.8,55,86.4),
+('Wolverine','WVR-6M','BattleMech','Medium','Skirmisher',64,22,105,0.40,10.5,55,86.4),
+('Phoenix Hawk','PXH-1','BattleMech','Medium','Skirmisher',52,18,80,0.35,8.5,45,97.2),
+('Hunchback','HBK-4G','BattleMech','Medium','Juggernaut',80,20,140,0.60,13.0,50,64.8),
+('Assassin','ASN-21','BattleMech','Medium','Scout',58,18,90,0.35,9.5,40,118.8),
+('Blackjack','BJ-1','BattleMech','Medium','Sniper',60,20,100,0.55,10.0,45,64.8),
+('Trebuchet','TBT-5N','BattleMech','Medium','Missile Boat',62,22,105,0.70,11.5,50,86.4),
+('Clint','CLNT-2-3T','BattleMech','Medium','Striker',62,22,90,0.70,9,40,97.0),
+('Clint','CLNT-2-4T','BattleMech','Medium','Sniper',62,22,90,0.70,10,40,97.0),
+('Vulcan','VL-5T','BattleMech','Medium','Striker',60,22,100,0.70,10,40,97.0),
+('Dervish','DV-6M','BattleMech','Medium','Missile Boat',60,22,100,0.75,10.5,55,86.4),
+('Cicada','CDA-2A','BattleMech','Medium','Scout',55,16,80,0.30,9.0,40,129.6),
+('Cicada','CDA-3C','BattleMech','Medium','Striker',58,18,85,0.35,9.5,40,129.6),
+('Vindicator','VND-1R','BattleMech','Medium','Sniper',60,20,100,0.40,10.0,45,64.8),
+('Kintaro','KTO-18','BattleMech','Medium','Missile Boat',64,24,110,0.70,11.0,55,86.4),
+('Crab','CRB-20','BattleMech','Medium','Brawler',66,20,130,0.10,11.0,50,64.8),
+
+-- Heavy Mechs
+('Rifleman','RFL-3N','BattleMech','Heavy','Sniper',72,24,120,0.70,12.5,60,64.8),
+('Rifleman','RFL-3C','BattleMech','Heavy','Sniper',70,22,115,0.65,12.0,60,64.8),
+('Catapult','CPLT-C1','BattleMech','Heavy','Missile Boat',76,26,130,0.80,13.0,65,64.8),
+('JagerMech','JM6-S','BattleMech','Heavy','Sniper',70,20,125,0.80,12.8,65,64.8),
+('Quickdraw','QKD-4G','BattleMech','Heavy','Skirmisher',74,22,135,0.60,12.2,60,86.4),
+('Archer','ARC-2R','BattleMech','Heavy','Missile Boat',78,28,140,0.85,13.5,70,64.8),
+('Grasshopper','GHR-5H','BattleMech','Heavy','Skirmisher',76,24,150,0.40,12.7,70,64.8),
+('Marauder','MAD-3R','BattleMech','Heavy','Sniper',82,26,155,0.60,13.6,75,64.8),
+('Orion','ON1-K','BattleMech','Heavy','Brawler',80,25,160,0.55,13.2,75,64.8),
+('Thunderbolt','TDR-5S','BattleMech','Heavy','Brawler',78,22,150,0.60,12.9,65,64.8),
+('Warhammer','WHM-6R','BattleMech','Heavy','Brawler',84,28,145,0.70,13.8,70,64.8),
+('Black Knight','BL-6-KNT','BattleMech','Heavy','Brawler',84,28,150,0.10,8.0,75,64.8),
+('Black Knight','BL-7-KNT','BattleMech','Heavy','Brawler',88,28,165,0.10,13.5,75,64.8),
+('Dragon','DRG-1N','BattleMech','Heavy','Brawler',76,24,140,0.50,12.5,60,86.4),
+('Dragon','DRG-1G','BattleMech','Heavy','Skirmisher',72,22,135,0.45,12.0,60,86.4),
+('Cataphract','CTF-1X','BattleMech','Heavy','Brawler',78,24,145,0.60,12.8,70,64.8),
+('Crusader','CRD-3R','BattleMech','Heavy','Missile Boat',74,26,130,0.80,13.0,65,64.8),
+('Bombardier','BMB-12D','BattleMech','Heavy','Missile Boat',70,22,120,0.85,12.5,65,64.8),
+('Lancelot','LNC25-01','BattleMech','Heavy','Sniper',75,22,130,0.20,12.5,60,86.4),
+('Ostsol','OTL-4D','BattleMech','Heavy','Sniper',72,20,125,0.10,12.0,60,86.4),
+('Ostroc','OSR-2C','BattleMech','Heavy','Skirmisher',70,22,140,0.30,12.3,60,86.4),
+
+-- Assault Mechs
+('Thug','THG-11E','BattleMech','Assault','Brawler',80,24,155,0.10,13.0,80,64.8),
+('Atlas','AS7-D','BattleMech','Assault','Juggernaut',100,30,200,0.70,15.0,100,54.0),
+('Awesome','AWS-8Q','BattleMech','Assault','Sniper',95,25,190,0.60,14.5,80,54.0),
+('BattleMaster','BLR-1G','BattleMech','Assault','Brawler',92,28,185,0.65,14.2,85,54.0),
+('Stalker','STK-3H','BattleMech','Assault','Missile Boat',88,26,180,0.80,13.5,85,54.0),
+('Zeus','ZEU-6S','BattleMech','Assault','Brawler',85,24,175,0.60,13.0,80,54.0),
+('Victor','VTR-9B','BattleMech','Assault','Skirmisher',86,22,160,0.55,12.5,80,64.8),
+('Cyclops','CP-10-Z','BattleMech','Assault','Command',84,20,165,0.50,12.0,90,54.0),
+('Mauler','MAL-1R','BattleMech','Assault','Sniper',88,22,170,0.70,13.0,90,54.0),
+('Banshee','BNC-3E','BattleMech','Assault','Juggernaut',82,20,160,0.50,11.5,95,54.0),
+('Highlander','HGN-732','BattleMech','Assault','Juggernaut',95,28,185,0.60,14.0,90,54.0),
+('King Crab','KGC-0000','BattleMech','Assault','Juggernaut',105,30,210,0.70,15.5,100,43.2),
+('Charger','CGR-1A1','BattleMech','Assault','Scout',55,18,120,0.10,10.0,80,86.4),
+('Charger','CGR-1L','BattleMech','Assault','Brawler',75,22,150,0.30,12.0,80,64.8),
+('Goliath','GOL-1H','BattleMech','Assault','Missile Boat',85,25,170,0.75,13.5,80,43.2),
+('Longbow','LGB-7Q','BattleMech','Assault','Missile Boat',80,25,160,0.90,13.0,85,54.0),
+
+-- Light Vehicles
+('Scorpion Light Tank','SLT-STD','Vehicle','Light','Scout',35,12,80,0.50,6.8,25,64.8),
+('Pegasus Scout Hover','PSH-STD','Vehicle','Light','Striker',40,14,75,0.50,6.5,35,129.6),
+('Striker','Standard','Vehicle','Light','Striker',25,5,70,0.35,5.0,35,86.4),
+('Hunter LST','HNT-STD','Vehicle','Light','Missile Boat',28,8,80,0.40,5.5,35,86.4),
+('Harasser','HAR-STD','Vehicle','Light','Striker',30,10,65,0.45,5.5,15,162.0),
+('Skulker','SKU-STD','Vehicle','Light','Scout',20,6,50,0.30,4.5,20,129.6),
+
+-- Medium Vehicles
+('Goblin','GBL-STD','Vehicle','Medium','Brawler',35,10,90,0.45,6.5,45,64.8),
+('Vedette Medium Tank','VMT-STD','Vehicle','Medium','Brawler',48,15,115,0.55,7.8,50,86.0),
+('Hetzer','HTZ-STD','Vehicle','Medium','Brawler',40,12,95,0.40,7.0,40,64.8),
+('Maxim','MXM-STD','Vehicle','Medium','Striker',25,8,80,0.30,6.0,50,129.6),
+
+-- Heavy Vehicles
+('Von Luckner Heavy Tank','VNL-K100','Vehicle','Heavy','Juggernaut',70,25,160,0.70,11.0,75,54.0),
+('Patton','PTN-STD','Vehicle','Heavy','Brawler',40,12,140,0.55,9.0,65,64.8),
+('Rommel','RML-STD','Vehicle','Heavy','Juggernaut',45,15,150,0.60,10.0,65,64.80),
+('Brutus','BTS-STD','Vehicle','Heavy','Juggernaut',50,15,160,0.60,10.5,75,54.0),
+('Manticore','MHT-STD','Vehicle','Heavy','Brawler',60,20,150,0.65,10.0,60,54.0),
+('Bulldog Medium Tank','BMT-STD','Vehicle','Heavy','Brawler',50,15,120,0.60,8.0,60,64.80),
+('SRM Carrier','SRM-STD','Vehicle','Heavy','Missile Boat',45,15,60,0.80,8.0,60,54.0),
+('LRM Carrier','LRM-STD','Vehicle','Heavy','Missile Boat',35,12,55,0.85,7.5,60,54.0),
+
+-- Assault Vehicles
+('Schrek','SHK-STD','Vehicle','Assault','Sniper',55,20,170,0.65,11.5,80,54.0),
+('Partisan','PRT-STD','Vehicle','Assault','Sniper',33,9,110,0.45,7.0,45,54.0),
+('Ontos','ONT-STD','Vehicle','Assault','Juggernaut',30,7,75,0.40,5.5,95,97.2),
+('Demolisher','DML-STD','Vehicle','Assault','Juggernaut',45,10,155,0.55,10.0,80,54.0),
+('Behemoth','BHM-STD','Vehicle','Assault','Juggernaut',80,20,200,0.60,12.0,100,32.0),
+('Devastator','DVS-STD','Vehicle','Heavy','Juggernaut',65,20,155,0.65,11.0,80,54.0),
+('Marsden II','MRS-STD','Vehicle','Assault','Juggernaut',55,15,175,0.55,11.0,90,32.4),
+
+-- Support Vehicles
+('MASH Truck','MSH-STD','Vehicle','Light','MASH',0,0,15,0.0,0.5,20,86.4),
+('Flatbed Truck','FBD-STD','Vehicle','Light','Supply',0,0,10,0.0,0.3,10,86.4),
+('Repair Vehicle','RPR-STD','Vehicle','Heavy','Repair',0,0,80,0.0,0.3,60,86.4),
+('Transport Truck', 'TRK-5T', 'Vehicle', 'Light', 'Transport', 0, 0, 10, 0.00, 0.50, 5, 86.4),
+
+-- APCs
+('APC','Wheeled','APC','Light','Scout',10,8,60,0.40,4.0,10,97.2),
+('APC','Tracked','APC','Light','Scout',10,8,65,0.40,4.2,10,97.2),
+('APC','Hover','APC','Light','Scout',10,8,55,0.40,3.8,10,162.0);
+
+-- BattleMechs
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Pilot', TRUE, 'MechWarrior'
+FROM chassis WHERE type = 'BattleMech';
+
+-- Vehicles
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', TRUE, 'Tanker' FROM chassis WHERE type = 'Vehicle';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Gunner', TRUE, 'Tanker' FROM chassis WHERE type = 'Vehicle';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Commander', FALSE, 'Tanker' FROM chassis WHERE type = 'Vehicle';
+
+-- APCs: Driver and Gunner required - Infantry MOS
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', TRUE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Gunner', TRUE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+-- APCs: 5 Dismounts optional - Infantry MOS
+-- (Sergeant + 2 Corporals + 2 Privates ride as dismounts; 2 privates are Driver/Gunner)
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Dismount', FALSE, 'Infantry' FROM chassis WHERE type = 'APC';
+
+-- Support
+-- Supply Trucks
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', TRUE, 'Tech' FROM chassis WHERE battlefield_role = 'Supply';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Supply';
+
+-- MASH Trucks
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', TRUE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Medic' FROM chassis WHERE battlefield_role = 'MASH';
+
+-- Repair Trucks
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', TRUE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Crew', FALSE, 'Tech' FROM chassis WHERE battlefield_role = 'Repair';
+
+-- Transport Truck
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT chassis_id, 'Driver', 1, NULL FROM chassis WHERE variant = 'TRK-5T';
+-- 13 passenger/cargo slots with NULL mos (any)
+INSERT INTO chassis_crew_requirements (chassis_id, crew_role, is_required, required_mos)
+SELECT c.chassis_id, 'Crew', 0, NULL
+FROM chassis c
+CROSS JOIN (
+    SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5
+    UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 UNION SELECT 10
+    UNION SELECT 11 UNION SELECT 12 UNION SELECT 13
+) AS nums
+WHERE c.variant = 'TRK-5T';

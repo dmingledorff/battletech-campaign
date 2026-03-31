@@ -105,6 +105,7 @@ class TemplateGenerator
                 $allegiance,
                 'Active'
             );
+            $this->generator->initializeEquipmentCombatStats($eid);
 
             // Use TOE crew mapping, not chassis_crew_requirements
             $crews = $this->toeModel->getCrewForSlot($slot['slot_id']);

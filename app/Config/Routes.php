@@ -94,6 +94,12 @@ $routes->post('toe/(:num)/update', 'ToeBuilder::update/$1');
 $routes->post('toe/(:num)/delete', 'ToeBuilder::delete/$1');
 
 // ================================
+// Combat
+// ================================
+$routes->get('combat',          'Combat::index');
+$routes->get('combat/(:num)',   'Combat::show/$1');
+
+// ================================
 // TOE
 // ================================
 // Slot management (AJAX)

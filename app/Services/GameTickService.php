@@ -6,6 +6,7 @@ use CodeIgniter\Database\BaseConnection;
 use App\Models\GameStateModel;
 use App\Models\MissionModel;
 use App\Models\UnitModel;
+use App\Services\CombatService;
 
 class GameTickService
 {
@@ -29,12 +30,12 @@ class GameTickService
 
         // Every tick
         $this->processCombat();
+        $this->processMissions();
         $this->updateMissionCoords();
 
         // Once per game day only
         if ($this->dayRollover) {
-            $this->processMissions();
-            $this->processMorale();
+            //$this->processMorale();
             $this->processDispersedUnits();
             $this->updateDayCount();
         }
@@ -72,26 +73,27 @@ class GameTickService
 
     protected function processCombat(): void
     {
-        // TODO — CombatService will plug in here
-        // Processes one combat round for every mission in Combat status
+        $combatService = new CombatService($this->db);
+        $combatService->processAllCombat();
     }
 
     protected function updateMissionCoords(): void
     {
-        // Update current_coord_x/y for in-transit missions every tick
-        // for smoother map movement — no arrival logic here
         $missions = $this->db->table('missions')
             ->where('status', 'In Transit')
             ->get()->getResultArray();
 
         foreach ($missions as $mission) {
-            $elapsed     = (int)$mission['days_elapsed'];
-            $transitDays = (int)$mission['transit_days'];
-            if ($transitDays <= 0) continue;
+            $hoursElapsed = (int)$mission['hours_elapsed'];
+            $transitHours = (int)$mission['transit_hours'];
 
-            // Progress as fraction of total transit (days elapsed + hour fraction)
-            $hourFraction = $this->currentHour / 24;
-            $progress     = min(1.0, ($elapsed + $hourFraction) / $transitDays);
+            if ($transitHours === 0 && (int)$mission['transit_days'] > 0) {
+                $transitHours = (int)$mission['transit_days'] * 24;
+            }
+
+            if ($transitHours <= 0) continue;
+
+            $progress = min(1.0, $hoursElapsed / $transitHours);
 
             $origin = $this->db->table('locations')
                 ->where('location_id', $mission['origin_location_id'])
@@ -118,38 +120,60 @@ class GameTickService
 
     protected function processMorale(): void
     {
-        $personnel = $this->db->table('personnel')->get()->getResultArray();
+        // Only recover morale for personnel NOT in active combat
+        $personnel = $this->db->query("
+            SELECT p.personnel_id, p.morale
+            FROM personnel p
+            WHERE p.status = 'Active'
+            AND p.morale < 100
+            AND p.personnel_id NOT IN (
+                SELECT DISTINCT pe.personnel_id
+                FROM personnel_equipment pe
+                JOIN equipment e ON e.equipment_id = pe.equipment_id
+                JOIN units u ON u.unit_id = e.assigned_unit_id
+                WHERE u.status = 'Combat'
+                AND pe.date_released IS NULL
+            )
+        ")->getResultArray();
+
         foreach ($personnel as $p) {
-            $morale = $p['morale'] ?? 100;
-            if ($morale < 100) {
-                $morale = min(100, $morale + 2.0);
-                $this->db->table('personnel')
-                    ->where('personnel_id', $p['personnel_id'])
-                    ->update(['morale' => $morale]);
-            }
+            $newMorale = min(100, (float)$p['morale'] + 2.0);
+            $this->db->table('personnel')
+                ->where('personnel_id', $p['personnel_id'])
+                ->update(['morale' => $newMorale]);
         }
     }
 
     protected function processMissions(): void
     {
+        $hoursPerTick = (int)($this->gameStateModel->getProperty('hours_per_tick') ?? 3);
+
         $missions = $this->db->table('missions')
             ->where('status', 'In Transit')
             ->get()->getResultArray();
 
         foreach ($missions as $mission) {
-            $elapsed     = (int)$mission['days_elapsed'] + 1;
-            $transitDays = (int)$mission['transit_days'];
+            $hoursElapsed = (int)$mission['hours_elapsed'] + $hoursPerTick;
+            $transitHours = (int)$mission['transit_hours'];
+
+            // Fallback for missions without transit_hours
+            if ($transitHours === 0 && (int)$mission['transit_days'] > 0) {
+                $transitHours = (int)$mission['transit_days'] * 24;
+            }
 
             $dest = $this->db->table('locations')
                 ->where('location_id', $mission['destination_location_id'])
                 ->get()->getRowArray();
 
-            if ($elapsed >= $transitDays) {
+            if ($hoursElapsed >= $transitHours) {
                 $this->completeMission($mission, $dest);
             } else {
                 $this->db->table('missions')
                     ->where('mission_id', $mission['mission_id'])
-                    ->update(['days_elapsed' => $elapsed]);
+                    ->update([
+                        'hours_elapsed' => $hoursElapsed,
+                        'days_elapsed'  => (int)floor($hoursElapsed / 24),
+                    ]);
             }
         }
     }
@@ -195,6 +219,8 @@ class GameTickService
         // Transfer / Resupply
         // ================================
         if (in_array($missionType, ['Transfer', 'Resupply'])) {
+            $isReturningFromDefeat = str_contains($mission['notes'] ?? '', '[DEFEATED — RETURNING]');
+
             if ($isFriendlyNow) {
                 if ($isHQMove) {
                     $this->arriveHQ($unitIds, $destLocationId, $mission, $dest, $missionModel, $unitModel);
@@ -210,7 +236,9 @@ class GameTickService
                         $mission['mission_id'],
                         $this->gameDate,
                         'Arrived',
-                        "Mission arrived at {$dest['name']}. " . count($unitIds) . " units transferred."
+                        $isReturningFromDefeat
+                            ? "Surviving units returned to {$dest['name']} after failed assault."
+                            : "Mission arrived at {$dest['name']}. " . count($unitIds) . " units transferred."
                     );
                 }
             } elseif ($isUncontrolled) {
@@ -369,22 +397,8 @@ class GameTickService
                 }
             } elseif ($missionType === 'Assault') {
                 if ($enemyPresent) {
-                    $this->db->table('missions')
-                        ->where('mission_id', $mission['mission_id'])
-                        ->update([
-                            'status'          => 'Combat',
-                            'arrived_date'    => $this->gameDate,
-                            'current_coord_x' => $dest['coord_x'],
-                            'current_coord_y' => $dest['coord_y'],
-                            'days_elapsed'    => $mission['transit_days'],
-                        ]);
-                    $unitModel->setMissionStatus($unitIds, 'Combat', $mission['mission_id'], $destLocationId);
-                    $missionModel->logEvent(
-                        $mission['mission_id'],
-                        $this->gameDate,
-                        'Combat',
-                        "Assault force arrived at {$dest['name']}. Enemy present — combat initiated. [COMBAT TODO]"
-                    );
+                    $combatService = new CombatService($this->db);
+                    $combatService->initiateCombat($mission, $dest);
                     return;
                 } else {
                     $this->takeControl($destLocationId, $missionFactionId);
@@ -524,10 +538,12 @@ class GameTickService
             (float)$origin['coord_x'],
             (float)$origin['coord_y']
         );
-        $returnDays = $missionModel->calculateTransitDays(
+
+        $returnHours = $missionModel->calculateTransitHours(
             $returnDistance,
             (float)$mission['slowest_speed']
         );
+        $returnDays  = (int)ceil($returnHours / 24);
 
         $etaDate = new \DateTime($this->gameDate);
         $etaDate->modify("+{$returnDays} days");
@@ -538,7 +554,9 @@ class GameTickService
                 'status'                  => 'In Transit',
                 'origin_location_id'      => $mission['destination_location_id'],
                 'destination_location_id' => $originLocationId,
+                'transit_hours'           => $returnHours,
                 'transit_days'            => $returnDays,
+                'hours_elapsed'           => 0,
                 'days_elapsed'            => 0,
                 'eta_date'                => $etaDate->format('Y-m-d'),
                 'notes'                   => ($mission['notes'] ?? '') . ' [RETURNING TO BASE]',

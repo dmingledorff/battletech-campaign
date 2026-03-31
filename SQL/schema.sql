@@ -11,6 +11,8 @@ DROP VIEW IF EXISTS unit_hierarchy_chain;
 
 -- Drop dependent tables (reverse FK order)
 SET FOREIGN_KEY_CHECKS=0;
+DROP TABLE IF EXISTS battle_log;
+DROP TABLE IF EXISTS event_log;
 DROP TABLE IF EXISTS buildings;
 DROP TABLE IF EXISTS mission_units;
 DROP TABLE IF EXISTS mission_log;
@@ -191,7 +193,9 @@ CREATE TABLE missions (
     arrived_date DATE NULL,
     distance DECIMAL(8,4) NOT NULL DEFAULT 0,
     transit_days INT NOT NULL DEFAULT 0,
+    transit_hours INT NOT NULL DEFAULT 0,
     days_elapsed INT NOT NULL DEFAULT 0,
+    hours_elapsed INT NOT NULL DEFAULT 0,
     slowest_speed DECIMAL(8,2) NOT NULL DEFAULT 0,
     current_coord_x DECIMAL(8,4) NULL,
     current_coord_y DECIMAL(8,4) NULL,
@@ -424,19 +428,12 @@ CREATE TABLE battle_log (
     combat_phase ENUM('Skirmish','Melee','Pursuit') NOT NULL,
     combat_round INT NOT NULL,
     log_type     ENUM(
-                     'RoundSummary',
-                     'Attack',
-                     'Damage',
-                     'Crippled',
-                     'Destroyed',
-                     'Ejection',
-                     'Retreat',
-                     'PhaseChange',
-                     'BattleStart',
-                     'BattleEnd'
+                     'RoundSummary','Attack','Damage','Crippled',
+                     'Destroyed','Ejection','Retreat',
+                     'PhaseChange','BattleStart','BattleEnd'
                  ) NOT NULL,
-    attacker_id  INT NULL COMMENT 'equipment_id of attacker',
-    target_id    INT NULL COMMENT 'equipment_id or unit_id for infantry',
+    attacker_id  INT NULL,
+    target_id    INT NULL,
     damage_dealt DECIMAL(5,2) NULL,
     description  TEXT NOT NULL,
     FOREIGN KEY (mission_id)  REFERENCES missions(mission_id) ON DELETE CASCADE,

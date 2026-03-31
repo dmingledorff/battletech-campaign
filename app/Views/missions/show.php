@@ -19,6 +19,16 @@ $progress = $mission['transit_days'] > 0
     </div>
     <a href="/missions" class="btn btn-outline-secondary btn-sm">← Mission Control</a>
 </div>
+<?php if (
+    $mission['status'] === 'Combat' ||
+    ($mission['mission_type'] === 'Assault' && ($mission['combat_round'] ?? 0) > 0)
+): ?>
+    <a href="/combat/<?= $mission['mission_id'] ?>"
+        class="btn btn-sm btn-outline-danger ms-2">
+        <i class="bi bi-crosshair me-1"></i>
+        <?= $mission['status'] === 'Combat' ? 'View Active Battle' : 'Battle Report' ?>
+    </a>
+<?php endif; ?>
 
 <div class="row g-3 mb-3">
 
@@ -70,14 +80,31 @@ $progress = $mission['transit_days'] > 0
                         <?= number_format((float)$mission['slowest_speed'], 1) ?> kph
                         <span class="text-muted small">(<?= number_format((float)$mission['slowest_speed'] * $speedEfficiency, 1) ?> kph effective)</span>
                     </p>
-                    <p class="mb-1"><strong>Transit:</strong>
-                        <?= esc($mission['days_elapsed']) ?>/<?= esc($mission['transit_days']) ?> days
-                    </p>
+                    <!-- Replace "X/Y days" with hours -->
+                    <?php
+                    $hoursElapsed  = $mission['hours_elapsed'] ?? ($mission['days_elapsed'] * 24);
+                    $transitHours  = $mission['transit_hours'] ?? ($mission['transit_days'] * 24);
+                    $hoursRemaining = max(0, $transitHours - $hoursElapsed);
+                    $daysRemaining  = floor($hoursRemaining / 24);
+                    $hrsRemaining   = $hoursRemaining % 24;
+                    ?>
+
+                    <strong>Transit:</strong>
+                    <?= $hoursElapsed ?>/<?= $transitHours ?> hours
+                    <span class="text-muted small">
+                        (<?= $daysRemaining ?>d <?= $hrsRemaining ?>h remaining)
+                    </span>
                     <?php if ($mission['status'] === 'In Transit'): ?>
-                        <div class="progress mt-2" style="height:8px;">
-                            <div class="progress-bar bg-info" style="width:<?= $progress ?>%"></div>
+                        <?php
+                        $hoursElapsed = (int)($mission['hours_elapsed'] ?? ($mission['days_elapsed'] * 24));
+                        $transitHours = (int)($mission['transit_hours'] ?? ($mission['transit_days'] * 24));
+                        $progress     = $transitHours > 0 ? min(100, round($hoursElapsed / $transitHours * 100)) : 0;
+                        ?>
+
+                        <div class="progress mb-1" style="height: 8px;">
+                            <div class="progress-bar bg-info" style="width: <?= $progress ?>%"></div>
                         </div>
-                        <p class="text-muted small mt-1 mb-0"><?= $progress ?>% complete</p>
+                        <div class="text-muted small"><?= $progress ?>% complete</div>
                     <?php endif; ?>
                 <?php endif; ?>
 

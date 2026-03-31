@@ -8,6 +8,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <link href="/css/app.css" rel="stylesheet">
+  <link href="/css/icons.css" rel="stylesheet">
   <!-- Standard favicon -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <!-- PNG favicons for better quality -->
@@ -48,6 +49,12 @@
             <a class="nav-link <?= (service('uri')->getSegment(1) === 'missions' ? 'active' : '') ?>"
               href="<?= base_url('/missions') ?>">
               <i class="bi bi-crosshair me-1"></i>Mission Control
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link <?= (service('uri')->getSegment(1) === 'combat' ? 'active' : '') ?>"
+              href="<?= base_url('/combat') ?>">
+              <i class="bi bi-crosshair me-1"></i>Combat
             </a>
           </li>
           <li class="nav-item">
