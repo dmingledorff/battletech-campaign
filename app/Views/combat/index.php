@@ -4,7 +4,7 @@
 
 <?php if (!empty($active)): ?>
 <div class="mb-4">
-    <h6 class="text-danger text-uppercase small fw-bold letter-spacing mb-2">
+    <h6 class="text-danger text-uppercase small fw-bold mb-2">
         <i class="bi bi-fire me-1"></i>Active Engagements
     </h6>
     <div class="row g-3">
@@ -12,7 +12,10 @@
         <div class="col-md-6">
             <div class="card shadow border-danger border-opacity-50">
                 <div class="card-header d-flex justify-content-between align-items-center bg-danger bg-opacity-10">
-                    <span class="fw-semibold"><?= esc($m['name']) ?></span>
+                    <span class="d-flex align-items-center gap-2">
+                        <img src="/<?= esc($m['faction_emblem']) ?>" style="height:18px;">
+                        <span class="fw-semibold"><?= esc($m['name']) ?></span>
+                    </span>
                     <span class="badge bg-danger">
                         <i class="bi bi-fire me-1"></i><?= esc($m['combat_phase'] ?? 'Combat') ?>
                         — Round <?= esc($m['combat_round'] ?? 0) ?>
@@ -37,7 +40,7 @@
                         </div>
                     </div>
                     <?php if (!empty($m['summary'])): ?>
-                    <div class="d-flex gap-3 mb-2" style="font-size:0.75rem;">
+                    <div class="d-flex gap-3" style="font-size:0.75rem;">
                         <span class="text-muted">
                             <i class="bi bi-crosshair me-1"></i><?= $m['summary']['total_attacks'] ?? 0 ?> attacks
                         </span>
@@ -51,9 +54,7 @@
                     <?php endif; ?>
                 </div>
                 <div class="card-footer border-secondary d-flex justify-content-between align-items-center">
-                    <span class="text-muted small">
-                        Started: <?= esc($m['arrived_date'] ?? '—') ?>
-                    </span>
+                    <span class="text-muted small">Started: <?= esc($m['launched_date'] ?? '—') ?></span>
                     <a href="/combat/<?= $m['mission_id'] ?>" class="btn btn-sm btn-outline-danger">
                         View Battle →
                     </a>
@@ -65,13 +66,11 @@
 </div>
 <?php endif; ?>
 
+<?php if (!empty($concluded)): ?>
 <div>
     <h6 class="text-muted text-uppercase small fw-bold mb-2">
-        <i class="bi bi-archive me-1"></i>Completed Engagements
+        <i class="bi bi-archive me-1"></i>Recent Battles
     </h6>
-    <?php if (empty($completed)): ?>
-        <p class="text-muted">No completed combat engagements.</p>
-    <?php else: ?>
     <div class="card shadow">
         <div class="card-body p-0">
             <table class="table table-dark table-sm table-hover mb-0">
@@ -88,15 +87,21 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($completed as $m):
-                        $won = $m['status'] === 'Arrived';
-                        $summary = $m['summary'] ?? [];
+                    <?php foreach ($concluded as $m):
+                        $attackerWon       = ($m['status'] === 'Arrived');
+                        $currentIsAttacker = ((int)$m['faction_id'] === (int)$currentFaction['faction_id']);
+                        $weWon             = ($attackerWon && $currentIsAttacker)
+                                          || (!$attackerWon && !$currentIsAttacker);
+                        $summary           = $m['summary'] ?? [];
                     ?>
                     <tr>
                         <td>
-                            <a class="link-info" href="/combat/<?= $m['mission_id'] ?>">
-                                <?= esc($m['name']) ?>
-                            </a>
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="<?= esc($m['faction_emblem']) ?>" style="height:16px; opacity:0.7;">
+                                <a class="link-info" href="/combat/<?= $m['mission_id'] ?>">
+                                    <?= esc($m['name']) ?>
+                                </a>
+                            </div>
                         </td>
                         <td>
                             <?= esc($m['destination_name']) ?>
@@ -105,15 +110,13 @@
                         <td class="text-muted small"><?= esc($m['terrain'] ?? '—') ?></td>
                         <td class="text-muted"><?= esc($summary['total_rounds'] ?? 0) ?></td>
                         <td>
-                            <?php if (($summary['units_destroyed'] ?? 0) > 0): ?>
-                                <span class="text-danger"><?= $summary['units_destroyed'] ?></span>
-                            <?php else: ?>
-                                <span class="text-muted">0</span>
-                            <?php endif; ?>
+                            <span class="<?= ($summary['units_destroyed'] ?? 0) > 0 ? 'text-danger' : 'text-muted' ?>">
+                                <?= $summary['units_destroyed'] ?? 0 ?>
+                            </span>
                         </td>
                         <td>
-                            <span class="badge <?= $won ? 'bg-success' : 'bg-danger' ?>">
-                                <?= $won ? 'Victory' : 'Defeated' ?>
+                            <span class="badge <?= $weWon ? 'bg-success' : 'bg-danger' ?>">
+                                <?= $weWon ? 'Victory' : 'Defeated' ?>
                             </span>
                         </td>
                         <td class="text-muted small"><?= esc($m['arrived_date'] ?? '—') ?></td>
@@ -128,5 +131,9 @@
             </table>
         </div>
     </div>
-    <?php endif; ?>
 </div>
+<?php endif; ?>
+
+<?php if (empty($active) && empty($concluded)): ?>
+<p class="text-muted">No combat engagements on record.</p>
+<?php endif; ?>

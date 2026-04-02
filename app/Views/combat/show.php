@@ -1,7 +1,11 @@
 <?php
+$isResolved = ($mission['status'] !== 'Combat');
 $isActive  = $mission['status'] === 'Combat';
 $won       = $mission['status'] === 'Arrived';
 $summary   = $summary ?? [];
+$attackerWon = ($mission['status'] === 'Arrived');
+$winningFaction = $attackerWon ? $attackerFaction : $defenderFaction;
+$losingFaction  = $attackerWon ? $defenderFaction : $attackerFaction;
 ?>
 
 <!-- Breadcrumb -->
@@ -12,42 +16,83 @@ $summary   = $summary ?? [];
     </ol>
 </nav>
 
-<!-- Header -->
-<div class="d-flex justify-content-between align-items-start mb-3">
-    <div>
-        <h4 class="mb-1">
-            <i class="bi bi-crosshair me-2 <?= $isActive ? 'text-danger' : ($won ? 'text-success' : 'text-secondary') ?>"></i>
-            <?= esc($mission['name']) ?>
-        </h4>
-        <div class="d-flex gap-2 align-items-center">
-            <?php if ($isActive): ?>
-                <span class="badge bg-danger"><i class="bi bi-fire me-1"></i>Active Combat</span>
-                <span class="badge bg-secondary"><?= esc($mission['combat_phase']) ?> — Round <?= esc($mission['combat_round']) ?></span>
-            <?php elseif ($won): ?>
-                <span class="badge bg-success">Victory</span>
-            <?php else: ?>
-                <span class="badge bg-danger">Defeated</span>
-            <?php endif; ?>
-            <span class="text-muted small">
-                <a class="link-secondary" href="/missions/<?= $mission['mission_id'] ?>">
-                    View Mission
+<!-- Resolved Banner -->
+<?php if ($isResolved): ?>
+    <div class="alert alert-secondary border border-secondary mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <img src="<?= esc($winningFaction['emblem_path']) ?>"
+                    alt="<?= esc($winningFaction['name']) ?>"
+                    style="height:40px;">
+                <div>
+                    <h5 class="mb-1">
+                        <?php if ($attackerWon): ?>
+                            <span style="color:<?= esc($winningFaction['color']) ?>">
+                                <?= esc($winningFaction['name']) ?>
+                            </span>
+                            victorious — <?= esc($mission['destination_name']) ?> captured
+                        <?php else: ?>
+                            <span style="color:<?= esc($winningFaction['color']) ?>">
+                                <?= esc($winningFaction['name']) ?>
+                            </span>
+                            holds <?= esc($mission['destination_name']) ?>
+                        <?php endif; ?>
+                    </h5>
+                    <div class="text-muted small">
+                        <?= esc($mission['combat_phase']) ?> ·
+                        <?= $mission['combat_round'] ?> Rounds ·
+                        Concluded <?= esc($mission['arrived_date'] ?? $gameDate) ?>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <img src="<?= esc($losingFaction['emblem_path']) ?>"
+                    alt="<?= esc($losingFaction['name']) ?>"
+                    style="height:30px; opacity:0.4;">
+                <a href="/missions/<?= $mission['mission_id'] ?>" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Mission Record
                 </a>
-            </span>
+            </div>
         </div>
     </div>
-    <?php if ($isActive): ?>
-        <div class="d-flex gap-2">
-            <form action="/missions/<?= $mission['mission_id'] ?>/withdraw" method="post">
-                <?= csrf_field() ?>
-                <button type="submit" class="btn btn-outline-warning btn-sm"
-                    onclick="return confirm('Order withdrawal? Units will attempt to break contact.')">
-                    <i class="bi bi-arrow-left me-1"></i>Order Withdrawal
-                </button>
-            </form>
-        </div>
-    <?php endif; ?>
-</div>
 
+<?php else: ?>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h4 class="mb-1">
+                <i class="bi bi-crosshair me-2 <?= $isActive ? 'text-danger' : ($won ? 'text-success' : 'text-secondary') ?>"></i>
+                <?= esc($mission['name']) ?>
+            </h4>
+            <div class="d-flex gap-2 align-items-center">
+                <?php if ($isActive): ?>
+                    <span class="badge bg-danger"><i class="bi bi-fire me-1"></i>Active Combat</span>
+                    <span class="badge bg-secondary"><?= esc($mission['combat_phase']) ?> — Round <?= esc($mission['combat_round']) ?></span>
+                <?php elseif ($won): ?>
+                    <span class="badge bg-success">Victory</span>
+                <?php else: ?>
+                    <span class="badge bg-danger">Defeated</span>
+                <?php endif; ?>
+                <span class="text-muted small">
+                    <a class="link-secondary" href="/missions/<?= $mission['mission_id'] ?>">
+                        View Mission
+                    </a>
+                </span>
+            </div>
+        </div>
+        <?php if ($isActive): ?>
+            <div class="d-flex gap-2">
+                <form action="/missions/<?= $mission['mission_id'] ?>/withdraw" method="post">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn-outline-warning btn-sm"
+                        onclick="return confirm('Order withdrawal? Units will attempt to break contact.')">
+                        <i class="bi bi-arrow-left me-1"></i>Order Withdrawal
+                    </button>
+                </form>
+            </div>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
 <!-- Summary stats bar -->
 <?php if (!empty($summary)): ?>
     <div class="row g-2 mb-3">
@@ -78,20 +123,35 @@ $summary   = $summary ?? [];
     <div class="col-md-3">
 
         <div class="card shadow mb-3">
-            <div class="card-header d-flex justify-content-between">
-                <span><i class="bi bi-arrow-right-circle me-1 text-info"></i>Attackers</span>
-                <span class="text-muted small"><?= count($attackers) ?> units</span>
+            <div class="card-header">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <img src="<?= esc($attackerFaction['emblem_path']) ?>"
+                        alt="<?= esc($attackerFaction['name']) ?>"
+                        style="height:18px;">
+                    <span class="fw-semibold" style="color:<?= esc($attackerFaction['color']) ?>">
+                        <?= esc($attackerFaction['name']) ?>
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted small">
+                        <i class="bi bi-arrow-right-circle me-1 text-info"></i>Attackers
+                    </span>
+                    <span class="text-muted small"><?= count($attackers) ?> units</span>
+                </div>
             </div>
             <?php
             $activeAttackers = array_filter(
                 $attackers,
-                fn($c) => ($c['combat_status'] ?? 'Operational') === 'Operational' &&
-                    ($c['pilot_status'] ?? 'Active') === 'Active'
+                fn($c) =>
+                in_array($c['pool_status'] ?? 'Active', ['Active', 'Crippled'])
+                    && ($c['pilot_status'] ?? 'Active') === 'Active'
             );
+
             $oooAttackers = array_filter(
                 $attackers,
-                fn($c) => ($c['combat_status'] ?? 'Operational') !== 'Operational' ||
-                    ($c['pilot_status'] ?? 'Active') !== 'Active'
+                fn($c) =>
+                in_array($c['pool_status'] ?? 'Active', ['Retreated', 'Routed', 'Destroyed'])
+                    || ($c['pilot_status'] ?? 'Active') !== 'Active'
             );
             ?>
             <div class="card-body p-0">
@@ -154,6 +214,26 @@ $summary   = $summary ?? [];
                         </span>
                     </p>
                 <?php endif; ?>
+                <!-- Battle Balance -->
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between mb-1" style="font-size:0.7rem;">
+                        <span style="color:<?= esc($attackerFaction['color']) ?>">
+                            <?= esc($attackerFaction['name']) ?>
+                            <span class="text-muted ms-1"><?= $balance['attacker_pct'] ?>%</span>
+                        </span>
+                        <span style="color:<?= esc($defenderFaction['color']) ?>">
+                            <span class="text-muted me-1"><?= $balance['defender_pct'] ?>%</span>
+                            <?= esc($defenderFaction['name']) ?>
+                        </span>
+                    </div>
+                    <div class="progress" style="height:8px; background:<?= esc($defenderFaction['color']) ?>;">
+                        <div class="progress-bar"
+                            style="width:<?= $balance['attacker_pct'] ?>%;
+                                background-color:<?= esc($attackerFaction['color']) ?>;
+                                transition\: width \0\.5s ease\;\">
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="card shadow">
@@ -218,20 +298,36 @@ $summary   = $summary ?? [];
 
         <!-- Right: Defenders -->
         <div class="card shadow mb-3">
-            <div class="card-header d-flex justify-content-between">
-                <span><i class="bi bi-shield-shaded me-1 text-warning"></i>Defenders</span>
-                <span class="text-muted small"><?= count($defenders) ?> units</span>
+
+            <div class="card-header">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <img src="<?= esc($defenderFaction['emblem_path']) ?>"
+                        alt="<?= esc($defenderFaction['name']) ?>"
+                        style="height:18px;">
+                    <span class="fw-semibold" style="color:<?= esc($defenderFaction['color']) ?>">
+                        <?= esc($defenderFaction['name']) ?>
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted small">
+                        <i class="bi bi-shield-shaded me-1 text-warning"></i>Defenders
+                    </span>
+                    <span class="text-muted small"><?= count($defenders) ?> units</span>
+                </div>
             </div>
             <?php
             $activeDefenders = array_filter(
                 $defenders,
-                fn($c) => ($c['combat_status'] ?? 'Operational') === 'Operational' &&
-                    ($c['pilot_status'] ?? 'Active') === 'Active'
+                fn($c) =>
+                in_array($c['pool_status'] ?? 'Active', ['Active', 'Crippled'])
+                    && ($c['pilot_status'] ?? 'Active') === 'Active'
             );
+
             $oooDefenders = array_filter(
                 $defenders,
-                fn($c) => ($c['combat_status'] ?? 'Operational') !== 'Operational' ||
-                    ($c['pilot_status'] ?? 'Active') !== 'Active'
+                fn($c) =>
+                in_array($c['pool_status'] ?? 'Active', ['Retreated', 'Routed', 'Destroyed'])
+                    || ($c['pilot_status'] ?? 'Active') !== 'Active'
             );
             ?>
             <div class="card-body p-0">

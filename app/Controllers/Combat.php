@@ -4,6 +4,8 @@ namespace App\Controllers;
 
 use App\Models\BattleLogModel;
 use App\Models\CombatModel;
+use App\Models\FactionModel;
+use App\Models\LocationModel;
 
 class Combat extends BaseController
 {
@@ -13,14 +15,14 @@ class Combat extends BaseController
         $combatModel = new CombatModel();
         $battleLog   = new BattleLogModel();
 
-        $active    = $combatModel->getActiveCombat($factionId);
-        $completed = $combatModel->getCompletedCombat($factionId);
+        $active    = $combatModel->getActiveCombatMissions($factionId);
+        $concluded = $combatModel->getConcludedCombatMissions($factionId);
 
         foreach ($active as &$m) {
             $m['unit_count'] = $combatModel->getMissionUnitCount($m['mission_id']);
             $m['summary']    = $battleLog->getSummary($m['mission_id']);
         }
-        foreach ($completed as &$m) {
+        foreach ($concluded as &$m) {
             $m['unit_count'] = $combatModel->getMissionUnitCount($m['mission_id']);
             $m['summary']    = $battleLog->getSummary($m['mission_id']);
         }
@@ -28,7 +30,7 @@ class Combat extends BaseController
 
         return $this->render('combat/index', [
             'active'    => $active,
-            'completed' => $completed,
+            'concluded' => $concluded,
         ]);
     }
 
@@ -36,6 +38,7 @@ class Combat extends BaseController
     {
         $combatModel = new CombatModel();
         $battleLog   = new BattleLogModel();
+        $locationModel = new LocationModel();
 
         $mission = $combatModel->getCombatMission($missionId);
 
@@ -50,8 +53,11 @@ class Combat extends BaseController
         $attackers = $combatModel->getAttackerCombatants($missionId);
         $defenders = $combatModel->getDefenderCombatants($missionId);
 
+        $attackerFaction = $combatModel->getAttackerFaction($missionId);
+        $defenderFaction = $combatModel->getDefenderFaction($missionId);
+
         $summary = $battleLog->getSummary($missionId);
-        $log = $battleLog->getForMission($missionId); // ASC order
+        $log = $battleLog->getForMission($missionId);
 
         $logByRound   = [];
         $groupFirstId = [];
@@ -71,6 +77,10 @@ class Combat extends BaseController
         }
         $logByRound = $sorted;
 
+        $location = $locationModel->find('location_id', $mission['destination_location_id']);
+
+        $balance = $combatModel->getBattleBalance($missionId, $location);
+
         return $this->render('combat/show', [
             'mission'          => $mission,
             'hasFortification' => $hasFortification,
@@ -79,6 +89,9 @@ class Combat extends BaseController
             'log'              => $log,
             'logByRound'       => $logByRound,
             'summary'          => $summary,
+            'attackerFaction'  => $attackerFaction,
+            'defenderFaction'  => $defenderFaction,
+            'balance'          => $balance
         ]);
     }
 }

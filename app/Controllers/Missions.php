@@ -18,11 +18,13 @@ class Missions extends BaseController
 
         $planning  = $missionModel->getMissionsByStatus($factionId, 'Planning');
         $inTransit = $missionModel->getMissionsByStatus($factionId, 'In Transit');
+        $combat    = $missionModel->getMissionsByStatus($factionId, 'Combat');
         $arrived   = $missionModel->getMissionsByStatus($factionId, 'Arrived');
 
         return $this->render('missions/index', [
             'planning'  => $planning,
             'inTransit' => $inTransit,
+            'combat'    => $combat, 
             'arrived'   => $arrived,
         ]);
     }

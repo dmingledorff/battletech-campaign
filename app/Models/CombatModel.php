@@ -9,51 +9,58 @@ class CombatModel extends Model
     protected $table      = 'missions';
     protected $primaryKey = 'mission_id';
 
-    public function getActiveCombat(int $factionId): array
+    public function getActiveCombatMissions(int $factionId): array
     {
-        return $this->db->table('missions m')
-            ->select('m.*,
-            ol.name AS origin_name,
-            dl.name AS destination_name,
-            dl.terrain,
-            op.name AS origin_planet,
-            dp.name AS destination_planet,
-            f.name AS enemy_faction_name,
-            f.color AS enemy_faction_color')
-            ->join('locations ol', 'ol.location_id = m.origin_location_id')
-            ->join('locations dl', 'dl.location_id = m.destination_location_id')
-            ->join('planets op',   'op.planet_id = ol.planet_id')
-            ->join('planets dp',   'dp.planet_id = dl.planet_id')
-            ->join('factions f',   'f.faction_id = dl.controlled_by', 'left')
-            ->where('m.status', 'Combat')
-            ->groupStart()
-            ->where('m.faction_id', $factionId)           // attacker
-            ->orWhere('dl.controlled_by', $factionId)     // defender
-            ->groupEnd()
-            ->orderBy('m.arrived_date', 'DESC')
-            ->get()->getResultArray();
+        return $this->db->query("
+            SELECT DISTINCT m.*,
+                l.name AS destination_name, l.terrain,
+                pl.name AS destination_planet,
+                f.name AS faction_name, f.color AS faction_color,
+                f.emblem_path AS faction_emblem
+            FROM missions m
+            JOIN locations l ON l.location_id = m.destination_location_id
+            JOIN planets pl ON pl.planet_id = l.planet_id
+            JOIN factions f ON f.faction_id = m.faction_id
+            WHERE m.status = 'Combat'
+            AND (
+                m.faction_id = {$factionId}
+                OR m.mission_id IN (
+                    SELECT DISTINCT cp.mission_id
+                    FROM combat_pool cp
+                    JOIN units u ON u.unit_id = cp.unit_id
+                    WHERE u.faction_id = {$factionId}
+                )
+            )
+            ORDER BY m.launched_date DESC
+        ")->getResultArray();
     }
 
-    public function getCompletedCombat(int $factionId, int $limit = 20): array
+    public function getConcludedCombatMissions(int $factionId): array
     {
-        return $this->db->table('missions m')
-            ->select('m.*,
-                ol.name AS origin_name,
-                dl.name AS destination_name,
-                dl.terrain,
-                op.name AS origin_planet,
-                dp.name AS destination_planet')
-            ->join('locations ol', 'ol.location_id = m.origin_location_id')
-            ->join('locations dl', 'dl.location_id = m.destination_location_id')
-            ->join('planets op',   'op.planet_id = ol.planet_id')
-            ->join('planets dp',   'dp.planet_id = dl.planet_id')
-            ->where('m.faction_id', $factionId)
-            ->whereIn('m.status', ['Arrived', 'Aborted'])
-            ->where('m.mission_type', 'Assault')
-            ->where('m.combat_round >', 0)
-            ->orderBy('m.arrived_date', 'DESC')
-            ->limit($limit)
-            ->get()->getResultArray();
+        return $this->db->query("
+            SELECT DISTINCT m.*,
+                l.name AS destination_name, l.terrain,
+                pl.name AS destination_planet,
+                f.name AS faction_name, f.color AS faction_color,
+                f.emblem_path AS faction_emblem
+            FROM missions m
+            JOIN locations l ON l.location_id = m.destination_location_id
+            JOIN planets pl ON pl.planet_id = l.planet_id
+            JOIN factions f ON f.faction_id = m.faction_id
+            WHERE m.status IN ('Arrived', 'Aborted')
+            AND m.mission_type = 'Assault'
+            AND (
+                m.faction_id = {$factionId}
+                OR m.mission_id IN (
+                    SELECT DISTINCT cp.mission_id
+                    FROM combat_pool cp
+                    JOIN units u ON u.unit_id = cp.unit_id
+                    WHERE u.faction_id = {$factionId}
+                )
+            )
+            ORDER BY m.arrived_date DESC
+            LIMIT 20
+        ")->getResultArray();
     }
 
     public function getCombatMission(int $missionId): ?array
@@ -96,127 +103,170 @@ class CombatModel extends Model
 
     public function getAttackerCombatants(int $missionId): array
     {
-        // Get all unit IDs in the mission, then resolve to leaves
-        $missionUnitIds = array_column(
-            $this->db->table('mission_units')
-                ->select('unit_id')
-                ->where('mission_id', $missionId)
-                ->get()->getResultArray(),
-            'unit_id'
-        );
-
-        $leafIds = [];
-        foreach ($missionUnitIds as $uid) {
-            $this->resolveLeafIds((int)$uid, $leafIds);
-        }
-
-        if (empty($leafIds)) return [];
-        $idList = implode(',', $leafIds);
-
         return $this->db->query("
-            SELECT u.unit_id, u.name AS unit_name, u.unit_type, u.role,
-                e.equipment_id, e.current_armor, e.current_structure,
-                e.max_armor, e.max_structure, e.combat_status,
-                e.equipment_status, e.salvage_status,
-                c.name AS chassis_name, c.variant, c.as_type, c.as_size,
-                c.as_mv, c.as_tmm, c.as_dmg_s, c.as_dmg_m, c.as_dmg_l,
-                c.as_specials,
-                p.first_name, p.last_name, p.experience, p.morale,
-                p.status AS pilot_status,
-                r.abbreviation AS rank_abbr
-            FROM units u
-            LEFT JOIN equipment e
-                ON e.assigned_unit_id = u.unit_id
-                AND e.equipment_status != 'Destroyed'
-            LEFT JOIN chassis c ON c.chassis_id = e.chassis_id
-            LEFT JOIN personnel_equipment pe
-                ON pe.equipment_id = e.equipment_id
-                AND pe.date_released IS NULL
-            LEFT JOIN personnel p ON p.personnel_id = pe.personnel_id
-            LEFT JOIN ranks r ON r.id = p.rank_id
-            WHERE u.unit_id IN ({$idList})
-            ORDER BY u.name, c.name
-        ")->getResultArray();
+        SELECT u.unit_id, u.name AS unit_name, u.unit_type, u.role,
+               e.equipment_id, e.equipment_status, e.salvage_status,
+               e.combat_status,
+               cp.current_armor, cp.current_structure,
+               cp.max_armor, cp.max_structure,
+               c.name AS chassis_name, c.variant, c.as_type, c.as_size,
+               c.as_mv, c.as_tmm, c.as_dmg_s, c.as_dmg_m, c.as_dmg_l,
+               c.as_specials,
+               cp.pilot_first_name   AS first_name,
+               cp.pilot_last_name    AS last_name,
+               cp.pilot_rank_abbr    AS rank_abbr,
+               cp.pilot_experience   AS experience,
+               cp.pilot_morale       AS morale,
+               cp.pilot_final_status AS pilot_status,
+               cp.status             AS pool_status
+        FROM combat_pool cp
+        JOIN units u ON u.unit_id = cp.unit_id
+        JOIN equipment e ON e.equipment_id = cp.equipment_id
+        JOIN chassis c ON c.chassis_id = e.chassis_id
+        WHERE cp.mission_id = {$missionId}
+        AND cp.side = 'attacker'
+        AND cp.participant_type = 'equipment'
+        ORDER BY u.name, c.name
+    ")->getResultArray();
     }
 
     public function getDefenderCombatants(int $missionId): array
     {
-        $mission = $this->db->table('missions')
-            ->select('destination_location_id, faction_id')
-            ->where('mission_id', $missionId)
-            ->get()->getRowArray();
-
-        if (!$mission) return [];
-
-        $locationId       = (int)$mission['destination_location_id'];
-        $missionFactionId = (int)$mission['faction_id'];
-
-        // Get all defender units at location
-        $topUnits = $this->db->table('units')
-            ->select('unit_id')
-            ->where('location_id', $locationId)
-            ->where('faction_id !=', $missionFactionId)
-            ->whereIn('status', ['Garrisoned', 'Combat'])
-            ->get()->getResultArray();
-
-        if (empty($topUnits)) return [];
-
-        // Resolve to leaf units
-        $leafIds = [];
-        foreach ($topUnits as $unit) {
-            $this->resolveLeafIds((int)$unit['unit_id'], $leafIds);
-        }
-
-        // Deduplicate
-        $leafIds = array_unique($leafIds);
-
-        if (empty($leafIds)) return [];
-        $idList = implode(',', $leafIds);
-
         return $this->db->query("
-            SELECT u.unit_id, u.name AS unit_name, u.unit_type, u.role,
-                u.faction_id,
-                f.name AS faction_name, f.color AS faction_color,
-                e.equipment_id, e.current_armor, e.current_structure,
-                e.max_armor, e.max_structure, e.combat_status,
-                e.equipment_status, e.salvage_status,
-                c.name AS chassis_name, c.variant, c.as_type, c.as_size,
-                c.as_mv, c.as_tmm, c.as_dmg_s, c.as_dmg_m, c.as_dmg_l,
-                c.as_specials,
-                p.first_name, p.last_name, p.experience, p.morale,
-                p.status AS pilot_status,
-                r.abbreviation AS rank_abbr, r.full_name AS rank_full
-            FROM units u
-            JOIN factions f ON f.faction_id = u.faction_id
-            LEFT JOIN equipment e
-                ON e.assigned_unit_id = u.unit_id
-                AND e.equipment_status != 'Destroyed'
-            LEFT JOIN chassis c ON c.chassis_id = e.chassis_id
-            LEFT JOIN personnel_equipment pe
-                ON pe.equipment_id = e.equipment_id
-                AND pe.date_released IS NULL
-            LEFT JOIN personnel p ON p.personnel_id = pe.personnel_id
-            LEFT JOIN ranks r ON r.id = p.rank_id
-            WHERE u.unit_id IN ({$idList})
-            ORDER BY u.faction_id, u.name, c.name
-        ")->getResultArray();
+        SELECT u.unit_id, u.name AS unit_name, u.unit_type, u.role,
+               e.equipment_id, e.equipment_status, e.salvage_status,
+               e.combat_status,
+               cp.current_armor, cp.current_structure,
+               cp.max_armor, cp.max_structure,
+               c.name AS chassis_name, c.variant, c.as_type, c.as_size,
+               c.as_mv, c.as_tmm, c.as_dmg_s, c.as_dmg_m, c.as_dmg_l,
+               c.as_specials,
+               cp.pilot_first_name   AS first_name,
+               cp.pilot_last_name    AS last_name,
+               cp.pilot_rank_abbr    AS rank_abbr,
+               cp.pilot_experience   AS experience,
+               cp.pilot_morale       AS morale,
+               cp.pilot_final_status AS pilot_status,
+               cp.status             AS pool_status
+        FROM combat_pool cp
+        JOIN units u ON u.unit_id = cp.unit_id
+        JOIN equipment e ON e.equipment_id = cp.equipment_id
+        JOIN chassis c ON c.chassis_id = e.chassis_id
+        WHERE cp.mission_id = {$missionId}
+        AND cp.side = 'defender'
+        AND cp.participant_type = 'equipment'
+        ORDER BY u.name, c.name
+    ")->getResultArray();
     }
 
-    protected function resolveLeafIds(int $unitId, array &$leafIds): void
+    public function getAttackerFaction(int $missionId): array
     {
-        $children = $this->db->table('units')
-            ->select('unit_id')
-            ->where('parent_unit_id', $unitId)
-            ->whereIn('unit_type', ['Lance', 'Squad', 'Company', 'Platoon'])
-            ->get()->getResultArray();
+        $row = $this->db->query("
+            SELECT DISTINCT f.faction_id, f.name, f.color, f.emblem_path
+            FROM combat_pool cp
+            JOIN units u ON u.unit_id = cp.unit_id
+            JOIN factions f ON f.faction_id = u.faction_id
+            WHERE cp.mission_id = {$missionId}
+            AND cp.side = 'attacker'
+            LIMIT 1
+        ")->getRowArray();
 
-        if (empty($children)) {
-            $leafIds[] = $unitId;
-            return;
+        return $row ?? [];
+    }
+
+    public function getDefenderFaction(int $missionId): array
+    {
+        $row = $this->db->query("
+            SELECT DISTINCT f.faction_id, f.name, f.color, f.emblem_path
+            FROM combat_pool cp
+            JOIN units u ON u.unit_id = cp.unit_id
+            JOIN factions f ON f.faction_id = u.faction_id
+            WHERE cp.mission_id = {$missionId}
+            AND cp.side = 'defender'
+            LIMIT 1
+        ")->getRowArray();
+
+        return $row ?? [];
+    }
+
+    public function getBattleBalance(int $missionId, ?array $location = null): array
+    {
+        $terrain = $location['terrain'] ?? 'Plains';
+        $isUrban = in_array($terrain, ['Urban', 'Dense Urban']);
+
+        $hasFortification = $this->db->table('buildings')
+            ->where('location_id', $location['location_id'] ?? 0)
+            ->where('type', 'Fortification')
+            ->where('status', 'Operational')
+            ->countAllResults() > 0;
+
+        $infantryMultiplier = 1.0;
+        if ($isUrban)        $infantryMultiplier *= 1.5;
+        if ($hasFortification) $infantryMultiplier *= 2.0;
+
+        $sizeWeights = ['Light' => 1, 'Medium' => 2, 'Heavy' => 3, 'Assault' => 4];
+        $baseInfantryScore = 18; // equivalent to a full-health Light mech
+
+        $scores = ['attacker' => 0.0, 'defender' => 0.0];
+
+        // Equipment
+        $equipment = $this->db->query("
+            SELECT cp.side, cp.current_armor, cp.current_structure,
+                c.weight_class
+            FROM combat_pool cp
+            JOIN equipment e ON e.equipment_id = cp.equipment_id
+            JOIN chassis c ON c.chassis_id = e.chassis_id
+            WHERE cp.mission_id = {$missionId}
+            AND cp.participant_type = 'equipment'
+            AND cp.status IN ('Active', 'Crippled')
+            AND cp.resolved = 0
+        ")->getResultArray();
+
+        foreach ($equipment as $row) {
+            $weight = $sizeWeights[$row['weight_class']] ?? 2;
+            $scores[$row['side']] += ($row['current_armor'] + $row['current_structure']) * $weight;
         }
 
-        foreach ($children as $child) {
-            $this->resolveLeafIds((int)$child['unit_id'], $leafIds);
+        // Infantry
+        $infantry = $this->db->query("
+            SELECT cp.side, cp.unit_id
+            FROM combat_pool cp
+            WHERE cp.mission_id = {$missionId}
+            AND cp.participant_type = 'infantry'
+            AND cp.status IN ('Active', 'Crippled')
+            AND cp.resolved = 0
+        ")->getResultArray();
+
+        foreach ($infantry as $row) {
+            $unitId = (int)$row['unit_id'];
+
+            $strength = (int)($this->db->query("
+                SELECT COUNT(*) AS cnt
+                FROM personnel_assignments pa
+                JOIN personnel p ON p.personnel_id = pa.personnel_id
+                WHERE pa.unit_id = {$unitId}
+                AND pa.date_released IS NULL
+                AND p.status = 'Active'
+            ")->getRowArray()['cnt'] ?? 0);
+
+            $maxStrength = (int)($this->db->query("
+                SELECT COUNT(*) AS cnt
+                FROM personnel_assignments pa
+                WHERE pa.unit_id = {$unitId}
+            ")->getRowArray()['cnt'] ?? 1);
+
+            $ratio = $maxStrength > 0 ? $strength / $maxStrength : 0;
+            $scores[$row['side']] += $ratio * $baseInfantryScore * $infantryMultiplier;
         }
+
+        $total = $scores['attacker'] + $scores['defender'];
+        $attackerPct = $total > 0 ? round(($scores['attacker'] / $total) * 100) : 50;
+
+        return [
+            'attacker_score' => round($scores['attacker']),
+            'defender_score' => round($scores['defender']),
+            'attacker_pct'   => $attackerPct,
+            'defender_pct'   => 100 - $attackerPct,
+        ];
     }
 }

@@ -35,7 +35,7 @@ class GameTickService
 
         // Once per game day only
         if ($this->dayRollover) {
-            //$this->processMorale();
+            $this->processMorale();
             $this->processDispersedUnits();
             $this->updateDayCount();
         }
@@ -120,24 +120,31 @@ class GameTickService
 
     protected function processMorale(): void
     {
-        // Only recover morale for personnel NOT in active combat
         $personnel = $this->db->query("
             SELECT p.personnel_id, p.morale
             FROM personnel p
-            WHERE p.status = 'Active'
+            WHERE p.status IN ('Active', 'Injured')
             AND p.morale < 100
+            AND p.personnel_id NOT IN (
+                SELECT DISTINCT cp.personnel_id
+                FROM combat_pool cp
+                WHERE cp.resolved = 0
+                AND cp.personnel_id IS NOT NULL
+            )
             AND p.personnel_id NOT IN (
                 SELECT DISTINCT pe.personnel_id
                 FROM personnel_equipment pe
                 JOIN equipment e ON e.equipment_id = pe.equipment_id
-                JOIN units u ON u.unit_id = e.assigned_unit_id
-                WHERE u.status = 'Combat'
+                JOIN combat_pool cp ON cp.equipment_id = e.equipment_id
+                WHERE cp.resolved = 0
                 AND pe.date_released IS NULL
             )
         ")->getResultArray();
+        
+        $moraleRecovery = (float)($this->gameStateModel->getProperty('daily_morale_recovery') ?? '5.0');
 
         foreach ($personnel as $p) {
-            $newMorale = min(100, (float)$p['morale'] + 2.0);
+            $newMorale = min(100, (float)$p['morale'] + $moraleRecovery);
             $this->db->table('personnel')
                 ->where('personnel_id', $p['personnel_id'])
                 ->update(['morale' => $newMorale]);
@@ -166,6 +173,27 @@ class GameTickService
                 ->get()->getRowArray();
 
             if ($hoursElapsed >= $transitHours) {
+                // Check if destination has active combat
+                $combatAtDest = $this->db->table('missions')
+                    ->where('status', 'Combat')
+                    ->where('destination_location_id', $mission['destination_location_id'])
+                    ->countAllResults();
+
+                if ($combatAtDest > 0) {
+                    // Cap hours at transit and hold
+                    $existingNotes = $mission['notes'] ?? '';
+                    if (strpos($existingNotes, 'HOLDING') === false) {
+                        $this->db->table('missions')
+                            ->where('mission_id', $mission['mission_id'])
+                            ->update([
+                                'hours_elapsed' => $transitHours,
+                                'days_elapsed'  => (int)floor($transitHours / 24),
+                                'notes'         => trim($existingNotes . ' [HOLDING — AWAITING BATTLE RESOLUTION]'),
+                            ]);
+                    }
+                    continue;
+                }
+
                 $this->completeMission($mission, $dest);
             } else {
                 $this->db->table('missions')
@@ -187,6 +215,18 @@ class GameTickService
         $destFactionId    = (int)($dest['controlled_by'] ?? 0);
         $missionFactionId = (int)$mission['faction_id'];
         $missionType      = $mission['mission_type'];
+
+        // Check for active combat at destination
+        $activeCombat = $this->db->table('missions')
+            ->where('status', 'Combat')
+            ->where('destination_location_id', $destLocationId)
+            ->get()->getRowArray();
+
+        if ($activeCombat) {
+            $combatService = new CombatService();
+            $combatService->joinCombat($mission, $activeCombat, $dest);
+            return;
+        }
 
         $unitIds = array_column(
             $this->db->table('mission_units')

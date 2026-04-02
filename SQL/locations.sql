@@ -56,4 +56,5 @@ INSERT INTO buildings (location_id, name, type, capacity, status) VALUES
 (1, 'Fort New Derry', 'Barracks', NULL, 'Operational'),
 (1, 'New Derry Spaceport', 'Spaceport', NULL, 'Operational'),
 (1, 'Field Hospital Alpha', 'Hospital', 50, 'Operational'),
-(1, 'Repair Bay 1', 'Repair Bay', 8, 'Operational');
+(1, 'Repair Bay 1', 'Repair Bay', 8, 'Operational'),
+(11, 'Fort Rathmullan', 'Fortification', 0, 'Operational');

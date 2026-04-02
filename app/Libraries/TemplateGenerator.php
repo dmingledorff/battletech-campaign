@@ -296,7 +296,7 @@ class TemplateGenerator
                 return $this->alphabet[$num - 1] . " Company";
 
             case 'Lance':
-                if (($template['role'] ?? null) === 'Command' && $this->isParentBattalion($parentUnitId)) {
+                if (($template['role'] ?? null) === 'Command') {
                     return "Command Lance";
                 }
                 return $this->ordinal($num) . " Lance";
@@ -313,12 +313,6 @@ class TemplateGenerator
             default:
                 return $template['name'];
         }
-    }
-
-    private function isParentBattalion($parentUnitId)
-    {
-        $row = $this->toeModel->find($parentUnitId);
-        return $row && $row['unit_type'] === 'Battalion';
     }
 
     private function ordinal($number)
