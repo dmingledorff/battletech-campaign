@@ -7,6 +7,7 @@ use App\Models\EventLogModel;
 use App\Models\GameStateModel;
 use App\Models\MissionModel;
 use App\Models\UnitModel;
+use App\Models\CombatBuildingsModel;
 use CodeIgniter\Database\BaseConnection;
 
 class CombatService
@@ -15,6 +16,8 @@ class CombatService
     protected string $gameDate;
     protected int    $gameHour;
     protected array  $settings = [];
+    protected array $artilleryTypes = [];
+    protected CombatBuildingsModel $combatBuildingsModel;
     protected BattleLogModel $battleLog;
     protected GameStateModel $gameState;
 
@@ -23,6 +26,7 @@ class CombatService
         $this->db        = $db ?? db_connect();
         $this->battleLog = new BattleLogModel();
         $this->gameState = new GameStateModel();
+        $this->combatBuildingsModel = new CombatBuildingsModel();
         $this->gameDate  = $this->gameState->getProperty('current_date') ?? '3025-01-01';
         $this->gameHour  = (int)($this->gameState->getProperty('current_hour') ?? 0);
         $this->loadSettings();
@@ -36,6 +40,11 @@ class CombatService
         $rows = $this->db->table('game_state')->get()->getResultArray();
         foreach ($rows as $row) {
             $this->settings[$row['property_name']] = $row['property_value'];
+        }
+
+        $artRows = $this->db->table('artillery_rules')->get()->getResultArray();
+        foreach ($artRows as $row) {
+            $this->artilleryTypes[$row['special_code']] = $row;
         }
     }
 
@@ -64,6 +73,11 @@ class CombatService
     // ================================================================
     public function initiateCombat(array $mission, array $location): void
     {
+        // Guard — don't re-initiate if already in combat
+        if ($mission['status'] === 'Combat') {
+            return;
+        }
+
         $missionId  = (int)$mission['mission_id'];
         $locationId = (int)$location['location_id'];
         $gameDate   = $this->gameDate;
@@ -145,6 +159,9 @@ class CombatService
         ");
         }
 
+        $this->snapshotBuildings($missionId, $locationId);
+        $this->assignInfantryToFortifications($missionId, $locationId);
+
         // Log BattleStart
         $this->battleLog->record(
             $missionId,
@@ -158,6 +175,32 @@ class CombatService
             null,
             null
         );
+        $eventLog = new EventLogModel();
+        $eventLog->log(
+            $missionFactionId,
+            $gameDate,
+            'Combat',
+            "Battle Commenced — {$mission['name']}",
+            "Assault force engaged defending garrison at {$location['name']}.",
+            'Warning',
+            null,
+            $missionId,
+            $locationId
+        );
+        $defenderFactionId = $this->getDefenderFactionId($locationId, $missionFactionId);
+        if ($defenderFactionId) {
+            $eventLog->log(
+                $defenderFactionId,
+                $gameDate,
+                'Combat',
+                "Under Attack — {$location['name']}",
+                "Enemy assault force has engaged our garrison at {$location['name']}.",
+                'Critical',
+                null,
+                null,
+                $locationId
+            );
+        }
     }
 
     // -------------------------------------------------------------------
@@ -176,26 +219,26 @@ class CombatService
         if ($isInfantry) {
             // Squad leader = highest grade active personnel in unit
             $leader = $this->db->query("
-            SELECT p.personnel_id
-            FROM personnel_assignments pa
-            JOIN personnel p ON p.personnel_id = pa.personnel_id
-            LEFT JOIN ranks r ON r.id = p.rank_id
-            WHERE pa.unit_id = {$unitId}
-            AND pa.date_released IS NULL
-            AND p.status = 'Active'
-            ORDER BY r.grade DESC
-            LIMIT 1
-        ")->getRowArray();
+                SELECT p.personnel_id
+                FROM personnel_assignments pa
+                JOIN personnel p ON p.personnel_id = pa.personnel_id
+                LEFT JOIN ranks r ON r.id = p.rank_id
+                WHERE pa.unit_id = {$unitId}
+                AND pa.date_released IS NULL
+                AND p.status = 'Active'
+                ORDER BY r.grade DESC
+                LIMIT 1
+            ")->getRowArray();
 
             // Only add if there is at least one active member
             $strength = $this->db->query("
-            SELECT COUNT(*) AS cnt
-            FROM personnel_assignments pa
-            JOIN personnel p ON p.personnel_id = pa.personnel_id
-            WHERE pa.unit_id = {$unitId}
-            AND pa.date_released IS NULL
-            AND p.status = 'Active'
-        ")->getRowArray()['cnt'] ?? 0;
+                SELECT COUNT(*) AS cnt
+                FROM personnel_assignments pa
+                JOIN personnel p ON p.personnel_id = pa.personnel_id
+                WHERE pa.unit_id = {$unitId}
+                AND pa.date_released IS NULL
+                AND p.status = 'Active'
+            ")->getRowArray()['cnt'] ?? 0;
 
             if ($strength > 0) {
                 $this->db->table('combat_pool')->insert([
@@ -205,6 +248,8 @@ class CombatService
                     'unit_id'          => $unitId,
                     'equipment_id'     => null,
                     'personnel_id'     => $leader['personnel_id'] ?? null,
+                    'pilot_morale'     => $leader['morale'] ?? 100,
+                    'pilot_experience' => $leader['experience'] ?? 'Regular',
                     'status'           => 'Active',
                     'joined_at'        => $gameDate,
                 ]);
@@ -286,6 +331,87 @@ class CombatService
         }
     }
 
+    // -------------------------------------------------------------------
+    // Snapshot all relevant buildings at location into combat_buildings
+    // -------------------------------------------------------------------
+    protected function snapshotBuildings(int $missionId, int $locationId): void
+    {
+        $buildings = $this->db->table('buildings')
+            ->where('location_id', $locationId)
+            ->whereIn('status', ['Operational', 'Damaged'])
+            ->get()->getResultArray();
+
+        foreach ($buildings as $b) {
+            $this->combatBuildingsModel->insert([
+                'mission_id'        => $missionId,
+                'building_id'       => $b['building_id'],
+                'name'              => $b['name'],
+                'type'              => $b['type'],
+                'capacity'          => $b['capacity'],
+                'current_integrity' => (int)$b['current_integrity'],
+                'max_integrity'     => (int)$b['max_integrity'],
+                'current_armor'     => $b['current_armor'],
+                'max_armor'         => $b['max_armor'],
+                'as_dmg_s'          => $b['as_dmg_s'],
+                'as_dmg_m'          => $b['as_dmg_m'],
+                'as_dmg_l'          => $b['as_dmg_l'],
+                'as_specials'       => $b['as_specials'],
+                'as_tmm'            => (int)$b['as_tmm'],
+                'status'            => $b['status'],
+            ]);
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // Auto-assign defending infantry to fortifications up to capacity
+    // Priority: highest integrity fortifications first
+    // -------------------------------------------------------------------
+    protected function assignInfantryToFortifications(int $missionId, int $locationId): void
+    {
+        $fortifications = $this->combatBuildingsModel->getActiveFortifications($missionId);
+
+        if (empty($fortifications)) return;
+
+        $infantry = $this->db->query("
+            SELECT cp.pool_id, cp.unit_id
+            FROM combat_pool cp
+            WHERE cp.mission_id = {$missionId}
+            AND cp.side = 'defender'
+            AND cp.participant_type = 'infantry'
+            AND cp.status = 'Active'
+        ")->getResultArray();
+
+        if (empty($infantry)) return;
+
+        $infantryQueue = $infantry;
+
+        foreach ($fortifications as $fort) {
+            $capacity = (int)($fort['capacity'] ?? 0);
+            if ($capacity <= 0) continue;
+
+            $assigned = 0;
+            $fortId   = (int)$fort['combat_building_id'];
+
+            while ($assigned < $capacity && !empty($infantryQueue)) {
+                $unit = array_shift($infantryQueue);
+
+                $this->db->table('fortification_assignments')->insert([
+                    'combat_building_id' => $fortId,
+                    'unit_id'            => $unit['unit_id'],
+                    'mission_id'         => $missionId,
+                ]);
+
+                $this->db->table('combat_pool')
+                    ->where('pool_id', $unit['pool_id'])
+                    ->update(['building_id' => $fortId]);
+
+                $assigned++;
+            }
+
+            if (empty($infantryQueue)) break;
+        }
+    }
+
     // ================================================================
     // Process one round of combat for a mission
     // ================================================================
@@ -328,21 +454,33 @@ class CombatService
             return;
         }
 
-        // Pair lances and resolve attacks
-        $pairings = $this->pairLances($attackers, $defenders);
-
-        // Collect artillery units (IF special) — not paired
+        // Collect artillery units (ART special)
         $attackerArtillery = $this->extractArtillery($attackers);
         $defenderArtillery = $this->extractArtillery($defenders);
 
+        // Pair lances and resolve attacks
+        $pairings = $this->pairLances($attackers, $defenders);
+
         foreach ($pairings as $pairing) {
-            $this->resolvePairing(
+            // Attackers shoot at defenders — pass $defenders master array
+            $this->resolveOneSideAttacks(
                 $pairing['attackers'],
-                $pairing['defenders'],
+                $defenders,          // ← master array, not pairing copy
                 $mission,
                 $phase,
                 $round,
-                $terrain
+                $terrain,
+                'attacker'
+            );
+            // Defenders shoot at attackers — pass $attackers master array
+            $this->resolveOneSideAttacks(
+                $pairing['defenders'],
+                $attackers,          // ← master array, not pairing copy
+                $mission,
+                $phase,
+                $round,
+                $terrain,
+                'defender'
             );
         }
 
@@ -351,6 +489,7 @@ class CombatService
         $this->resolveArtillery($defenderArtillery, $attackers, $mission, $phase, $round, $terrain);
 
         $this->syncCombatToMainTables($missionId);
+        $this->processHeat($missionId);
 
         // Log round summary
         $this->battleLog->record(
@@ -377,6 +516,10 @@ class CombatService
         $pool = $this->db->query("
             SELECT cp.pool_id, cp.unit_id, cp.equipment_id, cp.personnel_id,
                 cp.participant_type, cp.status AS pool_status,
+                cp.heat_buildup, cp.is_shutdown, cp.used_ov,
+                cp.pilot_morale, cp.pilot_experience,
+                cp.pilot_first_name, cp.pilot_last_name,
+                cp.pilot_rank_abbr, cp.pilot_final_status,
                 cp.side
             FROM combat_pool cp
             WHERE cp.mission_id = {$missionId}
@@ -384,7 +527,6 @@ class CombatService
             AND cp.status IN ('Active', 'Crippled')
             AND cp.resolved = 0
         ")->getResultArray();
-
         $combatants = [];
 
         foreach ($pool as $participant) {
@@ -408,21 +550,6 @@ class CombatService
                     AND p.status = 'Active'
                 ")->getRowArray()['cnt'] ?? 0;
 
-                // Fetch squad leader for morale/experience checks
-                $leader = $this->db->query("
-                    SELECT p.personnel_id, p.morale, p.experience, p.status,
-                        p.first_name, p.last_name,
-                        r.abbreviation AS rank_abbr, r.grade
-                    FROM personnel_assignments pa
-                    JOIN personnel p ON p.personnel_id = pa.personnel_id
-                    LEFT JOIN ranks r ON r.id = p.rank_id
-                    WHERE pa.unit_id = {$unitId}
-                    AND pa.date_released IS NULL
-                    AND p.status = 'Active'
-                    ORDER BY r.grade DESC
-                    LIMIT 1
-                ")->getRowArray();
-
                 // Max strength — total ever assigned (including casualties)
                 $maxStrength = (int)$this->db->query("
                     SELECT COUNT(*) AS cnt
@@ -431,18 +558,24 @@ class CombatService
                     WHERE pa.unit_id = {$unitId}
                 ")->getRowArray()['cnt'] ?? $strength;
 
+                // Infantry combatant array
                 $combatants[] = [
                     'pool_id'      => (int)$participant['pool_id'],
                     'unit'         => $unit,
                     'equipment'    => null,
-                    'crew'         => $leader,
+                    'crew'         => [
+                        'personnel_id' => $participant['personnel_id'],
+                        'morale'       => (float)$participant['pilot_morale'],
+                        'experience'   => $participant['pilot_experience'] ?? 'Regular',
+                    ],
                     'is_infantry'  => true,
+                    'is_turret'    => false,
                     'strength'     => $strength,
                     'max_strength' => $maxStrength,
                     'pool_status'  => $participant['pool_status'],
                     'side'         => $side,
                     'retreated'    => false,
-                    'out_of_combat'  => false,
+                    'out_of_combat' => false,
                 ];
 
                 continue;
@@ -473,21 +606,19 @@ class CombatService
             $equipment['specials'] = $this->parseSpecials($equipment['as_specials'] ?? '');
 
             // Get active pilot via personnel_equipment
-            $crew = $this->db->query("
-                SELECT p.personnel_id, p.morale, p.experience, p.status,
-                    p.first_name, p.last_name,
-                    r.abbreviation AS rank_abbr, r.grade
-                FROM personnel_equipment pe
-                JOIN personnel p ON p.personnel_id = pe.personnel_id
-                LEFT JOIN ranks r ON r.id = p.rank_id
-                WHERE pe.equipment_id = {$eqId}
-                AND pe.date_released IS NULL
-                AND p.status = 'Active'
-                LIMIT 1
-            ")->getRowArray();
+            $crew = [
+                'personnel_id' => (int)$participant['personnel_id'],
+                'morale'       => (float)$participant['pilot_morale'],
+                'experience'   => $participant['pilot_experience'] ?? 'Regular',
+                'status'       => $participant['pilot_final_status'] ?? 'Active',
+                'first_name'   => $participant['pilot_first_name'],
+                'last_name'    => $participant['pilot_last_name'],
+                'rank_abbr'    => $participant['pilot_rank_abbr'],
+                'grade'        => null, // not needed during combat
+            ];
 
             // No active pilot — skip (pilot may have been KIA/Injured mid-battle)
-            if (!$crew) continue;
+            if (!$participant['personnel_id']) continue;
 
             $combatants[] = [
                 'pool_id'     => (int)$participant['pool_id'],
@@ -495,11 +626,64 @@ class CombatService
                 'equipment'   => $equipment,
                 'crew'        => $crew,
                 'is_infantry' => false,
+                'is_turret'    => false,
+                'pool_status'  => $participant['pool_status'],
+                'heat_buildup' => (int)$participant['heat_buildup'],
+                'is_shutdown'  => (bool)$participant['is_shutdown'],
+                'used_ov'      => (bool)$participant['used_ov'],
                 'pool_status' => $participant['pool_status'],
                 'side'        => $side,
                 'retreated'   => false,
                 'out_of_combat'  => false
             ];
+        }
+
+        // Load active turrets as defender combatants
+        if ($side === 'defender') {
+            $turrets = $this->combatBuildingsModel->getActiveTurrets($missionId);
+
+            foreach ($turrets as $turret) {
+                $turret['specials'] = $this->parseSpecials($turret['as_specials'] ?? '');
+
+                $combatants[] = [
+                    'pool_id'       => null,
+                    'unit'          => [
+                        'unit_id'        => null,
+                        'name'           => $turret['name'],
+                        'unit_type'      => 'Turret',
+                        'role'           => 'Defender',
+                        'faction_id'     => null,
+                        'parent_unit_id' => null,
+                    ],
+                    'equipment'     => [
+                        'equipment_id'      => null,
+                        'combat_building_id' => $turret['combat_building_id'],
+                        'chassis_name'      => $turret['name'],
+                        'variant'           => '',
+                        'as_type'           => 'Turret',
+                        'as_dmg_s'          => $turret['as_dmg_s'],
+                        'as_dmg_m'          => $turret['as_dmg_m'],
+                        'as_dmg_l'          => $turret['as_dmg_l'],
+                        'as_tmm'            => $turret['as_tmm'],
+                        'current_armor'     => $turret['current_armor'],
+                        'max_armor'         => $turret['max_armor'],
+                        'current_structure' => $turret['current_integrity'],
+                        'max_structure'     => 100,
+                        'combat_status'     => $turret['status'] === 'Damaged' ? 'Crippled' : 'Operational',
+                        'specials'          => $turret['specials'],
+                    ],
+                    'crew'          => null,  // no pilot
+                    'is_infantry'   => false,
+                    'is_turret'     => true,
+                    'pool_status'   => 'Active',
+                    'heat_buildup'  => 0,
+                    'is_shutdown'   => false,
+                    'used_ov'       => false,
+                    'side'          => 'defender',
+                    'retreated'     => false,
+                    'out_of_combat' => false,
+                ];
+            }
         }
 
         return $combatants;
@@ -619,37 +803,15 @@ class CombatService
         return $count > 0 ? $total / $count : 0;
     }
 
-    protected function extractArtillery(array &$combatants): array
+    protected function extractArtillery(array $combatants): array
     {
         $artillery = [];
-        $remaining = [];
         foreach ($combatants as $c) {
-            if (!$c['is_infantry'] && isset($c['equipment']['specials']['IF'])) {
+            if (!$c['is_infantry'] && isset($c['equipment']['specials']['ART'])) {
                 $artillery[] = $c;
-            } else {
-                $remaining[] = $c;
             }
         }
-        $combatants = $remaining;
         return $artillery;
-    }
-
-    // ================================================================
-    // Resolve all attacks within a paired engagement
-    // Both sides attack independently
-    // ================================================================
-    protected function resolvePairing(
-        array $attackers,
-        array $defenders,
-        array $mission,
-        string $phase,
-        int $round,
-        array $terrain
-    ): void {
-        // Attackers target defenders
-        $this->resolveOneSideAttacks($attackers, $defenders, $mission, $phase, $round, $terrain, 'attacker');
-        // Defenders target attackers (independently)
-        $this->resolveOneSideAttacks($defenders, $attackers, $mission, $phase, $round, $terrain, 'defender');
     }
 
     protected function resolveOneSideAttacks(
@@ -675,9 +837,6 @@ class CombatService
                 if ($t['out_of_combat']) return false;
                 if ($t['retreated']) return false;
                 if ($t['is_infantry']) return $t['strength'] > 0;
-                $cs = $t['equipment']['combat_status'] ?? 'Operational';
-                if ($cs === 'Destroyed') return false;
-                // Also check pool status if available
                 $ps = $t['pool_status'] ?? 'Active';
                 if (in_array($ps, ['Destroyed', 'Retreated', 'Routed'])) return false;
                 return true;
@@ -692,21 +851,21 @@ class CombatService
             // Sync updated target state back into $targets array immediately
             foreach ($targets as &$t) {
                 if ($t['is_infantry'] && $t['unit']['unit_id'] === $target['unit']['unit_id']) {
-                    $t['strength']    = $target['strength'];
-                    $t['retreated']   = $target['retreated'];
-                    $t['pool_status'] = $target['pool_status'] ?? $t['pool_status'];
+                    $t['strength']      = $target['strength'];
+                    $t['retreated']     = $target['retreated'];
                     $t['out_of_combat'] = $target['out_of_combat'];
+                    $t['pool_status']   = $target['pool_status'] ?? $t['pool_status'];
                 } elseif (
                     !$t['is_infantry'] &&
                     isset($t['equipment']['equipment_id']) &&
                     $t['equipment']['equipment_id'] === ($target['equipment']['equipment_id'] ?? null)
                 ) {
-                    $t['equipment']['combat_status']    = $target['equipment']['combat_status'];
+                    $t['equipment']['combat_status']     = $target['equipment']['combat_status'];
                     $t['equipment']['current_armor']     = $target['equipment']['current_armor'];
                     $t['equipment']['current_structure'] = $target['equipment']['current_structure'];
                     $t['retreated']                      = $target['retreated'];
+                    $t['out_of_combat']                  = $target['out_of_combat'];
                     $t['pool_status']                    = $target['pool_status'] ?? $t['pool_status'];
-                    $t['out_of_combat'] = $target['out_of_combat'];
                 }
             }
             unset($t);
@@ -781,7 +940,7 @@ class CombatService
     // ================================================================
     protected function resolveAttack(
         array  $shooter,
-        array  $target,
+        array  &$target,
         array  $mission,
         string $phase,
         int    $round,
@@ -789,20 +948,31 @@ class CombatService
     ): void {
         $missionId = $mission['mission_id'];
 
+        if ($shooter['is_shutdown'] ?? false) return;
+
         // Get base damage for this phase/round
         $baseDamage = $this->getBaseDamage($shooter, $phase, $round);
         if ($baseDamage <= 0) return;
 
         // Apply special ability bonuses to damage
         $specials = $shooter['is_infantry'] ? [] : ($shooter['equipment']['specials'] ?? []);
+        $ovBonus = $this->checkAndApplyOV($shooter, $target, $phase, $round);
         $damage   = $this->applySpecialDamageBonus($baseDamage, $specials, $phase, $round);
+
+        if ($ovBonus > 0) {
+            $isLRange = ($phase === 'Skirmish' && $round < (int)$this->setting('skirmish_l_to_m_round', 3));
+            if (!$isLRange || isset($specials['OVL'])) {
+                $damage += $ovBonus;
+            }
+        }
 
         // Roll to hit
         $hit = $this->rollToHit($shooter, $target, $terrain);
 
+        $shooterName = $this->getCombatantName($shooter);
+        $targetName  = $this->getCombatantName($target);
+
         if (!$hit) {
-            $shooterName = $this->getCombatantName($shooter);
-            $targetName  = $this->getCombatantName($target);
             $this->battleLog->record(
                 $missionId,
                 $this->gameDate,
@@ -837,10 +1007,7 @@ class CombatService
             }
         }
 
-        $damage = max(0, round($damage, 1));
-
-        $shooterName = $this->getCombatantName($shooter);
-        $targetName  = $this->getCombatantName($target);
+        //$damage = max(0, round($damage, 1));
 
         $this->battleLog->record(
             $missionId,
@@ -849,21 +1016,26 @@ class CombatService
             $phase,
             $round,
             'Attack',
-            "{$shooterName} hits {$targetName} for {$damage} damage.",
+            "{$shooterName} hits {$targetName} for {$damage} damage."
+                . ($ovBonus > 0 ? " [OV+{$ovBonus}]" : ''),
             $shooter['is_infantry'] ? null : ($shooter['equipment']['equipment_id'] ?? null),
             $target['is_infantry']  ? null : ($target['equipment']['equipment_id']  ?? null),
             $damage
         );
 
         // Apply damage
-        if ($target['is_infantry']) {
+        if ($target['is_turret'] ?? false) {
+            $this->applyTurretDamage($target, $damage, $mission, $phase, $round);
+        } elseif ($target['is_infantry']) {
             $this->applyInfantryDamage($target, $damage, $mission, $phase, $round);
         } else {
             $this->applyEquipmentDamage($target, $damage, $mission, $phase, $round);
         }
 
-        // Apply morale damage to crew
-        $this->applyMoraleDamage($target, $damage, $mission, $phase, $round);
+        // Morale damage — not for turrets
+        if (!($target['is_turret'] ?? false)) {
+            $this->applyMoraleDamage($target, $damage, $mission, $phase, $round);
+        }
     }
 
     // ================================================================
@@ -902,6 +1074,97 @@ class CombatService
     }
 
     // ================================================================
+    // OV check — pilot decides whether to push heat for extra damage
+    // ================================================================
+    protected function checkAndApplyOV(array &$shooter, array $target, string $phase, int $round): float
+    {
+        if ($shooter['is_infantry'] || ($shooter['is_turret'] ?? false)) return 0;
+        if ($shooter['used_ov']) return 0;
+        if ($shooter['is_shutdown']) return 0;
+
+        $eq    = $shooter['equipment'];
+        $ovMax = (int)($eq['as_ov'] ?? 0);
+        if ($ovMax <= 0) return 0;
+
+        $crew       = $shooter['crew'];
+        $experience = $crew['experience'] ?? 'Regular';
+        $heat       = $shooter['heat_buildup'];
+
+        // Base chance to use any OV at all by experience
+        $baseOvChance = match ($experience) {
+            'Elite'   => 70,
+            'Veteran' => 50,
+            'Regular' => 30,
+            'Green'   => 10,
+            default   => 30,
+        };
+
+        if (random_int(0, 100) > $baseOvChance) return 0;
+
+        // Determine how many OV points to actually use
+        // Pilots prefer not to push into shutdown territory
+        $ovToUse = 0;
+        for ($points = 1; $points <= $ovMax; $points++) {
+            $wouldShutdown = ($heat + $points) >= 4;
+
+            if ($wouldShutdown) {
+                // Only push into shutdown if target can be killed
+                $targetHealth = $target['is_infantry']
+                    ? $target['strength']
+                    : (($target['equipment']['current_armor'] ?? 0) + ($target['equipment']['current_structure'] ?? 0));
+
+                $baseDamage        = $this->getBaseDamage($shooter, $phase, $round);
+                $potentialDamage   = $baseDamage + $points;
+
+                if ($potentialDamage < $targetHealth) break; // can't kill it, stop here
+
+                $shutdownChance = match ($experience) {
+                    'Elite'   => 60,
+                    'Veteran' => 40,
+                    'Regular' => 15,
+                    'Green'   => 5,
+                    default   => 15,
+                };
+
+                if (random_int(0, 100) <= $shutdownChance) {
+                    $ovToUse = $points;
+                }
+                break; // don't consider higher OV points once shutdown threshold reached
+            }
+
+            // Safe to use this point — experienced pilots more willing to push
+            $safeChance = match ($experience) {
+                'Elite'   => 90,
+                'Veteran' => 75,
+                'Regular' => 50,
+                'Green'   => 20,
+                default   => 50,
+            };
+
+            if (random_int(0, 100) <= $safeChance) {
+                $ovToUse = $points;
+            } else {
+                break; // pilot decided not to push further
+            }
+        }
+
+        if ($ovToUse <= 0) return 0;
+
+        // Apply OV
+        $shooter['used_ov']      = true;
+        $shooter['heat_buildup'] += $ovToUse;
+
+        $this->db->table('combat_pool')
+            ->where('pool_id', $shooter['pool_id'])
+            ->update([
+                'used_ov'      => 1,
+                'heat_buildup' => $shooter['heat_buildup'],
+            ]);
+
+        return (float)$ovToUse;
+    }
+
+    // ================================================================
     // Roll to hit — returns bool
     // ================================================================
     protected function rollToHit(array $shooter, array $target, array $terrain): bool
@@ -916,6 +1179,16 @@ class CombatService
 
         // Target TMM
         if (!$target['is_infantry']) {
+            $modifier += (int)($target['equipment']['as_tmm'] ?? 0);
+        }
+
+        // Shutdown mech — much easier to hit
+        if (!$target['is_infantry'] && ($target['is_shutdown'] ?? false)) {
+            $modifier -= 4;
+        }
+
+        // Turret TMM
+        if ($target['is_turret'] ?? false) {
             $modifier += (int)($target['equipment']['as_tmm'] ?? 0);
         }
 
@@ -940,12 +1213,37 @@ class CombatService
         // Terrain
         $modifier += $terrain['to_hit_modifier'];
 
-        // Infantry in fortification — harder to target
-        if ($target['is_infantry'] && $terrain['has_fortification']) {
-            $modifier += 2;
+        // Infantry in fortification
+        if ($target['is_infantry']) {
+            $fortBonus = $this->getFortificationBonus($target, $missionId ?? 0);
+            $modifier += $fortBonus;
         }
 
         return $roll >= ($baseToHit + $modifier);
+    }
+
+    protected function getFortificationBonus(array $target, int $missionId): int
+    {
+        $unitId = $target['unit']['unit_id'] ?? null;
+        if (!$unitId) return 0;
+
+        $assignment = $this->db->query("
+            SELECT cb.current_integrity, cb.max_integrity, cb.status
+            FROM fortification_assignments fa
+            JOIN combat_buildings cb ON cb.combat_building_id = fa.combat_building_id
+            WHERE fa.unit_id = {$unitId}
+            AND fa.mission_id = {$missionId}
+            AND cb.status != 'Destroyed'
+            LIMIT 1
+        ")->getRowArray();
+
+        if (!$assignment) return 0;
+
+        $integrityPct = $assignment['max_integrity'] > 0
+            ? ($assignment['current_integrity'] / $assignment['max_integrity']) * 100
+            : 0;
+
+        return $integrityPct > 50 ? 2 : 1;
     }
 
     // ================================================================
@@ -962,9 +1260,9 @@ class CombatService
         $eqId      = $eq['equipment_id'];
         $missionId = $mission['mission_id'];
 
-        $fresh = $this->db->table('equipment')
-            ->select('current_armor, current_structure, combat_status')
-            ->where('equipment_id', $eqId)
+        $fresh = $this->db->table('combat_pool')
+            ->select('current_armor, current_structure, status AS combat_status')
+            ->where('pool_id', $target['pool_id'])
             ->get()->getRowArray();
 
         if (!$fresh || $fresh['combat_status'] === 'Destroyed') return;
@@ -1041,17 +1339,16 @@ class CombatService
                 ]);
             $target['pool_status'] = 'Destroyed';
             $target['out_of_combat'] = true;  // exclude from targeting only
+            $this->applyFriendlyDestroyedPenalty($target, $missionId, $phase, $round);
             $this->rollEjection($target, 'destroyed', $mission, $phase, $round);
             $this->handleDestroyed($target, $mission);
         }
 
-        // Persist to DB
-        $this->db->table('equipment')
-            ->where('equipment_id', $eqId)
+        $this->db->table('combat_pool')
+            ->where('pool_id', $target['pool_id'])
             ->update([
                 'current_armor'     => $currentArmor,
                 'current_structure' => $currentStructure,
-                'combat_status'     => $newStatus,
             ]);
 
         // Update local array for this tick
@@ -1125,36 +1422,105 @@ class CombatService
             ? 1 - ($target['strength'] / $target['max_strength'])
             : 1;
 
+        if ($target['strength'] <= 0 && !$target['retreated']) {
+            // Wiped out — auto rout regardless of morale
+            $this->routeInfantryUnit($target, $mission, $phase, $round);
+            return;
+        }
         if ($casualtyRatio >= 0.50 && !$target['retreated']) {
             $this->checkInfantryRout($target, $mission, $phase, $round);
         }
     }
 
+    protected function applyTurretDamage(
+        array  &$target,
+        float  $damage,
+        array  $mission,
+        string $phase,
+        int    $round
+    ): void {
+        $combatBuildingId = $target['equipment']['combat_building_id'];
+        $missionId        = $mission['mission_id'];
+        $intDamage        = (int)ceil($damage);
+
+        $fresh = $this->combatBuildingsModel->find($combatBuildingId);
+
+        if (!$fresh || $fresh['status'] === 'Destroyed') return;
+
+        // Apply to armor first if present, overflow to integrity
+        $currentArmor    = (int)($fresh['current_armor'] ?? 0);
+        $currentIntegrity = (int)$fresh['current_integrity'];
+        $maxIntegrity     = (int)$fresh['max_integrity'];
+
+        if ($currentArmor > 0) {
+            if ($intDamage <= $currentArmor) {
+                $currentArmor -= $intDamage;
+                $intDamage = 0;
+            } else {
+                $intDamage   -= $currentArmor;
+                $currentArmor = 0;
+            }
+        }
+
+        if ($intDamage > 0) {
+            $currentIntegrity = max(0, $currentIntegrity - $intDamage);
+        }
+
+        // Determine new status
+        $integrityPct = $maxIntegrity > 0 ? ($currentIntegrity / $maxIntegrity) * 100 : 0;
+        $newStatus = match (true) {
+            $currentIntegrity <= 0  => 'Destroyed',
+            $integrityPct <= 50     => 'Damaged',
+            default                 => 'Operational',
+        };
+
+        $this->combatBuildingsModel->update($combatBuildingId, [
+            'current_armor'     => $currentArmor,
+            'current_integrity' => $currentIntegrity,
+            'status'            => $newStatus,
+        ]);
+
+        // Update local array
+        $target['equipment']['current_armor']     = $currentArmor;
+        $target['equipment']['current_structure'] = $currentIntegrity;
+        $target['equipment']['combat_status']     = $newStatus === 'Destroyed' ? 'Destroyed'
+            : ($newStatus === 'Damaged' ? 'Crippled' : 'Operational');
+        $target['pool_status'] = $newStatus === 'Destroyed' ? 'Destroyed' : $target['pool_status'];
+
+        if ($newStatus === 'Destroyed') {
+            $target['out_of_combat'] = true;
+            $this->battleLog->record(
+                $missionId,
+                $this->gameDate,
+                $this->gameHour,
+                $phase,
+                $round,
+                'Destroyed',
+                "{$target['unit']['name']} has been DESTROYED."
+            );
+        } elseif ($newStatus === 'Damaged' && $fresh['status'] === 'Operational') {
+            $this->battleLog->record(
+                $missionId,
+                $this->gameDate,
+                $this->gameHour,
+                $phase,
+                $round,
+                'Crippled',
+                "{$target['unit']['name']} is DAMAGED — effectiveness reduced."
+            );
+        }
+    }
+
     protected function checkInfantryRout(array &$target, array $mission, string $phase, int $round): void
     {
-        $unitId = $target['unit']['unit_id'];
-
-        // Find highest ranking active squad member
-        $leader = $this->db->query("
-        SELECT p.personnel_id, p.morale, p.experience, r.grade
-        FROM personnel_assignments pa
-        JOIN personnel p ON p.personnel_id = pa.personnel_id
-        LEFT JOIN ranks r ON r.id = p.rank_id
-        WHERE pa.unit_id = {$unitId}
-        AND pa.date_released IS NULL
-        AND p.status = 'Active'
-        ORDER BY r.grade DESC
-        LIMIT 1
-    ")->getRowArray();
-
-        if (!$leader) {
-            // No active personnel — auto rout
+        $crew = $target['crew'];
+        if (!$crew) {
             $this->routeInfantryUnit($target, $mission, $phase, $round);
             return;
         }
 
-        $experience = $leader['experience'] ?? 'Regular';
-        $morale     = (float)$leader['morale'];
+        $experience = $crew['experience'] ?? 'Regular';
+        $morale     = (float)$crew['morale'];
 
         $threshold = (float)match ($experience) {
             'Green'   => $this->setting('retreat_threshold_green',   40),
@@ -1174,9 +1540,7 @@ class CombatService
             };
 
             $routeChance = ($threshold - $morale) * $chanceMult;
-            $roll        = random_int(0, 100);
-
-            if ($roll < $routeChance) {
+            if (random_int(0, 100) < $routeChance) {
                 $this->routeInfantryUnit($target, $mission, $phase, $round);
             }
         }
@@ -1185,6 +1549,7 @@ class CombatService
     protected function routeInfantryUnit(array &$target, array $mission, string $phase, int $round): void
     {
         $target['retreated'] = true;
+        $target['out_of_combat'] = true;
         $unitName = $target['unit']['name'];
 
         $this->battleLog->record(
@@ -1202,6 +1567,16 @@ class CombatService
             ->where('unit_id', $target['unit']['unit_id'])
             ->where('participant_type', 'infantry')
             ->update(['status' => 'Routed']);
+
+        // Apply friendly morale penalty if squad is wiped out entirely
+        if ($target['strength'] <= 0) {
+            $this->applyFriendlyDestroyedPenalty(
+                $target,
+                $mission['mission_id'],
+                $phase,
+                $round
+            );
+        }
     }
 
     // ================================================================
@@ -1234,10 +1609,19 @@ class CombatService
             ->where('personnel_id', $crew['personnel_id'])
             ->update(['morale' => $newMorale]);
         // Keep pool in sync immediately
-        $this->db->table('combat_pool')
-            ->where('mission_id', $mission['mission_id'])
-            ->where('equipment_id', $target['equipment']['equipment_id'])
-            ->update(['pilot_morale' => $newMorale]);
+        if (!$target['is_infantry'] && isset($target['equipment']['equipment_id'])) {
+            $this->db->table('combat_pool')
+                ->where('mission_id', $mission['mission_id'])
+                ->where('equipment_id', $target['equipment']['equipment_id'])
+                ->update(['pilot_morale' => $newMorale]);
+        } elseif ($target['is_infantry']) {
+            $this->db->table('combat_pool')
+                ->where('mission_id', $mission['mission_id'])
+                ->where('unit_id', $target['unit']['unit_id'])
+                ->where('participant_type', 'infantry')
+                ->update(['pilot_morale' => $newMorale]);
+            $target['crew']['morale'] = $newMorale;  // ← keep local array in sync
+        }
 
         // Check retreat threshold
         $threshold = (float)match ($experience) {
@@ -1275,14 +1659,12 @@ class CombatService
                 );
 
                 // Update combat pool — persistent retreat flag
-                if (!$target['is_infantry']) {
-                    $this->db->table('combat_pool')
-                        ->where('mission_id', $mission['mission_id'])
-                        ->where('equipment_id', $target['equipment']['equipment_id'])
-                        ->update(['status' => 'Retreated']);
-                }
-                // Note: no longer setting unit status to Garrisoned here
-                // That only happens in endCombat() once battle is fully resolved
+                $this->db->table('combat_pool')
+                    ->where('pool_id', $target['pool_id'])
+                    ->update([
+                        'status'       => 'Retreated',    // ← this was missing
+                        'pilot_morale' => $newMorale,
+                    ]);
             }
         }
     }
@@ -1298,26 +1680,310 @@ class CombatService
         int    $round,
         array  $terrain
     ): void {
-        if (empty($artilleryUnits) || empty($targets)) return;
+        if (empty($artilleryUnits)) return;
+
+        $missionId = $mission['mission_id'];
 
         foreach ($artilleryUnits as $arty) {
-            $ifValue = (float)($arty['equipment']['specials']['IF']['value1'] ?? 0);
-            if ($ifValue <= 0) continue;
+            $specials = $arty['equipment']['specials'] ?? [];
+            if (!isset($specials['ART'])) continue;
 
-            // Reduced effectiveness in melee
-            if ($phase === 'Melee') $ifValue *= 0.5;
+            $artType    = $specials['ART']['type'] ?? null;
+            $artAttacks = (int)($specials['ART']['attacks'] ?? 1);
 
-            // Pick a random active target
-            $activeTargets = array_values(array_filter($targets, function ($t) {
-                if ($t['retreated']) return false;
-                if ($t['is_infantry']) return $t['strength'] > 0;
-                return ($t['equipment']['combat_status'] ?? 'Operational') !== 'Destroyed';
-            }));
+            if (!$artType || !isset($this->artilleryTypes[$artType])) continue;
 
-            if (empty($activeTargets)) continue;
+            $artData = $this->artilleryTypes[$artType];
 
-            $target = $activeTargets[array_rand($activeTargets)];
-            $this->resolveAttack($arty, $target, $mission, $phase, $round, $terrain);
+            for ($i = 0; $i < $artAttacks; $i++) {
+                // Build target list — artillery can hit units OR buildings
+                $activeTargets = array_values(array_filter($targets, function ($t) {
+                    if ($t['out_of_combat']) return false;
+                    if ($t['is_infantry']) return $t['strength'] > 0;
+                    $ps = $t['pool_status'] ?? 'Active';
+                    if (in_array($ps, ['Destroyed', 'Retreated', 'Routed'])) return false;
+                    return true;
+                }));
+
+                // Also get targetable buildings (fortifications)
+                $targetBuildings = $this->combatBuildingsModel->getActiveFortifications($missionId);
+
+                // Weight infantry and buildings as preferred targets
+                // Artillery prioritizes fortifications and infantry
+                $buildingTarget = null;
+                if (!empty($targetBuildings) && random_int(0, 100) < 60) {
+                    $buildingTarget = $targetBuildings[array_rand($targetBuildings)];
+                }
+
+                if ($buildingTarget) {
+                    $this->resolveArtilleryVsBuilding(
+                        $arty,
+                        $buildingTarget,
+                        $artData,
+                        $mission,
+                        $phase,
+                        $round
+                    );
+                } elseif (!empty($activeTargets)) {
+                    $target = $activeTargets[array_rand($activeTargets)];
+                    $this->resolveArtilleryVsUnit(
+                        $arty,
+                        $target,
+                        $artData,
+                        $mission,
+                        $phase,
+                        $round,
+                        $terrain
+                    );
+
+                    // Sync target state back
+                    foreach ($targets as &$t) {
+                        if (
+                            !$t['is_infantry'] &&
+                            isset($t['equipment']['equipment_id']) &&
+                            $t['equipment']['equipment_id'] === ($target['equipment']['equipment_id'] ?? null)
+                        ) {
+                            $t['equipment']['combat_status']     = $target['equipment']['combat_status'];
+                            $t['equipment']['current_armor']     = $target['equipment']['current_armor'];
+                            $t['equipment']['current_structure'] = $target['equipment']['current_structure'];
+                            $t['out_of_combat']                  = $target['out_of_combat'];
+                            $t['pool_status']                    = $target['pool_status'];
+                        }
+                    }
+                    unset($t);
+                }
+            }
+        }
+    }
+
+    // ================================================================
+    // Artillery to-hit roll — separate from standard rollToHit()
+    // ================================================================
+    protected function rollArtilleryToHit(
+        array  $arty,
+        mixed  $target,      // combatant array OR building array
+        array  $artData,
+        array  $terrain,
+        bool   $isBuilding = false,
+        bool   $isInfantry = false,
+        bool   $isFortified = false
+    ): bool {
+        $baseToHit  = (int)$this->setting('base_to_hit', 7);
+        $roll       = random_int(1, 6) + random_int(1, 6);
+        $modifier   = 0;
+
+        // Cannon types use their own modifier
+        $cannonTypes = ['TC', 'SC', 'LTC'];
+        if (in_array($artData['special_code'], $cannonTypes)) {
+            $modifier += (int)$this->setting('artillery_cannon_modifier', 2);
+        } elseif ($isBuilding) {
+            $modifier += (int)$this->setting('artillery_modifier_building', -2);
+        } elseif ($isInfantry && $isFortified) {
+            $modifier += (int)$this->setting('artillery_modifier_infantry_fort', 2);
+            // Artillery ignores fortification to-hit bonus entirely
+        } elseif ($isInfantry) {
+            $modifier += (int)$this->setting('artillery_modifier_infantry_open', 0);
+        } else {
+            $modifier += (int)$this->setting('artillery_modifier_mech', 4);
+        }
+
+        // IF special — ignore terrain to-hit penalties
+        $specials = $arty['equipment']['specials'] ?? [];
+        $hasIF    = isset($specials['IF']);
+        if (!$hasIF) {
+            $modifier += $terrain['to_hit_modifier'];
+        }
+
+        // Pilot experience
+        $experience = $arty['crew']['experience'] ?? 'Regular';
+        $modifier  += match ($experience) {
+            'Elite'   => -2,
+            'Veteran' => -1,
+            'Regular' =>  0,
+            'Green'   =>  1,
+            default   =>  0,
+        };
+
+        // Target TMM for mechs/vehicles
+        if (!$isBuilding && !$isInfantry && is_array($target)) {
+            $modifier += (int)($target['equipment']['as_tmm'] ?? 0);
+        }
+
+        return $roll >= ($baseToHit + $modifier);
+    }
+
+    protected function resolveArtilleryVsUnit(
+        array  $arty,
+        array  &$target,
+        array  $artData,
+        array  $mission,
+        string $phase,
+        int    $round,
+        array  $terrain
+    ): void {
+        $missionId  = $mission['mission_id'];
+        $artyName   = $this->getCombatantName($arty);
+        $targetName = $this->getCombatantName($target);
+        $damage     = (int)$artData['primary_damage'];
+
+        if ($damage === 0 && $artData['min_roll']) {
+            $roll   = random_int(1, 6);
+            $damage = $roll >= $artData['min_roll'] ? 1 : 0;
+        }
+
+        // Determine if infantry target is fortified
+        $isInfantry = $target['is_infantry'] ?? false;
+        $isFortified = false;
+        if ($isInfantry) {
+            $isFortified = $this->getFortificationBonus($target, $mission['mission_id']) > 0;
+        }
+
+        $hit = $this->rollArtilleryToHit(
+            $arty,
+            $target,
+            $artData,
+            $terrain,
+            false,
+            $isInfantry,
+            $isFortified
+        );
+
+        if (!$hit) {
+            $this->battleLog->record(
+                $missionId,
+                $this->gameDate,
+                $this->gameHour,
+                $phase,
+                $round,
+                'Attack',
+                "{$artyName} fires artillery at {$targetName} — MISS. [ART-{$artData['special_code']}]",
+                $arty['equipment']['equipment_id'] ?? null,
+                $isInfantry ? null : ($target['equipment']['equipment_id'] ?? null),
+                0
+            );
+            return;
+        }
+
+        $this->battleLog->record(
+            $missionId,
+            $this->gameDate,
+            $this->gameHour,
+            $phase,
+            $round,
+            'Attack',
+            "{$artyName} fires artillery at {$targetName} for {$damage} damage. [ART-{$artData['special_code']}]",
+            $arty['equipment']['equipment_id'] ?? null,
+            $isInfantry ? null : ($target['equipment']['equipment_id'] ?? null),
+            $damage
+        );
+
+        if ($damage > 0) {
+            if ($isInfantry) {
+                $this->applyInfantryDamage($target, $damage, $mission, $phase, $round);
+            } else {
+                $this->applyEquipmentDamage($target, $damage, $mission, $phase, $round);
+            }
+            $this->applyMoraleDamage($target, $damage, $mission, $phase, $round);
+        }
+    }
+
+    protected function resolveArtilleryVsBuilding(
+        array  $arty,
+        array  $building,
+        array  $artData,
+        array  $mission,
+        string $phase,
+        int    $round
+    ): void {
+        $missionId        = $mission['mission_id'];
+        $combatBuildingId = (int)$building['combat_building_id'];
+        $artyName         = $this->getCombatantName($arty);
+        $damage           = (int)$artData['primary_damage'];
+
+        if ($damage === 0 && $artData['min_roll']) {
+            $roll   = random_int(1, 6);
+            $damage = $roll >= $artData['min_roll'] ? 1 : 0;
+        }
+
+        // Buildings have no terrain cover — pass empty terrain
+        $emptyTerrain = ['to_hit_modifier' => 0, 'type' => 'Plains', 'has_fortification' => false];
+
+        $hit = $this->rollArtilleryToHit(
+            $arty,
+            $building,
+            $artData,
+            $emptyTerrain,
+            true,
+            false,
+            false
+        );
+
+        if (!$hit) {
+            $this->battleLog->record(
+                $missionId,
+                $this->gameDate,
+                $this->gameHour,
+                $phase,
+                $round,
+                'Attack',
+                "{$artyName} fires artillery at {$building['name']} — MISS. [ART-{$artData['special_code']}]",
+                $arty['equipment']['equipment_id'] ?? null,
+                null,
+                0
+            );
+            return;
+        }
+
+        $this->battleLog->record(
+            $missionId,
+            $this->gameDate,
+            $this->gameHour,
+            $phase,
+            $round,
+            'Attack',
+            "{$artyName} fires artillery at {$building['name']} for {$damage} integrity damage. [ART-{$artData['special_code']}]",
+            $arty['equipment']['equipment_id'] ?? null,
+            null,
+            $damage
+        );
+
+        if ($damage <= 0) return;
+
+        $currentIntegrity = max(0, (int)$building['current_integrity'] - $damage);
+        $maxIntegrity     = (int)$building['max_integrity'];
+        $integrityPct     = $maxIntegrity > 0 ? ($currentIntegrity / $maxIntegrity) * 100 : 0;
+
+        $newStatus = match (true) {
+            $currentIntegrity <= 0 => 'Destroyed',
+            $integrityPct <= 50    => 'Damaged',
+            default                => 'Operational',
+        };
+
+        $this->combatBuildingsModel->update($combatBuildingId, [
+            'current_integrity' => $currentIntegrity,
+            'status'            => $newStatus,
+        ]);
+
+        if ($newStatus === 'Destroyed') {
+            $this->battleLog->record(
+                $missionId,
+                $this->gameDate,
+                $this->gameHour,
+                $phase,
+                $round,
+                'Destroyed',
+                "{$building['name']} has been DESTROYED by artillery fire."
+            );
+        } elseif ($newStatus === 'Damaged' && $building['status'] === 'Operational') {
+            $this->battleLog->record(
+                $missionId,
+                $this->gameDate,
+                $this->gameHour,
+                $phase,
+                $round,
+                'Crippled',
+                "{$building['name']} is DAMAGED — fortification bonus reduced."
+            );
         }
     }
 
@@ -1331,30 +1997,28 @@ class CombatService
         string $phase,
         int    $round
     ): void {
-        // Only BattleMechs eject
         if (($target['equipment']['as_type'] ?? '') !== 'BM') return;
-
-        $crew       = $target['crew'];
+        $crew      = $target['crew'];
         if (!$crew) return;
 
         $experience = $crew['experience'] ?? 'Regular';
         $missionId  = $mission['mission_id'];
 
         $chance = (int)match ([$trigger, $experience]) {
-            ['crippled', 'Green']   => $this->setting('eject_crippled_green',   60),
-            ['crippled', 'Regular'] => $this->setting('eject_crippled_regular', 35),
-            ['crippled', 'Veteran'] => $this->setting('eject_crippled_veteran', 20),
-            ['crippled', 'Elite']   => $this->setting('eject_crippled_elite',   10),
-            ['destroyed', 'Green']  => $this->setting('eject_destroyed_green',  40),
+            ['crippled', 'Green']    => $this->setting('eject_crippled_green',    60),
+            ['crippled', 'Regular']  => $this->setting('eject_crippled_regular',  35),
+            ['crippled', 'Veteran']  => $this->setting('eject_crippled_veteran',  20),
+            ['crippled', 'Elite']    => $this->setting('eject_crippled_elite',    10),
+            ['destroyed', 'Green']   => $this->setting('eject_destroyed_green',   40),
             ['destroyed', 'Regular'] => $this->setting('eject_destroyed_regular', 55),
             ['destroyed', 'Veteran'] => $this->setting('eject_destroyed_veteran', 70),
-            ['destroyed', 'Elite']  => $this->setting('eject_destroyed_elite',  80),
+            ['destroyed', 'Elite']   => $this->setting('eject_destroyed_elite',   80),
             default => 50,
         };
 
-        $roll     = random_int(0, 100);
-        $ejected  = $roll < $chance;
-        $name     = "{$crew['rank_abbr']}. {$crew['last_name']}";
+        $roll    = random_int(0, 100);
+        $ejected = $roll < $chance;
+        $name    = "{$crew['rank_abbr']}. {$crew['last_name']}";
         $mechName = $this->getCombatantName($target);
 
         if ($ejected) {
@@ -1372,19 +2036,23 @@ class CombatService
                 "{$name} ejects from {$mechName} — pilot survives."
             );
 
-            // If ejected due to crippling (not destruction), mech is abandoned — mark salvage
+            // Always update pool final status for ejections
+            $this->db->table('combat_pool')
+                ->where('pool_id', $target['pool_id'])
+                ->update([
+                    'pilot_final_status' => 'Injured',
+                    'pilot_morale'       => $crew['morale'],
+                ]);
+
             if ($trigger === 'crippled') {
                 $eqId       = $target['equipment']['equipment_id'];
                 $locationId = $mission['destination_location_id'];
 
-                // Release pilot from equipment
                 $this->db->table('personnel_equipment')
                     ->where('personnel_id', $crew['personnel_id'])
                     ->where('date_released IS NULL', null, false)
                     ->update(['date_released' => $this->gameDate]);
 
-                // Mark as abandoned salvage — equipment_status stays Active
-                // (it's intact, just no pilot), salvage_status = Available
                 $this->db->table('equipment')
                     ->where('equipment_id', $eqId)
                     ->update([
@@ -1392,19 +2060,16 @@ class CombatService
                         'location_id'    => $locationId,
                     ]);
 
-                // Update pool — no pilot means can no longer fight
                 $this->db->table('combat_pool')
-                    ->where('mission_id', $mission['mission_id'])
-                    ->where('equipment_id', $eqId)
+                    ->where('pool_id', $target['pool_id'])
                     ->update([
-                        'status' => 'Retreated',
+                        'status'             => 'Retreated',
                         'pilot_final_status' => 'Injured',
                         'pilot_morale'       => 0,
                     ]);
 
-                // Update local array
-                $target['retreated']   = true;
-                $target['pool_status'] = 'Retreated';
+                $target['retreated']     = true;
+                $target['pool_status']   = 'Retreated';
                 $target['out_of_combat'] = true;
             }
         } else {
@@ -1413,15 +2078,13 @@ class CombatService
                     ->where('personnel_id', $crew['personnel_id'])
                     ->update(['status' => 'KIA']);
 
-                // Release from equipment assignment
                 $this->db->table('personnel_equipment')
                     ->where('personnel_id', $crew['personnel_id'])
                     ->where('date_released IS NULL', null, false)
                     ->update(['date_released' => $this->gameDate]);
 
                 $this->db->table('combat_pool')
-                    ->where('mission_id', $missionId)
-                    ->where('personnel_id', $crew['personnel_id'])
+                    ->where('pool_id', $target['pool_id'])
                     ->update([
                         'pilot_final_status' => 'KIA',
                         'pilot_morale'       => 0,
@@ -1771,7 +2434,7 @@ class CombatService
             AND cp.resolved = 0
         ")->getResultArray();
 
-        $salvageModifier = (float)$this->setting('salvage_base_chance', 0.6);
+        $salvageModifier = (float)$this->setting('salvage_base_chance', 0.6) / 100;
 
         foreach ($destroyed as $row) {
             $eqId         = (int)$row['equipment_id'];
@@ -2030,6 +2693,17 @@ class CombatService
         foreach (explode(',', $specials) as $special) {
             $special = trim($special);
             if (!$special) continue;
+
+            // Handle ART specials first — ARTLT-1, ARTAIS-2, ARTT-1 etc
+            if (preg_match('/^ART([A-Z0-9]+)-(\d+)$/', $special, $m)) {
+                $result['ART'] = [
+                    'type'    => $m[1],
+                    'attacks' => (int)$m[2],
+                ];
+                continue;
+            }
+
+            // General specials
             if (preg_match('/^([A-Z]+)(\d+)?(?:\/(\d+))?(?:\/(\d+))?(?:\/([\d-]+))?$/', $special, $m)) {
                 $result[$m[1]] = [
                     'value1' => isset($m[2]) && $m[2] !== '' ? (int)$m[2] : null,
@@ -2197,7 +2871,13 @@ class CombatService
     protected function getCombatantName(array $combatant): string
     {
         if ($combatant['is_infantry']) {
-            return $combatant['unit']['name'];
+            // Get parent unit name for disambiguation
+            $parent = $this->db->table('units')
+                ->select('name')
+                ->where('unit_id', $combatant['unit']['parent_unit_id'])
+                ->get()->getRowArray();
+            $parentName = $parent ? " ({$parent['name']})" : '';
+            return $combatant['unit']['name'] . $parentName;
         }
         $chassis = $combatant['equipment']['chassis_name'] ?? 'Unknown';
         $variant = $combatant['equipment']['variant'] ?? '';
@@ -2210,7 +2890,9 @@ class CombatService
         $pool = $this->db->query("
             SELECT cp.pool_id, cp.participant_type,
                 cp.equipment_id, cp.personnel_id,
-                cp.status AS pool_status
+                cp.status AS pool_status,
+                cp.pilot_morale, cp.pilot_final_status,
+                cp.current_armor, cp.current_structure
             FROM combat_pool cp
             WHERE cp.mission_id = {$missionId}
             AND cp.resolved = 0
@@ -2219,8 +2901,8 @@ class CombatService
         foreach ($pool as $participant) {
             if ($participant['participant_type'] !== 'equipment') continue;
 
-            $eqId  = (int)$participant['equipment_id'];
-            $pid   = (int)$participant['personnel_id'];
+            $eqId = (int)$participant['equipment_id'];
+            $pid  = (int)$participant['personnel_id'];
 
             // Sync combat_status to equipment table
             $combatStatus = match ($participant['pool_status']) {
@@ -2229,7 +2911,13 @@ class CombatService
                 default     => 'Operational',
             };
 
-            $eqUpdate = ['combat_status' => $combatStatus];
+
+            $eqUpdate = [
+                'combat_status'     => $combatStatus,
+                'current_armor'     => $participant['current_armor'],
+                'current_structure' => $participant['current_structure'],
+            ];
+
             if ($participant['pool_status'] === 'Destroyed') {
                 $eqUpdate['equipment_status'] = 'Destroyed';
             }
@@ -2238,35 +2926,89 @@ class CombatService
                 ->where('equipment_id', $eqId)
                 ->update($eqUpdate);
 
-            // Pull fresh armor/structure and morale back into pool
-            $freshEq = $this->db->table('equipment')
-                ->select('current_armor, current_structure')
-                ->where('equipment_id', $eqId)
-                ->get()->getRowArray();
-
-            $freshPilot = $this->db->table('personnel')
-                ->select('morale, status')
-                ->where('personnel_id', $pid)
-                ->get()->getRowArray();
-
-            $poolUpdate = [];
-
-            if ($freshEq) {
-                $poolUpdate['current_armor']     = $freshEq['current_armor'];
-                $poolUpdate['current_structure'] = $freshEq['current_structure'];
-            }
-
-            if ($freshPilot) {
-                $poolUpdate['pilot_morale']       = $freshPilot['morale'];
-                $poolUpdate['pilot_final_status'] = $freshPilot['status'];
-            }
-
-            if (!empty($poolUpdate)) {
-                $this->db->table('combat_pool')
-                    ->where('pool_id', $participant['pool_id'])
-                    ->update($poolUpdate);
+            // Push pool morale → personnel (pool is authoritative)
+            if ($pid) {
+                $this->db->table('personnel')
+                    ->where('personnel_id', $pid)
+                    ->update(['morale' => $participant['pilot_morale']]);
             }
         }
+
+        // Infantry sync — pool pilot_morale is authoritative, push to personnel
+        foreach ($pool as $participant) {
+            if ($participant['participant_type'] !== 'infantry') continue;
+            if (!$participant['personnel_id']) continue;
+
+            $this->db->table('personnel')
+                ->where('personnel_id', $participant['personnel_id'])
+                ->update(['morale' => $participant['pilot_morale']]);
+        }
+
+        $this->combatBuildingsModel->syncToBuildings($missionId);
+    }
+
+    protected function processHeat(int $missionId): void
+    {
+        // Step 1 — Reactivate shutdown mechs and clear their heat
+        $this->db->table('combat_pool')
+            ->where('mission_id', $missionId)
+            ->where('is_shutdown', 1)
+            ->where('resolved', 0)
+            ->update([
+                'is_shutdown'  => 0,
+                'heat_buildup' => 0,
+            ]);
+
+        // Step 2 — Shutdown mechs that hit heat 4+ this round
+        $this->db->table('combat_pool')
+            ->where('mission_id', $missionId)
+            ->where('heat_buildup >=', 4)
+            ->where('resolved', 0)
+            ->update(['is_shutdown' => 1]);
+
+        // Log any newly shutdown mechs
+        $shutdown = $this->db->query("
+            SELECT cp.pool_id, cp.pilot_first_name, cp.pilot_last_name,
+                cp.pilot_rank_abbr, e.equipment_id,
+                c.name AS chassis_name, c.variant,
+                u.name AS unit_name
+            FROM combat_pool cp
+            JOIN equipment e ON e.equipment_id = cp.equipment_id
+            JOIN chassis c ON c.chassis_id = e.chassis_id
+            JOIN units u ON u.unit_id = cp.unit_id
+            WHERE cp.mission_id = {$missionId}
+            AND cp.is_shutdown = 1
+            AND cp.resolved = 0
+        ")->getResultArray();
+
+        foreach ($shutdown as $row) {
+            $this->battleLog->record(
+                $missionId,
+                $this->gameDate,
+                $this->gameHour,
+                '',
+                0,
+                'Shutdown',
+                "{$row['pilot_rank_abbr']}. {$row['pilot_last_name']}'s "
+                    . "{$row['chassis_name']} {$row['variant']} ({$row['unit_name']}) "
+                    . "has SHUT DOWN due to heat."
+            );
+        }
+
+        // Step 3 — Reduce all mech heat by 1, floor 0
+        $this->db->query("
+            UPDATE combat_pool
+            SET heat_buildup = GREATEST(0, heat_buildup - 1)
+            WHERE mission_id = {$missionId}
+            AND participant_type = 'equipment'
+            AND resolved = 0
+        ");
+
+        // Clear used_ov for next round
+        $this->db->table('combat_pool')
+            ->where('mission_id', $missionId)
+            ->where('resolved', 0)
+            ->update(['used_ov' => 0]);
     }
 
     // ================================================================
@@ -2449,9 +3191,9 @@ class CombatService
         // Set arriving units to Combat status
         $idList = implode(',', $leafIds);
         $this->db->query("
-        UPDATE units SET status = 'Combat'
-        WHERE unit_id IN ({$idList})
-    ");
+            UPDATE units SET status = 'Combat'
+            WHERE unit_id IN ({$idList})
+        ");
 
         // Add arriving units to the active combat's mission_units
         // so endCombat() can find them when resolving
@@ -2489,6 +3231,89 @@ class CombatService
             (int)$activeCombatMission['combat_round'],
             'RoundSummary',
             "Reinforcements have arrived and joined the {$side} force."
+        );
+    }
+
+    protected function applyFriendlyDestroyedPenalty(
+        array  $destroyedUnit,
+        int    $missionId,
+        string $phase,
+        int    $round
+    ): void {
+        $penalty     = (float)$this->setting('morale_loss_friendly_destroyed', 10);
+        $destroyedSide = $destroyedUnit['side'];
+        $destroyedName = $this->getCombatantName($destroyedUnit);
+
+        // Find all active personnel on the same side in this battle
+        // Equipment pilots
+        $pilots = $this->db->query("
+            SELECT cp.personnel_id, cp.pilot_morale, cp.pool_id,
+                cp.pilot_experience
+            FROM combat_pool cp
+            WHERE cp.mission_id = {$missionId}
+            AND cp.side = '{$destroyedSide}'
+            AND cp.participant_type = 'equipment'
+            AND cp.status IN ('Active','Crippled')
+            AND cp.resolved = 0
+            AND cp.personnel_id IS NOT NULL
+        ")->getResultArray();
+
+        foreach ($pilots as $pilot) {
+            $experience = $pilot['pilot_experience'] ?? 'Regular';
+
+            // More experienced pilots are less affected
+            $multiplier = match ($experience) {
+                'Elite'   => 0.25,
+                'Veteran' => 0.5,
+                'Regular' => 1.0,
+                'Green'   => 1.5,
+                default   => 1.0,
+            };
+
+            $loss      = $penalty * $multiplier;
+            $newMorale = max(0, (float)$pilot['pilot_morale'] - $loss);
+
+            $this->db->table('personnel')
+                ->where('personnel_id', $pilot['personnel_id'])
+                ->update(['morale' => $newMorale]);
+
+            $this->db->table('combat_pool')
+                ->where('pool_id', $pilot['pool_id'])
+                ->update(['pilot_morale' => $newMorale]);
+        }
+
+        // Infantry leaders
+        $infantry = $this->db->query("
+            SELECT cp.personnel_id, cp.pilot_morale, cp.pool_id
+            FROM combat_pool cp
+            WHERE cp.mission_id = {$missionId}
+            AND cp.side = '{$destroyedSide}'
+            AND cp.participant_type = 'infantry'
+            AND cp.status = 'Active'
+            AND cp.resolved = 0
+            AND cp.personnel_id IS NOT NULL
+        ")->getResultArray();
+
+        foreach ($infantry as $inf) {
+            $newMorale = max(0, (float)$inf['pilot_morale'] - $penalty);
+
+            $this->db->table('personnel')
+                ->where('personnel_id', $inf['personnel_id'])
+                ->update(['morale' => $newMorale]);
+
+            $this->db->table('combat_pool')
+                ->where('pool_id', $inf['pool_id'])
+                ->update(['pilot_morale' => $newMorale]);
+        }
+
+        $this->battleLog->record(
+            $missionId,
+            $this->gameDate,
+            $this->gameHour,
+            $phase,
+            $round,
+            'Damage',
+            "Friendly loss of {$destroyedName} — morale penalty applied to all {$destroyedSide} units."
         );
     }
 }

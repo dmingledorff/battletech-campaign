@@ -3,8 +3,8 @@
 namespace App\Controllers;
 
 use App\Models\BattleLogModel;
+use App\Models\CombatBuildingsModel;
 use App\Models\CombatModel;
-use App\Models\FactionModel;
 use App\Models\LocationModel;
 
 class Combat extends BaseController
@@ -36,62 +36,58 @@ class Combat extends BaseController
 
     public function show(int $missionId)
     {
-        $combatModel = new CombatModel();
-        $battleLog   = new BattleLogModel();
-        $locationModel = new LocationModel();
+        $combatModel          = new CombatModel();
+        $combatBuildingsModel = new CombatBuildingsModel();
+        $battleLog            = new BattleLogModel();
+        $locationModel        = new LocationModel();
 
         $mission = $combatModel->getCombatMission($missionId);
-
         if (!$mission) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $hasFortification = $combatModel->hasFortification(
-            $mission['destination_location_id']
-        );
+        $location = $locationModel->find($mission['destination_location_id']);
+        $balance  = $combatModel->getBattleBalance($missionId, $location);
 
-        $attackers = $combatModel->getAttackerCombatants($missionId);
-        $defenders = $combatModel->getDefenderCombatants($missionId);
-
-        $attackerFaction = $combatModel->getAttackerFaction($missionId);
-        $defenderFaction = $combatModel->getDefenderFaction($missionId);
-
-        $summary = $battleLog->getSummary($missionId);
-        $log = $battleLog->getForMission($missionId);
-
+        $log          = $battleLog->getForMission($missionId);
         $logByRound   = [];
         $groupFirstId = [];
 
         foreach ($log as $entry) {
             $key = $entry['combat_phase'] . '|' . $entry['combat_round'];
             $logByRound[$key][]  = $entry;
-            $groupFirstId[$key]  = $entry['log_id']; // last seen = highest id for this group
+            $groupFirstId[$key]  = $entry['log_id'];
         }
 
-        // Sort groups by highest log_id descending = newest round first
         arsort($groupFirstId);
-
         $sorted = [];
         foreach (array_keys($groupFirstId) as $key) {
-            $sorted[$key] = $logByRound[$key]; // entries within round stay chronological
+            $sorted[$key] = $logByRound[$key];
         }
         $logByRound = $sorted;
 
-        $location = $locationModel->find('location_id', $mission['destination_location_id']);
-
-        $balance = $combatModel->getBattleBalance($missionId, $location);
+        $attackers = array_merge(
+            $combatModel->getAttackerCombatants($missionId),
+            $combatModel->getAttackerInfantry($missionId)
+        );
+        $defenders = array_merge(
+            $combatModel->getDefenderCombatants($missionId),
+            $combatModel->getDefenderInfantry($missionId)
+        );
 
         return $this->render('combat/show', [
-            'mission'          => $mission,
-            'hasFortification' => $hasFortification,
-            'attackers'        => $attackers,
-            'defenders'        => $defenders,
-            'log'              => $log,
-            'logByRound'       => $logByRound,
-            'summary'          => $summary,
-            'attackerFaction'  => $attackerFaction,
-            'defenderFaction'  => $defenderFaction,
-            'balance'          => $balance
+            'mission'                  => $mission,
+            'attackers'                => $attackers,
+            'defenders'                => $defenders,
+            'attackerFaction'          => $combatModel->getAttackerFaction($missionId),
+            'defenderFaction'          => $combatModel->getDefenderFaction($missionId),
+            'summary'                  => $battleLog->getSummary($missionId),
+            'log'                      => $log,
+            'logByRound'               => $logByRound,
+            'balance'                  => $balance,
+            'combatBuildings'          => $combatBuildingsModel->getForMission($missionId),
+            'fortificationAssignments' => $combatBuildingsModel->getFortificationAssignments($missionId),
+            'location'                 => $location,
         ]);
     }
 }

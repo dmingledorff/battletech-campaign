@@ -140,7 +140,7 @@ class GameTickService
                 AND pe.date_released IS NULL
             )
         ")->getResultArray();
-        
+
         $moraleRecovery = (float)($this->gameStateModel->getProperty('daily_morale_recovery') ?? '5.0');
 
         foreach ($personnel as $p) {
@@ -438,7 +438,9 @@ class GameTickService
             } elseif ($missionType === 'Assault') {
                 if ($enemyPresent) {
                     $combatService = new CombatService($this->db);
-                    $combatService->initiateCombat($mission, $dest);
+                    if ($mission['status'] !== 'Combat') {
+                        $combatService->initiateCombat($mission, $dest);
+                    }
                     return;
                 } else {
                     $this->takeControl($destLocationId, $missionFactionId);

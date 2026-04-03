@@ -13,7 +13,7 @@
             <div class="card shadow border-danger border-opacity-50">
                 <div class="card-header d-flex justify-content-between align-items-center bg-danger bg-opacity-10">
                     <span class="d-flex align-items-center gap-2">
-                        <img src="/<?= esc($m['faction_emblem']) ?>" style="height:18px;">
+                        <img src="<?= esc($m['faction_emblem']) ?>" style="height:18px;">
                         <span class="fw-semibold"><?= esc($m['name']) ?></span>
                     </span>
                     <span class="badge bg-danger">

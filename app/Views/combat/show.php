@@ -142,16 +142,18 @@ $losingFaction  = $attackerWon ? $defenderFaction : $attackerFaction;
             <?php
             $activeAttackers = array_filter(
                 $attackers,
-                fn($c) =>
-                in_array($c['pool_status'] ?? 'Active', ['Active', 'Crippled'])
-                    && ($c['pilot_status'] ?? 'Active') === 'Active'
+                fn($c) => in_array($c['pool_status'] ?? 'Active', ['Active', 'Crippled'])
+                    && ($c['is_infantry'] ?? false
+                        ? true  // infantry — only check pool_status
+                        : ($c['pilot_status'] ?? 'Active') === 'Active')
             );
 
             $oooAttackers = array_filter(
                 $attackers,
-                fn($c) =>
-                in_array($c['pool_status'] ?? 'Active', ['Retreated', 'Routed', 'Destroyed'])
-                    || ($c['pilot_status'] ?? 'Active') !== 'Active'
+                fn($c) => in_array($c['pool_status'] ?? 'Active', ['Retreated', 'Routed', 'Destroyed'])
+                    || ($c['is_infantry'] ?? false
+                        ? false  // infantry — pool_status already handled above
+                        : ($c['pilot_status'] ?? 'Active') !== 'Active')
             );
             ?>
             <div class="card-body p-0">
@@ -194,13 +196,20 @@ $losingFaction  = $attackerWon ? $defenderFaction : $attackerFaction;
                         · <?= esc($mission['location_type']) ?>
                     <?php endif; ?>
                 </p>
-                <?php if ($hasFortification): ?>
+                <?php
+                $hasActiveFortification = !empty(array_filter(
+                    $combatBuildings,
+                    fn($b) => $b['type'] === 'Fortification' && $b['status'] !== 'Destroyed'
+                ));
+                ?>
+
+                <?php if ($hasActiveFortification): ?>
                     <p class="mb-1">
                         <strong>Fortifications:</strong>
                         <span class="badge bg-warning text-dark">
                             <i class="bi bi-shield-fill me-1"></i>Active
                         </span>
-                        <span class="text-muted small">Hard attack ×0.5 vs defenders</span>
+                        <span class="text-muted small">+1/+2 to-hit vs fortified infantry</span>
                     </p>
                 <?php endif; ?>
                 <p class="mb-1">
@@ -315,38 +324,99 @@ $losingFaction  = $attackerWon ? $defenderFaction : $attackerFaction;
                     <span class="text-muted small"><?= count($defenders) ?> units</span>
                 </div>
             </div>
+
             <?php
             $activeDefenders = array_filter(
                 $defenders,
-                fn($c) =>
-                in_array($c['pool_status'] ?? 'Active', ['Active', 'Crippled'])
-                    && ($c['pilot_status'] ?? 'Active') === 'Active'
+                fn($c) => in_array($c['pool_status'] ?? 'Active', ['Active', 'Crippled'])
+                    && ($c['is_infantry'] ?? false
+                        ? true  // infantry — only check pool_status
+                        : ($c['pilot_status'] ?? 'Active') === 'Active')
             );
 
             $oooDefenders = array_filter(
                 $defenders,
-                fn($c) =>
-                in_array($c['pool_status'] ?? 'Active', ['Retreated', 'Routed', 'Destroyed'])
-                    || ($c['pilot_status'] ?? 'Active') !== 'Active'
+                fn($c) => in_array($c['pool_status'] ?? 'Active', ['Retreated', 'Routed', 'Destroyed'])
+                    || ($c['is_infantry'] ?? false
+                        ? false  // infantry — pool_status already handled above
+                        : ($c['pilot_status'] ?? 'Active') !== 'Active')
             );
             ?>
-            <div class="card-body p-0">
+
+            <?php if (!empty($combatBuildings)): ?>
+                <?php foreach ($combatBuildings as $cb):
+                    $integrityPct = $cb['max_integrity'] > 0
+                        ? round(($cb['current_integrity'] / $cb['max_integrity']) * 100)
+                        : 0;
+                    $intColor = $cb['status'] === 'Destroyed' ? 'danger'
+                        : ($cb['status'] === 'Damaged' ? 'warning' : 'success');
+                    $assignedUnits = $fortificationAssignments[$cb['combat_building_id']] ?? [];
+                ?>
+
+                    <div class="card-body p-0">
+
+                        <div class="px-3 py-2 border-bottom border-secondary <?= $cb['status'] === 'Destroyed' ? 'opacity-50' : '' ?>">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="small fw-semibold">
+                                    <i class="bi bi-shield-fill me-1 text-<?= $intColor ?>"></i>
+                                    <?= esc($cb['name']) ?>
+                                </div>
+                                <span class="badge bg-<?= $intColor ?>" style="font-size:0.65rem;">
+                                    <?= esc($cb['status']) ?>
+                                </span>
+                            </div>
+
+                            <!-- Integrity bar -->
+                            <div class="mt-1" style="font-size:0.65rem;">
+                                <div class="d-flex justify-content-between text-muted mb-1">
+                                    <span>Integrity</span>
+                                    <span><?= $cb['current_integrity'] ?>/<?= $cb['max_integrity'] ?> (<?= $integrityPct ?>%)</span>
+                                </div>
+                                <div class="progress" style="height:4px; background:#333;">
+                                    <div class="progress-bar bg-<?= $intColor ?>"
+                                        style="width:<?= $integrityPct ?>%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Fortification bonus indicator -->
+                            <?php if ($cb['status'] !== 'Destroyed'): ?>
+                                <div class="mt-1 text-muted" style="font-size:0.65rem;">
+                                    <i class="bi bi-shield-check me-1"></i>
+                                    +<?= $integrityPct > 50 ? 2 : 1 ?> to-hit bonus
+                                    · <?= $cb['capacity'] ?? 0 ?> unit capacity
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Assigned units -->
+                            <?php if (!empty($assignedUnits)): ?>
+                                <div class="mt-1" style="font-size:0.65rem;">
+                                    <?php foreach ($assignedUnits as $au): ?>
+                                        <span class="badge bg-dark border border-secondary me-1">
+                                            <?= esc($au['unit_name']) ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+
                 <?php foreach ($activeDefenders as $c): ?>
                     <?php include('_combatant_row.php') ?>
                 <?php endforeach; ?>
-            </div>
-            <?php if (!empty($oooDefenders)): ?>
-                <div class="card-header border-top border-secondary bg-dark">
-                    <span class="text-muted small text-uppercase fw-bold">
-                        <i class="bi bi-slash-circle me-1"></i>Out of Action
-                    </span>
-                </div>
-                <div class="card-body p-0 opacity-50">
-                    <?php foreach ($oooDefenders as $c): ?>
-                        <?php include('_combatant_row.php') ?>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+                    </div>
+                    <?php if (!empty($oooDefenders)): ?>
+                        <div class="card-header border-top border-secondary bg-dark">
+                            <span class="text-muted small text-uppercase fw-bold">
+                                <i class="bi bi-slash-circle me-1"></i>Out of Action
+                            </span>
+                        </div>
+                        <div class="card-body p-0 opacity-50">
+                            <?php foreach ($oooDefenders as $c): ?>
+                                <?php include('_combatant_row.php') ?>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
         </div>
     </div>
 

@@ -58,7 +58,7 @@ INSERT INTO game_state (property_name, property_value) VALUES
 ('eject_destroyed_veteran',       '70'),
 ('eject_destroyed_elite',         '80'),
 
--- Salvage
+-- Salvage base chance (%)
 ('salvage_base_chance',           '60'),
 
 -- Infantry casualty rates
@@ -74,21 +74,25 @@ INSERT INTO game_state (property_name, property_value) VALUES
 ('combat_morale_loss_multiplier', '5.0'),
 
 -- Global daily morale recovery (can be modified by other factors)
-('daily_morale_recovery', '5.0');
+('daily_morale_recovery', '5.0'),
 
-INSERT INTO artillery_types
-    (special_code, name, primary_damage, splash_damage, aoe_template, min_roll)
-VALUES
-    ('AIS',  'Arrow IV (IS)',       2,  NULL, 2, NULL),
-    ('AC',   'Arrow IV (Clan)',     2,  NULL, 2, NULL),
-    ('TC',   'Thumper Cannon',      0,  NULL, 2, 4),
-    ('SC',   'Sniper Cannon',       1,  NULL, 2, NULL),
-    ('LTC',  'Long Tom Cannon',     2,  NULL, 2, NULL),
-    ('BA',   'Battle Armor Tube',   1,  NULL, 2, NULL),
-    ('CM5',  'Cruise Missile/50',   5,  NULL, 2, NULL),
-    ('CM7',  'Cruise Missile/70',   7,  2,    6, NULL),
-    ('CM9',  'Cruise Missile/90',   9,  4,    6, NULL),
-    ('CM12', 'Cruise Missile/120',  12, 5,    6, NULL),
-    ('LT',   'Long Tom',            3,  1,    6, NULL),
-    ('S',    'Sniper',              2,  NULL, 2, NULL),
-    ('T',    'Thumper',             1,  NULL, 2, NULL);
+('artillery_modifier_mech',           '4'),   -- to-hit penalty vs mechs/vehicles
+('artillery_modifier_infantry_open',  '0'),   -- to-hit penalty vs unfortified infantry
+('artillery_modifier_infantry_fort',  '2'),   -- to-hit penalty vs fortified infantry (ignores fort bonus)
+('artillery_modifier_building',      '-2'),   -- to-hit bonus vs buildings/fortifications
+('artillery_cannon_modifier',         '2');   -- to-hit penalty for cannon types (TC/SC/LTC)
+
+INSERT INTO artillery_rules (special_code, name, primary_damage, splash_damage, aoe_template, min_roll) VALUES
+('AIS',  'Arrow IV (IS)',       2,  NULL, 2, NULL),
+('AC',   'Arrow IV (Clan)',     2,  NULL, 2, NULL),
+('TC',   'Thumper Cannon',      0,  NULL, 2, 4),
+('SC',   'Sniper Cannon',       1,  NULL, 2, NULL),
+('LTC',  'Long Tom Cannon',     2,  NULL, 2, NULL),
+('BA',   'Battle Armor Tube',   1,  NULL, 2, NULL),
+('CM5',  'Cruise Missile/50',   5,  NULL, 2, NULL),
+('CM7',  'Cruise Missile/70',   7,  2,    6, NULL),
+('CM9',  'Cruise Missile/90',   9,  4,    6, NULL),
+('CM12', 'Cruise Missile/120',  12, 5,    6, NULL),
+('LT',   'Long Tom',            3,  1,    6, NULL),
+('S',    'Sniper',              2,  NULL, 2, NULL),
+('T',    'Thumper',             1,  NULL, 2, NULL);

@@ -11,9 +11,12 @@ DROP VIEW IF EXISTS unit_hierarchy_chain;
 
 -- Drop dependent tables (reverse FK order)
 SET FOREIGN_KEY_CHECKS=0;
+DROP TABLE IF EXISTS fortification_assignments;
+DROP TABLE IF EXISTS artillery_rules;
 DROP TABLE IF EXISTS combat_pool;
 DROP TABLE IF EXISTS battle_log;
 DROP TABLE IF EXISTS event_log;
+DROP TABLE IF EXISTS combat_buildings;
 DROP TABLE IF EXISTS buildings;
 DROP TABLE IF EXISTS mission_units;
 DROP TABLE IF EXISTS mission_log;
@@ -114,37 +117,7 @@ CREATE TABLE buildings (
     FOREIGN KEY (location_id) REFERENCES locations(location_id) ON DELETE CASCADE
 );
 
-CREATE TABLE combat_buildings (
-    combat_building_id  INT AUTO_INCREMENT PRIMARY KEY,
-    mission_id          INT          NOT NULL,
-    building_id         INT          NOT NULL,
-    name                VARCHAR(100) NOT NULL,
-    type                VARCHAR(50)  NOT NULL,
-    current_integrity   INT          NOT NULL,
-    max_integrity       INT          NOT NULL,
-    current_armor       INT          NULL,
-    max_armor           INT          NULL,
-    as_dmg_s            DECIMAL(4,1) NULL,
-    as_dmg_m            DECIMAL(4,1) NULL,
-    as_dmg_l            DECIMAL(4,1) NULL,
-    as_specials         VARCHAR(255) NULL,
-    as_tmm              INT          NOT NULL DEFAULT 0,
-    status              ENUM('Operational','Damaged','Destroyed') DEFAULT 'Operational',
-    FOREIGN KEY (mission_id)  REFERENCES missions(mission_id)  ON DELETE CASCADE,
-    FOREIGN KEY (building_id) REFERENCES buildings(building_id)
-);
-
-CREATE TABLE fortification_assignments (
-    assignment_id       INT AUTO_INCREMENT PRIMARY KEY,
-    combat_building_id  INT NOT NULL,
-    unit_id             INT NOT NULL,
-    mission_id          INT NOT NULL,
-    FOREIGN KEY (combat_building_id) REFERENCES combat_buildings(combat_building_id) ON DELETE CASCADE,
-    FOREIGN KEY (unit_id)            REFERENCES units(unit_id),
-    FOREIGN KEY (mission_id)         REFERENCES missions(mission_id) ON DELETE CASCADE
-);
-
-CREATE TABLE artillery_types (
+CREATE TABLE artillery_rules (
     artillery_id    INT AUTO_INCREMENT PRIMARY KEY,
     special_code    VARCHAR(20)  NOT NULL UNIQUE,
     name            VARCHAR(100) NOT NULL,
@@ -276,7 +249,7 @@ CREATE TABLE chassis (
     battlefield_role    ENUM(
                             'Ambusher','Brawler','Missile Boat','Juggernaut',
                             'Scout','Sniper','Skirmisher','Striker',
-                            'Command','MASH','Repair','Supply','Transport'
+                            'Command','MASH','Repair','Supply','Transport', 'Artillery'
                         ) DEFAULT 'Brawler',
     supply_consumption  DECIMAL(6,2),
     tonnage             INT,
@@ -425,7 +398,7 @@ CREATE TABLE toe_slot_roles (
     battlefield_role ENUM(
         'Ambusher','Brawler','Missile Boat','Juggernaut',
         'Scout','Sniper','Skirmisher','Striker','MASH',
-        'Repair', 'Supply', 'Transport'
+        'Repair', 'Supply', 'Transport', 'Artillery'
     ) NOT NULL,
     FOREIGN KEY (slot_id) REFERENCES toe_slots(slot_id) ON DELETE CASCADE
 );
@@ -492,6 +465,37 @@ CREATE TABLE battle_log (
     INDEX idx_mission_phase (mission_id, combat_phase)
 );
 
+CREATE TABLE combat_buildings (
+    combat_building_id  INT AUTO_INCREMENT PRIMARY KEY,
+    mission_id          INT          NOT NULL,
+    building_id         INT          NOT NULL,
+    name                VARCHAR(100) NOT NULL,
+    type                VARCHAR(50)  NOT NULL,
+    capacity 			INT 		 NULL,
+    current_integrity   INT          NOT NULL,
+    max_integrity       INT          NOT NULL,
+    current_armor       INT          NULL,
+    max_armor           INT          NULL,
+    as_dmg_s            DECIMAL(4,1) NULL,
+    as_dmg_m            DECIMAL(4,1) NULL,
+    as_dmg_l            DECIMAL(4,1) NULL,
+    as_specials         VARCHAR(255) NULL,
+    as_tmm              INT          NOT NULL DEFAULT 0,
+    status              ENUM('Operational','Damaged','Destroyed') DEFAULT 'Operational',
+    FOREIGN KEY (mission_id)  REFERENCES missions(mission_id)  ON DELETE CASCADE,
+    FOREIGN KEY (building_id) REFERENCES buildings(building_id)
+);
+
+CREATE TABLE fortification_assignments (
+    assignment_id       INT AUTO_INCREMENT PRIMARY KEY,
+    combat_building_id  INT NOT NULL,
+    unit_id             INT NOT NULL,
+    mission_id          INT NOT NULL,
+    FOREIGN KEY (combat_building_id) REFERENCES combat_buildings(combat_building_id) ON DELETE CASCADE,
+    FOREIGN KEY (unit_id)            REFERENCES units(unit_id),
+    FOREIGN KEY (mission_id)         REFERENCES missions(mission_id) ON DELETE CASCADE
+);
+
 CREATE TABLE combat_pool (
     pool_id            INT AUTO_INCREMENT PRIMARY KEY,
     mission_id         INT NOT NULL,
@@ -515,14 +519,14 @@ CREATE TABLE combat_pool (
     max_structure      INT NULL,
     structure_at_death INT NULL,
     heat_buildup  INT         NOT NULL DEFAULT 0,
-    is_shutdown   TINYINT(1)  NOT NULL DEFAULT 0,
-    used_ov       TINYINT(1)  NOT NULL DEFAULT 0,
+    is_shutdown   TINYINT  NOT NULL DEFAULT 0,
+    used_ov       TINYINT  NOT NULL DEFAULT 0,
     building_id   INT         NULL,
     FOREIGN KEY (mission_id)   REFERENCES missions(mission_id) ON DELETE CASCADE,
     FOREIGN KEY (unit_id)      REFERENCES units(unit_id),
     FOREIGN KEY (equipment_id) REFERENCES equipment(equipment_id),
     FOREIGN KEY (personnel_id) REFERENCES personnel(personnel_id),
-    FOREIGN KEY (building_id) REFERENCES buildings(building_id),
+    FOREIGN KEY (building_id) REFERENCES combat_buildings(combat_building_id),
     INDEX idx_mission_side     (mission_id, side),
     INDEX idx_mission_status   (mission_id, status),
     INDEX idx_mission_resolved (mission_id, resolved)

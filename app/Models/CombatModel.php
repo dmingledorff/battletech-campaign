@@ -104,59 +104,65 @@ class CombatModel extends Model
     public function getAttackerCombatants(int $missionId): array
     {
         return $this->db->query("
-        SELECT u.unit_id, u.name AS unit_name, u.unit_type, u.role,
-               e.equipment_id, e.equipment_status, e.salvage_status,
-               e.combat_status,
-               cp.current_armor, cp.current_structure,
-               cp.max_armor, cp.max_structure,
-               c.name AS chassis_name, c.variant, c.as_type, c.as_size,
-               c.as_mv, c.as_tmm, c.as_dmg_s, c.as_dmg_m, c.as_dmg_l,
-               c.as_specials,
-               cp.pilot_first_name   AS first_name,
-               cp.pilot_last_name    AS last_name,
-               cp.pilot_rank_abbr    AS rank_abbr,
-               cp.pilot_experience   AS experience,
-               cp.pilot_morale       AS morale,
-               cp.pilot_final_status AS pilot_status,
-               cp.status             AS pool_status
-        FROM combat_pool cp
-        JOIN units u ON u.unit_id = cp.unit_id
-        JOIN equipment e ON e.equipment_id = cp.equipment_id
-        JOIN chassis c ON c.chassis_id = e.chassis_id
-        WHERE cp.mission_id = {$missionId}
-        AND cp.side = 'attacker'
-        AND cp.participant_type = 'equipment'
-        ORDER BY u.name, c.name
-    ")->getResultArray();
+            SELECT u.unit_id, u.name AS unit_name, u.unit_type, u.role,
+                e.equipment_id, e.equipment_status, e.salvage_status,
+                e.combat_status,
+                cp.current_armor, cp.current_structure,
+                cp.max_armor, cp.max_structure,
+                c.name AS chassis_name, c.variant, c.as_type, c.as_size,
+                c.as_mv, c.as_tmm, c.as_dmg_s, c.as_dmg_m, c.as_dmg_l,
+                c.as_specials,
+                cp.pilot_first_name   AS first_name,
+                cp.pilot_last_name    AS last_name,
+                cp.pilot_rank_abbr    AS rank_abbr,
+                cp.pilot_experience   AS experience,
+                cp.pilot_morale       AS morale,
+                cp.pilot_final_status AS pilot_status,
+                cp.status             AS pool_status,
+                cp.heat_buildup,
+                cp.is_shutdown,
+                0                     AS is_infantry
+            FROM combat_pool cp
+            JOIN units u ON u.unit_id = cp.unit_id
+            JOIN equipment e ON e.equipment_id = cp.equipment_id
+            JOIN chassis c ON c.chassis_id = e.chassis_id
+            WHERE cp.mission_id = {$missionId}
+            AND cp.side = 'attacker'
+            AND cp.participant_type = 'equipment'
+            ORDER BY u.name, c.name
+        ")->getResultArray();
     }
 
     public function getDefenderCombatants(int $missionId): array
     {
         return $this->db->query("
-        SELECT u.unit_id, u.name AS unit_name, u.unit_type, u.role,
-               e.equipment_id, e.equipment_status, e.salvage_status,
-               e.combat_status,
-               cp.current_armor, cp.current_structure,
-               cp.max_armor, cp.max_structure,
-               c.name AS chassis_name, c.variant, c.as_type, c.as_size,
-               c.as_mv, c.as_tmm, c.as_dmg_s, c.as_dmg_m, c.as_dmg_l,
-               c.as_specials,
-               cp.pilot_first_name   AS first_name,
-               cp.pilot_last_name    AS last_name,
-               cp.pilot_rank_abbr    AS rank_abbr,
-               cp.pilot_experience   AS experience,
-               cp.pilot_morale       AS morale,
-               cp.pilot_final_status AS pilot_status,
-               cp.status             AS pool_status
-        FROM combat_pool cp
-        JOIN units u ON u.unit_id = cp.unit_id
-        JOIN equipment e ON e.equipment_id = cp.equipment_id
-        JOIN chassis c ON c.chassis_id = e.chassis_id
-        WHERE cp.mission_id = {$missionId}
-        AND cp.side = 'defender'
-        AND cp.participant_type = 'equipment'
-        ORDER BY u.name, c.name
-    ")->getResultArray();
+            SELECT u.unit_id, u.name AS unit_name, u.unit_type, u.role,
+                e.equipment_id, e.equipment_status, e.salvage_status,
+                e.combat_status,
+                cp.current_armor, cp.current_structure,
+                cp.max_armor, cp.max_structure,
+                c.name AS chassis_name, c.variant, c.as_type, c.as_size,
+                c.as_mv, c.as_tmm, c.as_dmg_s, c.as_dmg_m, c.as_dmg_l,
+                c.as_specials,
+                cp.pilot_first_name   AS first_name,
+                cp.pilot_last_name    AS last_name,
+                cp.pilot_rank_abbr    AS rank_abbr,
+                cp.pilot_experience   AS experience,
+                cp.pilot_morale       AS morale,
+                cp.pilot_final_status AS pilot_status,
+                cp.status             AS pool_status,
+                cp.heat_buildup,
+                cp.is_shutdown,
+                0                     AS is_infantry
+            FROM combat_pool cp
+            JOIN units u ON u.unit_id = cp.unit_id
+            JOIN equipment e ON e.equipment_id = cp.equipment_id
+            JOIN chassis c ON c.chassis_id = e.chassis_id
+            WHERE cp.mission_id = {$missionId}
+            AND cp.side = 'defender'
+            AND cp.participant_type = 'equipment'
+            ORDER BY u.name, c.name
+        ")->getResultArray();
     }
 
     public function getAttackerFaction(int $missionId): array
@@ -268,5 +274,65 @@ class CombatModel extends Model
             'attacker_pct'   => $attackerPct,
             'defender_pct'   => 100 - $attackerPct,
         ];
+    }
+
+    public function getAttackerInfantry(int $missionId): array
+    {
+        return $this->db->query("
+            SELECT u.unit_id, u.name AS unit_name, u.unit_type, u.role,
+                cp.pool_id, cp.status AS pool_status,
+                cp.personnel_id,
+                p.first_name, p.last_name, p.experience, p.morale,
+                p.status AS pilot_status,
+                r.abbreviation AS rank_abbr,
+                1 AS is_infantry,
+                (SELECT COUNT(*)
+                    FROM personnel_assignments pa
+                    JOIN personnel p2 ON p2.personnel_id = pa.personnel_id
+                    WHERE pa.unit_id = u.unit_id
+                    AND pa.date_released IS NULL
+                    AND p2.status = 'Active') AS current_strength,
+                (SELECT COUNT(*)
+                    FROM personnel_assignments pa
+                    WHERE pa.unit_id = u.unit_id) AS max_strength
+            FROM combat_pool cp
+            JOIN units u ON u.unit_id = cp.unit_id
+            LEFT JOIN personnel p ON p.personnel_id = cp.personnel_id
+            LEFT JOIN ranks r ON r.id = p.rank_id
+            WHERE cp.mission_id = {$missionId}
+            AND cp.side = 'attacker'
+            AND cp.participant_type = 'infantry'
+            ORDER BY u.name
+        ")->getResultArray();
+    }
+
+    public function getDefenderInfantry(int $missionId): array
+    {
+        return $this->db->query("
+            SELECT u.unit_id, u.name AS unit_name, u.unit_type, u.role,
+                cp.pool_id, cp.status AS pool_status,
+                cp.personnel_id,
+                p.first_name, p.last_name, p.experience, p.morale,
+                p.status AS pilot_status,
+                r.abbreviation AS rank_abbr,
+                1 AS is_infantry,
+                (SELECT COUNT(*)
+                    FROM personnel_assignments pa
+                    JOIN personnel p2 ON p2.personnel_id = pa.personnel_id
+                    WHERE pa.unit_id = u.unit_id
+                    AND pa.date_released IS NULL
+                    AND p2.status = 'Active') AS current_strength,
+                (SELECT COUNT(*)
+                    FROM personnel_assignments pa
+                    WHERE pa.unit_id = u.unit_id) AS max_strength
+            FROM combat_pool cp
+            JOIN units u ON u.unit_id = cp.unit_id
+            LEFT JOIN personnel p ON p.personnel_id = cp.personnel_id
+            LEFT JOIN ranks r ON r.id = p.rank_id
+            WHERE cp.mission_id = {$missionId}
+            AND cp.side = 'defender'
+            AND cp.participant_type = 'infantry'
+            ORDER BY u.name
+        ")->getResultArray();
     }
 }

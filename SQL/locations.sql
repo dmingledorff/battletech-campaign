@@ -15,14 +15,14 @@ SET @galtor3_id = LAST_INSERT_ID();
 -- Insert major locations (cities with coordinates)
 INSERT INTO locations (name, type, terrain, planet_id, coord_x, coord_y, controlled_by) VALUES
 ('New Derry', 'City', 'Dense Urban', @galtor3_id, 62, 46, 1),
-('New Wuhan City', 'City', 'Dense Urban', @galtor3_id, 11, 45, NULL),
-('Changlee', 'City', 'Dense Urban', @galtor3_id, 45, 15, NULL),
-('Maeglin', 'City', 'Urban', @galtor3_id, 59, 53, NULL),
-('St. Colm', 'City', 'Urban', @galtor3_id, 71, 17, NULL),
-('Glencar', 'City', 'Urban', @galtor3_id, 65, 65, NULL),
-('Webster', 'City', 'Urban', @galtor3_id, 45, 50, NULL),
-('Lifford', 'City', 'Rural', @galtor3_id, 38, 65, NULL),
-('Cead Cathair', 'City', 'Urban', @galtor3_id, 49, 70, NULL),
+('New Wuhan City', 'City', 'Dense Urban', @galtor3_id, 11, 45, 2),
+('Changlee', 'City', 'Dense Urban', @galtor3_id, 45, 15, 1),
+('Maeglin', 'City', 'Urban', @galtor3_id, 59, 53, 1),
+('St. Colm', 'City', 'Urban', @galtor3_id, 71, 17, 1),
+('Glencar', 'City', 'Urban', @galtor3_id, 65, 65, 1),
+('Webster', 'City', 'Urban', @galtor3_id, 45, 50, 1),
+('Lifford', 'City', 'Rural', @galtor3_id, 38, 65, 1),
+('Cead Cathair', 'City', 'Urban', @galtor3_id, 49, 70, 1),
 ('Buncrana', 'City', 'Urban', @galtor3_id, 70, 85, 2),
 ('Rathmullan', 'City', 'Urban', @galtor3_id, 49, 88, 2),
 ('Cloc Ceann Faola', 'City', 'Urban', @galtor3_id, 8, 82, 2);
@@ -52,9 +52,14 @@ INSERT INTO locations (name, type, terrain, planet_id, coord_x, coord_y, control
 
 
 -- Buildings
-INSERT INTO buildings (location_id, name, type, capacity, status) VALUES
-(1, 'Fort New Derry', 'Barracks', NULL, 'Operational'),
-(1, 'New Derry Spaceport', 'Spaceport', NULL, 'Operational'),
-(1, 'Field Hospital Alpha', 'Hospital', 50, 'Operational'),
-(1, 'Repair Bay 1', 'Repair Bay', 8, 'Operational'),
-(11, 'Fort Rathmullan', 'Fortification', 0, 'Operational');
+INSERT INTO buildings (location_id, name, type, capacity, status, max_integrity, current_integrity) VALUES
+-- New Derry (location 1) -- non-combat buildings, default integrity
+(1, 'Fort New Derry',        'Barracks',   NULL, 'Operational', 100, 100),
+(1, 'New Derry Spaceport',   'Spaceport',  NULL, 'Operational', 100, 100),
+(1, 'Field Hospital Alpha',  'Hospital',   50,   'Operational', 100, 100),
+(1, 'Repair Bay 1',          'Repair Bay', 8,    'Operational', 100, 100),
+
+-- Fortifications (location 11) — capacity = how many infantry units can shelter here
+-- Integrity set to meaningful values for combat degradation
+(11, 'Firebase Alpha', 'Fortification', 4, 'Operational', 20, 20),
+(11, 'Firebase Beta',  'Fortification', 4, 'Operational', 20, 20);

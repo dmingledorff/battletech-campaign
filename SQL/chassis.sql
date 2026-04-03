@@ -124,6 +124,9 @@ INSERT INTO chassis
 ('Devastator','DVS-STD','Vehicle','Heavy','Juggernaut',11.0,80,54.0,34,'CV',3,1,4,'t',5,5,2,0,0,6,5,2,'AC4/4/-'),
 ('Marsden II','MRS-STD','Vehicle','Assault','Juggernaut',11.0,90,32.4,35,'CV',4,1,2,'t',5,5,2,0,0,7,6,2,'AC4/4/-'),
 
+-- Artillery Vehicles
+('Mobile Long Tom Artillery ','LT-MOB-25','Vehicle','Heavy','Artillery',8.0,95,25.6,37,'CV',2,0,4,'t',1,0,0,0,0,2,3,2,'ARTLT-1,EE,HTC,MHQ2,SRCH'),
+
 -- Support Vehicles
 ('MASH Truck','MSH-STD','Vehicle','Light','MASH',0.5,20,86.4,5,'CV',1,0,8,'w',0,0,0,0,0,1,1,1,NULL),
 ('Flatbed Truck','FBD-STD','Vehicle','Light','Supply',0.3,10,86.4,3,'CV',1,0,8,'w',0,0,0,0,0,1,1,1,NULL),
